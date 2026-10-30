@@ -1395,3 +1395,8 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
   .game-card { transition: none; }
 }
 @media (hover: none), (max-width: 860px) { .topbar { background: var(--bg); } }
+
+/* ---------- Poções: seleção suave e sem reflexo ---------- */
+.pz-glass::before { display: none; }
+.pz-tube { transition: transform .26s cubic-bezier(.3,1.3,.5,1); will-change: transform; }
+.pz-tube.sel { transform: translateY(-14px); }

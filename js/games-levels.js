@@ -76,8 +76,12 @@
     { name: 'Muito difícil', from: 3001, colors: 8, color: '#ff7a45' },
     { name: 'Extra difícil', from: 4001, colors: 9, color: '#ef4565' }
   ];
+  const extraColors = level => { const n = AH.levelKit.numOf(level); return n > 20 ? Math.min(3, 1 + Math.floor((n - 21) / 8)) : 0; }; // fases geradas ganham cores a mais
   function buildNuts(level) {
-    const n = NUT_TIERS[tierIndex(NUT_TIERS, level)].colors;
+    const base = NUT_TIERS[tierIndex(NUT_TIERS, level)].colors;
+    for (let e = extraColors(level); e >= 0; e--) { const r = buildNutsN(level, Math.min(12, base + e)); if (r) return r; }
+  }
+  function buildNutsN(level, n) {
     for (let a = 0; a < 40; a++) {
       const rnd = K.rng(level * 15485863 + a * 7907 + 31);
       const pool = []; for (let c = 0; c < n; c++) for (let k = 0; k < 4; k++) pool.push(c);
@@ -90,7 +94,7 @@
 
   AH.engines.porcas = {
     mount(el, ctx) {
-      const COLORS = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#ec4899', '#a3e635'];
+      const COLORS = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#ec4899', '#a3e635', '#14b8a6', '#f43f5e', '#78716c'];
       const duel = ctx.mode === 'duel';
       let level = duel ? AH.duelLevel(NUT_TIERS, ctx.difficulty ?? 1, ctx.seed) : startLevel('porcas');
       let bolts, sel, moves, undo, hints, done, arrived = null;

@@ -343,8 +343,13 @@
   function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   // Kit compartilhado com outros jogos de "ordenar" (ex.: Porcas e Parafusos)
   AH.sortKit = { solve: (...a) => pSolve(...a), apply: (...a) => pApply(...a), solved: t => pSolved(t), done: st => pDone(st), rng: s => mulberry(s) };
+  const extraColors = level => { const n = AH.levelKit.numOf(level); return n > 20 ? Math.min(3, 1 + Math.floor((n - 21) / 8)) : 0; }; // fases geradas ganham cores a mais
   function buildLevel(level) {
-    const n = POTION_TIERS[tierOf(level)].colors;
+    const base = POTION_TIERS[tierOf(level)].colors;
+    for (let e = extraColors(level); e >= 0; e--) { const r = buildLevelN(level, Math.min(12, base + e)); if (r) return r; }
+    return null;
+  }
+  function buildLevelN(level, n) {
     for (let attempt = 0; attempt < 40; attempt++) {
       const rnd = mulberry(level * 7919 + attempt * 104729);
       const pool = []; for (let c = 0; c < n; c++) for (let k = 0; k < PCAP; k++) pool.push(c);
@@ -358,7 +363,7 @@
 
   AH.engines.pocoes = {
     mount(el, ctx) {
-      const PALETTE = ['#ef0f3a', '#0a84d8', '#ffd000', '#13a81a', '#ff38d2', '#ff7a00', '#2fe0d0', '#b04a2c', '#a2d20a', '#d9a882'];
+      const PALETTE = ['#ef0f3a', '#0a84d8', '#ffd000', '#13a81a', '#ff38d2', '#ff7a00', '#2fe0d0', '#b04a2c', '#a2d20a', '#d9a882', '#6d28d9', '#0f766e'];
       const duel = ctx.mode === 'duel';
       const LK = AH.levelKit, SUB = t => `${t.colors} cores`;
       let level = duel ? duelLevel(POTION_TIERS, ctx.difficulty ?? 1, ctx.seed) : LK.startLevel('pocoes');
@@ -437,7 +442,7 @@
         src.classList.add('pouring');
         const seq = (async () => {
           // 1) sobe e inclina
-          await src.animate([{ transform: 'translateY(0) rotate(0deg)' }, { transform: tr }], { duration: 360, easing: EASE, fill: 'forwards' }).finished;
+          await src.animate([{ transform: 'translateY(-14px) rotate(0deg)' }, { transform: tr }], { duration: 360, easing: EASE, fill: 'forwards' }).finished;
           // 2) fio de líquido + dose por dose
           const stream = document.createElement('span');
           stream.className = 'pz-stream';
