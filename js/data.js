@@ -128,7 +128,7 @@
     }
   });
   // Dificuldades escolhíveis no lobby do duelo (limits = tempo da corrida em segundos por dificuldade)
-  const FIVE = ['Fácil', 'Médio', 'Difícil', 'Muito difícil', 'Extra difícil'];
+  const FIVE = ['Fácil', 'Médio', 'Difícil', 'Muito difícil', 'Hardcore'];
   AH.duelDifficulties = {
     velha:  { names: ['Fácil', 'Médio', 'Difícil'], def: 1 },
     pocoes: { names: FIVE, limits: [120, 180, 240, 300, 360], def: 1 },

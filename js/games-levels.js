@@ -62,8 +62,9 @@
   const begin = (ctx, id, tiers, sub, start) => {
     if (ctx.mode === 'duel') return start();
     const go = () => start(startLevel(id));
-    if (ctx.chosen) return go();
-    ctx.chosen = true; tierModal(id, tiers, sub, go, true);
+    const sh = ctx.shared || ctx;
+    if (sh.chosen) return go();
+    sh.chosen = true; tierModal(id, tiers, sub, go, true);
   };
   const actionBtn = (attr, icon, label, badge) => `<button class="pz-action" ${attr}><span>${ic(icon)}${badge ? `<i class="pz-badge" ${badge}>3</i>` : ''}</span>${label}</button>`;
 
@@ -75,7 +76,7 @@
     { name: 'Médio', from: 1001, colors: 5, color: '#2a8bd8' },
     { name: 'Difícil', from: 2001, colors: 6, color: '#f2a516' },
     { name: 'Muito difícil', from: 3001, colors: 8, color: '#ff7a45' },
-    { name: 'Extra difícil', from: 4001, colors: 9, color: '#ef4565' }
+    { name: 'Hardcore', from: 4001, colors: 9, color: '#8b5cf6' }
   ];
   const extraColors = level => { const n = AH.levelKit.numOf(level); return n > 20 ? Math.min(3, 1 + Math.floor((n - 21) / 8)) : 0; }; // fases geradas ganham cores a mais
   function buildNuts(level) {
@@ -171,7 +172,7 @@
     { name: 'Fácil', from: 1, cars: 7, min: 3, max: 6, color: '#1fb37a' },
     { name: 'Médio', from: 1001, cars: 9, min: 7, max: 11, color: '#2a8bd8' },
     { name: 'Difícil', from: 2001, cars: 11, min: 12, max: 17, color: '#f2a516' },
-    { name: 'Expert', from: 3001, cars: 12, min: 18, max: 60, color: '#ef4565' }
+    { name: 'Expert', from: 3001, cars: 12, min: 18, max: 60, color: '#8b5cf6' }
   ];
   const N = 6, EXIT_ROW = 2;
   function occ(cars, skip) {
@@ -729,7 +730,7 @@
     { id: 'facil', name: 'Fácil', clues: 40, color: '#1fb37a' },
     { id: 'medio', name: 'Médio', clues: 32, color: '#2a8bd8' },
     { id: 'dificil', name: 'Difícil', clues: 27, color: '#f2a516' },
-    { id: 'expert', name: 'Expert', clues: 23, color: '#ef4565' }
+    { id: 'expert', name: 'Expert', clues: 23, color: '#8b5cf6' }
   ];
   const BOX = i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
   // Resolve com bitmasks escolhendo sempre a casa com menos opções; conta até `limit` soluções.

@@ -36,7 +36,7 @@
     { name: 'Fácil', from: 1, size: 7, color: '#1fb37a' },
     { name: 'Médio', from: 1001, size: 9, color: '#2a8bd8' },
     { name: 'Difícil', from: 2001, size: 11, color: '#f2a516' },
-    { name: 'Expert', from: 3001, size: 13, color: '#ef4565' }
+    { name: 'Expert', from: 3001, size: 13, color: '#8b5cf6' }
   ];
   function slide(grid, n, pos, dir) {
     const [dr, dc] = VEC[dir]; let r = (pos / n) | 0, c = pos % n; const path = [];
@@ -296,7 +296,7 @@
     { name: 'Fácil', from: 1, shelves: 6, types: 5, layers: 2, color: '#1fb37a' },
     { name: 'Médio', from: 1001, shelves: 8, types: 8, layers: 3, color: '#2a8bd8' },
     { name: 'Difícil', from: 2001, shelves: 9, types: 11, layers: 3, color: '#f2a516' },
-    { name: 'Expert', from: 3001, shelves: 12, types: 15, layers: 3, color: '#ef4565' }
+    { name: 'Expert', from: 3001, shelves: 12, types: 15, layers: 3, color: '#8b5cf6' }
   ];
   const GOODS = ['🍎', '🍌', '🍇', '🍓', '🍊', '🥑', '🍉', '🍒', '🥥', '🍋', '🍑', '🥕', '🌽', '🍩', '🧁', '🍪', '🧃', '🍿', '🥐', '🧀'];
   function buildShelves(level) {
@@ -423,7 +423,7 @@
     { name: 'Fácil', from: 1, belt: 6, cap: 10, color: '#1fb37a' },
     { name: 'Médio', from: 1001, belt: 5, cap: 8, color: '#2a8bd8' },
     { name: 'Difícil', from: 2001, belt: 4, cap: 6, color: '#f2a516' },
-    { name: 'Expert', from: 3001, belt: 3, cap: 5, color: '#ef4565' }
+    { name: 'Expert', from: 3001, belt: 3, cap: 5, color: '#8b5cf6' }
   ];
   function buildCups(level) {
     const t = CUP_TIERS[L.tierIndex(CUP_TIERS, level)], art = ART[(level - 1) % ART.length];

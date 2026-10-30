@@ -295,7 +295,7 @@
     { name: 'Médio',         from: 1001, colors: 5,  color: '#2a8bd8' },
     { name: 'Difícil',       from: 2001, colors: 7,  color: '#f2a516' },
     { name: 'Muito difícil', from: 3001, colors: 9,  color: '#ff7a45' },
-    { name: 'Extra difícil', from: 4001, colors: 10, color: '#ef4565' }
+    { name: 'Hardcore', from: 4001, colors: 10, color: '#8b5cf6' }
   ];
   // fase aleatória dentro da dificuldade escolhida no duelo
   const duelLevel = (tiers, i, seed) => { const t = tiers[Math.min(i, tiers.length - 1)], span = (tiers[i + 1]?.from || t.from + 20) - t.from; return t.from + Math.floor((seed != null ? mulberry(seed)() : Math.random()) * span); };
@@ -443,21 +443,24 @@
         const seq = (async () => {
           // 1) sobe e inclina
           await src.animate([{ transform: 'translateY(-14px) rotate(0deg)' }, { transform: tr }], { duration: 360, easing: EASE, fill: 'forwards' }).finished;
-          // 2) fio de líquido + dose por dose
+          // 2) fio de líquido + dose por dose: o fio vai da boca do frasco até a superfície do destino
+          const unit = dR.height * 0.86 / PCAP, bottom = dR.top - bR.top + dR.height;
+          const lip = dR.top - bR.top - sR.height * 0.12, lvl = n => bottom - n * unit - lip;
+          const n0 = tubes[to].length, h0 = Math.max(8, lvl(n0)), h1 = Math.max(8, lvl(n0 + k));
           const stream = document.createElement('span');
           stream.className = 'pz-stream';
-          stream.style.cssText = `--c:${color};left:${dR.left - bR.left + dR.width / 2 - 3}px;top:${dR.top - bR.top - sR.height * 0.12}px;height:${dR.height * 0.95}px;animation:none;transform-origin:50% 0;transform:scaleY(0)`;
+          stream.style.cssText = `--c:${color};left:${dR.left - bR.left + dR.width / 2 - 3}px;top:${lip}px;height:${h1}px;animation:none;transform-origin:50% 0`;
           board.appendChild(stream);
-          await stream.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 140, easing: 'ease-out', fill: 'forwards' }).finished;
+          await stream.animate([{ height: '0px' }, { height: h0 + 'px' }], { duration: 140, easing: 'ease-out', fill: 'forwards' }).finished;
           const srcSpans = [...src.querySelectorAll('.pz-liquid span')].slice(-k).reverse();
           const dstLiq = dst.querySelector('.pz-liquid');
           const news = Array.from({ length: k }, () => { const n = document.createElement('span'); n.style.cssText = `--c:${color};height:0`; dstLiq.appendChild(n); return n; });
-          const anims = [];
+          const anims = [stream.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: POUR, easing: 'linear', fill: 'forwards' })];
           srcSpans.forEach((sp, j) => anims.push(sp.animate([{ height: '25%' }, { height: '0%' }], { duration: POUR / k, delay: j * POUR / k, easing: 'linear', fill: 'both' })));
           news.forEach((sp, j) => anims.push(sp.animate([{ height: '0%' }, { height: '25%' }], { duration: POUR / k, delay: j * POUR / k, easing: 'linear', fill: 'both' })));
-          await Promise.all(anims.map(a => a.finished));
+          await Promise.all(anims.map(x => x.finished));
           // 3) fio some e o frasco volta
-          const out = stream.animate([{ transform: 'scaleY(1)', transformOrigin: '50% 100%' }, { transform: 'scaleY(0)', transformOrigin: '50% 100%' }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
+          const out = stream.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: 'ease-in', fill: 'forwards' });
           const back = src.animate([{ transform: tr }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 380, easing: EASE, fill: 'forwards' });
           await Promise.all([out.finished, back.finished]);
           stream.remove();

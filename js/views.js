@@ -219,6 +219,7 @@
     const online = !!(duel && duel.online && duel.room);
     const offs = []; // handlers da sala para remover ao sair
     let cleanup = () => {};
+    const shared = {}; // sobrevive a cada "próxima fase" (o ctx abaixo é recriado)
     AH.online?.enabled && AH.online.setPlaying(g.id);
     const mount = () => {
       el.innerHTML = `<div class="play-wrap">
@@ -239,6 +240,7 @@
         duel.result = { result, summary, rewards: r }; U.rewardToasts(r); go('#/duels/result');
       };
       const ctx = {
+        shared,
         mode: duel ? 'duel' : 'solo', opponent: duel ? duel.opp : null, difficulty: duel ? duel.difficulty : undefined, seed: duel?.seed,
         // jogos de confronto direto online recebem um canal para trocar jogadas
         net: online && g.duelType === 'versus' ? {
