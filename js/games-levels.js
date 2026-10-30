@@ -434,7 +434,7 @@
       </div>`;
       const cv = el.querySelector('canvas'), g = cv.getContext('2d');
       const $ = s => el.querySelector(s);
-      const SEG = 12, SPACING = 150;
+      const SEG = 12, SPACING = 200;
       let W, H, R, RI, K3, TH, BR, raf, running = false, dead = false;
       let rot, ballY, vy, camY, plats, score, combo, rng, splats, parts, trail, pops, squash, lastT;
       let round, theme, passedInRound, gen;
@@ -540,6 +540,8 @@
         // câmera só desce, sempre mostrando a bolinha no terço de cima
         const target = ballY - H * 0.34;
         if (target > camY) camY += (target - camY) * Math.min(1, 0.18 * dt);
+        // a bolinha nunca sai da parte de cima da tela (nem no pulo mais alto)
+        if (ballY - camY < H * 0.2) camY = ballY - H * 0.2;
         // tema acompanha a rodada atual com transição suave
         theme = mix(theme, themeOf(round), 0.06 * dt);
         while (plats[plats.length - 1].y < camY + H + SPACING * 3) plats.push(makePlat());
