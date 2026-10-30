@@ -407,8 +407,10 @@
         $('[data-hints]').textContent = hints;
       }
 
-      // Anima o frasco de origem inclinando sobre o destino e derramando.
-      function pourAnimated(from, to) {
+      // Anima o frasco de origem: sobe e inclina sobre o destino, o líquido escorre dose por dose
+      // (a origem esvazia e o destino enche de forma contínua) e o frasco volta ao lugar.
+      // Tudo com Web Animations (transform/opacity), uma linha do tempo só, sem "saltos".
+      async function pourAnimated(from, to) {
         busy = true;
         const src = board.querySelector(`[data-t="${from}"]`), dst = board.querySelector(`[data-t="${to}"]`);
         const bR = board.getBoundingClientRect(), sR = src.getBoundingClientRect(), dR = dst.getBoundingClientRect();
@@ -416,20 +418,48 @@
         const dx = (dR.left + dR.width / 2) - (sR.left + sR.width / 2) + (right ? -sR.width * 0.35 : sR.width * 0.35);
         const dy = dR.top - sR.top - sR.height * 0.42;
         const color = PALETTE[tubes[from][tubes[from].length - 1]];
-        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        src.classList.add('pouring');
-        src.style.transform = `translate(${dx}px, ${dy}px) rotate(${right ? 72 : -72}deg)`;
-        const stream = document.createElement('span');
-        stream.className = 'pz-stream';
-        stream.style.cssText = `--c:${color};left:${dR.left - bR.left + dR.width / 2 - 3}px;top:${dR.top - bR.top - sR.height * 0.12}px;--h:${dR.height * 0.95}px`;
-        setTimeout(() => {
-          board.appendChild(stream);
+        let run = 0; for (let i = tubes[from].length - 1; i >= 0 && tubes[from][i] === tubes[from][tubes[from].length - 1]; i--) run++;
+        const k = Math.min(run, PCAP - tubes[to].length);
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || !src.animate;
+        let ended = false;
+        const finish = () => {
+          if (ended) return; ended = true;
+          board.querySelectorAll('.pz-stream').forEach(x => x.remove());
           tubes = pApply(tubes, from, to);
           dst.outerHTML = tubeHTML(tubes[to], to);
-          src.querySelector('.pz-liquid').innerHTML = tubes[from].map(c => `<span style="--c:${PALETTE[c]}"></span>`).join('');
-        }, reduce ? 0 : 280);
-        setTimeout(() => { stream.remove(); src.style.transform = ''; }, reduce ? 0 : 720);
-        setTimeout(() => { src.classList.remove('pouring'); busy = false; afterMove(); }, reduce ? 0 : 1000);
+          const cur = board.querySelector(`[data-t="${from}"]`);
+          if (cur) { cur.classList.remove('pouring'); cur.getAnimations().forEach(x => x.cancel()); cur.querySelector('.pz-liquid').innerHTML = tubes[from].map(c => `<span style="--c:${PALETTE[c]}"></span>`).join(''); }
+          busy = false; afterMove();
+        };
+        if (reduce) return finish();
+        const tr = `translate(${dx}px, ${dy}px) rotate(${right ? 72 : -72}deg)`;
+        const EASE = 'cubic-bezier(.45,0,.2,1)', POUR = 230 * k;
+        src.classList.add('pouring');
+        const seq = (async () => {
+          // 1) sobe e inclina
+          await src.animate([{ transform: 'translateY(0) rotate(0deg)' }, { transform: tr }], { duration: 360, easing: EASE, fill: 'forwards' }).finished;
+          // 2) fio de líquido + dose por dose
+          const stream = document.createElement('span');
+          stream.className = 'pz-stream';
+          stream.style.cssText = `--c:${color};left:${dR.left - bR.left + dR.width / 2 - 3}px;top:${dR.top - bR.top - sR.height * 0.12}px;height:${dR.height * 0.95}px;animation:none;transform-origin:50% 0;transform:scaleY(0)`;
+          board.appendChild(stream);
+          await stream.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 140, easing: 'ease-out', fill: 'forwards' }).finished;
+          const srcSpans = [...src.querySelectorAll('.pz-liquid span')].slice(-k).reverse();
+          const dstLiq = dst.querySelector('.pz-liquid');
+          const news = Array.from({ length: k }, () => { const n = document.createElement('span'); n.style.cssText = `--c:${color};height:0`; dstLiq.appendChild(n); return n; });
+          const anims = [];
+          srcSpans.forEach((sp, j) => anims.push(sp.animate([{ height: '25%' }, { height: '0%' }], { duration: POUR / k, delay: j * POUR / k, easing: 'linear', fill: 'both' })));
+          news.forEach((sp, j) => anims.push(sp.animate([{ height: '0%' }, { height: '25%' }], { duration: POUR / k, delay: j * POUR / k, easing: 'linear', fill: 'both' })));
+          await Promise.all(anims.map(a => a.finished));
+          // 3) fio some e o frasco volta
+          const out = stream.animate([{ transform: 'scaleY(1)', transformOrigin: '50% 100%' }, { transform: 'scaleY(0)', transformOrigin: '50% 100%' }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
+          const back = src.animate([{ transform: tr }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 380, easing: EASE, fill: 'forwards' });
+          await Promise.all([out.finished, back.finished]);
+          stream.remove();
+        })().catch(() => {});
+        // se o navegador pausar as animações (aba em segundo plano), conclui a jogada mesmo assim
+        await Promise.race([seq, new Promise(r => setTimeout(r, 360 + 140 + POUR + 380 + 500))]);
+        finish();
       }
       function tryPour(from, to) {
         const a = tubes[from], b = tubes[to], c = a[a.length - 1];
