@@ -1364,3 +1364,24 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .gm-row { height: clamp(120px, 34vw, 190px); }
 .gm-p { height: 100%; min-height: 0; overflow: hidden; }
 .gm-c { width: auto; height: 17%; aspect-ratio: 1; max-width: 86%; }
+
+/* ---------- Correções de enquadramento (PC) e linhas achatadas ---------- */
+/* o quadro nunca passa da altura da janela e a proporção é sempre respeitada */
+.ar { --ratio: 1; width: min(100%, calc((100dvh - 230px) * var(--ratio))); min-width: min(100%, 280px); margin-inline: auto; }
+.ar-canvas { aspect-ratio: var(--ratio); height: auto; }
+.tt-pad { width: min(100%, calc((100dvh - 230px) * .5 + 120px)); margin-inline: auto; }
+/* tabuleiros com proporção fixa: linhas e colunas iguais, mesmo com casas vazias */
+.ck, .ch { grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: min(100%, 480px, calc(100dvh - 300px)); }
+.ck-s, .ch-s { min-width: 0; min-height: 0; overflow: hidden; }
+.c4 { grid-template-columns: repeat(7, minmax(0, 1fr)); width: min(100%, 460px, calc((100dvh - 300px) * 7 / 6)); }
+.ms-grid { grid-template-columns: repeat(var(--c, 8), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); width: min(100%, 460px, calc(100dvh - 330px)); }
+.ms-c, .lo-c, .bn-c, .kk-c, .kk-b { min-width: 0; min-height: 0; padding: 0; }
+.lo-board { width: min(100%, 420px, calc(100dvh - 330px)); grid-auto-rows: minmax(0, 1fr); }
+.bn-grid { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
+.kk { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); width: min(100%, 440px, calc(100dvh - 380px)); }
+.sl-board, .mj { max-width: min(100%, 560px, calc(100dvh - 300px)); }
+.ttt { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); max-width: min(420px, calc(100dvh - 330px)); }
+.ttt button, .g2048 .cell { min-width: 0; min-height: 0; }
+.pz-tierpick { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface-2); color: var(--text); text-align: left; }
+.pz-tierpick:hover, .pz-tierpick.cur { border-color: var(--primary); }
+.pz-tierpick b { font-family: var(--font-display); }

@@ -31,9 +31,9 @@
     });
   }
   // Moldura comum: placar no topo, canvas e tela inicial
-  const shell = (name, help, id, aspect = '1') => `<div class="ar">
+  const shell = (name, help, id, ratio = 1) => `<div class="ar" style="--ratio:${ratio}">
     <div class="ar-top"><span class="tr-chip"><small>Pontos</small><b data-score>0</b></span><span class="tr-chip"><small>Recorde</small><b>${fmt(best0(id))}</b></span></div>
-    <canvas class="ar-canvas" style="aspect-ratio:${aspect}" tabindex="0" aria-label="${esc(name)}"></canvas>
+    <canvas class="ar-canvas" tabindex="0" aria-label="${esc(name)}"></canvas>
     <div class="hx-overlay" data-overlay><b>${esc(name)}</b><span>${help}</span><button class="btn btn-primary btn-lg" data-go>${ic('play')} Começar</button></div></div>`;
 
   /* =====================================================
@@ -43,7 +43,7 @@
     mount(el, ctx) {
       const N = 20, duel = ctx.mode === 'duel';
       const sk = AH.store.skin('snake', 'skin').fx, fd = AH.store.skin('snake', 'food').fx;
-      el.innerHTML = shell('Snake', 'Deslize (ou use as setas) para guiar a cobrinha.<br>Coma as frutas e não bata em você nem nas paredes!', 'snake');
+      el.innerHTML = shell('Snake', 'Deslize (ou use as setas) para guiar a cobrinha.<br>As paredes são portais: saia de um lado e volte pelo outro.<br>Coma as frutas e não bata em você mesma!', 'snake');
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, cell, snake, dir, nextDir, food, score, timer, running = false, over = false;
       const size = () => { ({ g, W, H } = fitCanvas(cv)); cell = W / N; };
@@ -57,9 +57,9 @@
       function step() {
         if (!running) return;
         dir = nextDir;
-        const [dr, dc] = VEC[dir], r = snake[0][0] + dr, c = snake[0][1] + dc;
+        const [dr, dc] = VEC[dir], r = (snake[0][0] + dr + N) % N, c = (snake[0][1] + dc + N) % N; // sai por um lado e volta pelo outro
         const eat = r === food[0] && c === food[1];
-        if (r < 0 || c < 0 || r >= N || c >= N || hit(r, c, !eat)) return die();
+        if (hit(r, c, !eat)) return die();
         snake.unshift([r, c]);
         if (eat) { score += 10; $('[data-score]').textContent = fmt(score); placeFood(); } else snake.pop();
         draw();
@@ -115,7 +115,7 @@
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
       const bird = AH.store.skin('flappy', 'bird').fx.color || '#fde047', sky = AH.store.skin('flappy', 'sky').fx;
-      el.innerHTML = shell('Pássaro Saltitante', 'Toque (ou use espaço/seta para cima) para bater as asas.<br>Passe entre os canos sem encostar!', 'flappy', '3/4');
+      el.innerHTML = shell('Pássaro Saltitante', 'Toque (ou use espaço/seta para cima) para bater as asas.<br>Passe entre os canos sem encostar!', 'flappy', 0.75);
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, running = false, over = false, lastT = 0;
       let y, vy, pipes, score, spawnIn, scroll;
@@ -190,9 +190,9 @@
     mount(el, ctx) {
       const duel = ctx.mode === 'duel', opp = ctx.opponent?.username || 'CPU', WIN = 5;
       const pc = AH.store.skin('pong', 'paddle').fx.color || '#ffffff', bc = AH.store.skin('pong', 'ball').fx.color || '#ffffff';
-      el.innerHTML = `<div class="ar">
+      el.innerHTML = `<div class="ar" style="--ratio:0.75">
         <div class="ar-top"><span class="tr-chip"><small>${esc(opp)}</small><b data-cpu>0</b></span><span class="tr-chip"><small>Você</small><b data-me>0</b></span></div>
-        <canvas class="ar-canvas" style="aspect-ratio:3/4" tabindex="0" aria-label="Pong. Arraste ou use as setas para mover a raquete."></canvas>
+        <canvas class="ar-canvas" tabindex="0" aria-label="Pong. Arraste ou use as setas para mover a raquete."></canvas>
         <div class="hx-overlay" data-overlay><b>Pong</b><span>Arraste (ou use ← →) para mover sua raquete, embaixo.<br>O primeiro a marcar ${WIN} pontos vence.</span><button class="btn btn-primary btn-lg" data-go>${ic('play')} Começar</button></div></div>`;
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, running = false, over = false, lastT = 0, me, cpu, px, cx, ball, serve = 0;
@@ -276,9 +276,9 @@
     mount(el, ctx) {
       const C = 10, R = 20, duel = ctx.mode === 'duel';
       const pal = AH.store.skin('tetra', 'blocks').fx.pal || TCOLORS;
-      el.innerHTML = `<div class="ar tt">
+      el.innerHTML = `<div class="ar tt" style="--ratio:0.5">
         <div class="ar-top"><span class="tr-chip"><small>Pontos</small><b data-score>0</b></span><span class="tr-chip"><small>Nível</small><b data-lv>1</b></span><span class="tr-chip"><small>Linhas</small><b data-lines>0</b></span></div>
-        <canvas class="ar-canvas" style="aspect-ratio:1/2;max-height:68vh;margin:0 auto" tabindex="0" aria-label="Blocos Caindo. Setas movem, seta para cima gira."></canvas>
+        <canvas class="ar-canvas" tabindex="0" aria-label="Blocos Caindo. Setas movem, seta para cima gira."></canvas>
         <div class="hx-overlay" data-overlay><b>Blocos Caindo</b><span>← → movem · ↑ gira · ↓ acelera · espaço derruba.<br>Complete linhas para pontuar.</span><button class="btn btn-primary btn-lg" data-go>${ic('play')} Começar</button></div></div>
         <div class="tt-pad" aria-label="Controles">
           <button class="btn" data-k="left" aria-label="Esquerda">${ic('arrow-left')}</button><button class="btn" data-k="rot" aria-label="Girar">${ic('rotate-cw')}</button><button class="btn" data-k="right" aria-label="Direita">${ic('arrow-right')}</button><button class="btn" data-k="down" aria-label="Descer">${ic('arrow-down')}</button><button class="btn btn-primary" data-k="drop" aria-label="Derrubar">${ic('chevrons-down')}</button>

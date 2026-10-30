@@ -34,9 +34,9 @@
      ===================================================== */
   const MAZE_TIERS = [
     { name: 'Fácil', from: 1, size: 7, color: '#1fb37a' },
-    { name: 'Médio', from: 16, size: 9, color: '#2a8bd8' },
-    { name: 'Difícil', from: 36, size: 11, color: '#f2a516' },
-    { name: 'Expert', from: 61, size: 13, color: '#ef4565' }
+    { name: 'Médio', from: 1001, size: 9, color: '#2a8bd8' },
+    { name: 'Difícil', from: 2001, size: 11, color: '#f2a516' },
+    { name: 'Expert', from: 3001, size: 13, color: '#ef4565' }
   ];
   function slide(grid, n, pos, dir) {
     const [dr, dc] = VEC[dir]; let r = (pos / n) | 0, c = pos % n; const path = [];
@@ -101,7 +101,7 @@
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
       const HUES = ['#ff5a7a', '#a855f7', '#22c55e', '#f59e0b', '#06b6d4', '#ef4444', '#3b82f6'];
-      let level = duel ? AH.duelLevel(MAZE_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('labirinto');
+      let level = duel ? AH.duelLevel(MAZE_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.startLevel('labirinto');
       let mz, ball, painted, moves, busy, done, color;
       el.innerHTML = L.levelShell({
         duel, board: '<div class="mz-wrap"><div class="mz-board" tabindex="0" aria-label="Labirinto. Deslize ou use as setas."></div></div>',
@@ -113,7 +113,7 @@
       function start(lvl = level) {
         level = lvl; mz = buildMaze(level); ball = mz.start; painted = new Set([ball]); moves = 0; busy = false; done = false;
         color = AH.store.skin('labirinto', 'paint').fx.paint || HUES[(level - 1) % HUES.length];
-        L.setTitle(el, MAZE_TIERS[L.tierIndex(MAZE_TIERS, level)], `Nível ${level}`);
+        L.setTitle(el, MAZE_TIERS[L.tierIndex(MAZE_TIERS, level)], `Nível ${L.numOf(level)}`);
         msg('Deslize para os lados para mover a bolinha.');
         build();
       }
@@ -148,7 +148,7 @@
           if (progress()) {
             done = true; board.classList.add('win'); msg('Labirinto pintado!');
             const tier = L.tierIndex(MAZE_TIERS, level);
-            setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${MAZE_TIERS[tier].name} · ${moves} movimentos`, next: duel ? null : 'Próxima fase' }), 700);
+            setTimeout(() => ctx.end({ result: 'win', score: duel ? L.numOf(level) : L.advance('labirinto', tier, level), extra: { tier }, summary: `Nível ${L.numOf(level)} · ${MAZE_TIERS[tier].name} · ${moves} movimentos`, next: duel ? null : 'Próxima fase' }), 700);
           }
         }, 50 * path.length + 70);
       }
@@ -156,8 +156,8 @@
       const onKey = e => { if (isModalOpen()) return; const d = KEYDIR[e.key]; if (d) { e.preventDefault(); move(d); } };
       document.addEventListener('keydown', onKey);
       $('[data-restart]').onclick = () => start(level);
-      el.querySelector('[data-levels]')?.addEventListener('click', () => L.levelPicker(MAZE_TIERS, L.unlockedOf('labirinto'), level, start, t => `${t.size}×${t.size}`));
-      start(level);
+      el.querySelector('[data-levels]')?.addEventListener('click', () => L.tierModal('labirinto', MAZE_TIERS, t => `${t.size}×${t.size}`, () => start(L.startLevel('labirinto'))));
+      L.begin(ctx, 'labirinto', MAZE_TIERS, t => `${t.size}×${t.size}`, start);
       return () => document.removeEventListener('keydown', onKey);
     }
   };
@@ -294,9 +294,9 @@
      ===================================================== */
   const SHELF_TIERS = [
     { name: 'Fácil', from: 1, shelves: 6, types: 5, layers: 2, color: '#1fb37a' },
-    { name: 'Médio', from: 16, shelves: 8, types: 8, layers: 3, color: '#2a8bd8' },
-    { name: 'Difícil', from: 36, shelves: 9, types: 11, layers: 3, color: '#f2a516' },
-    { name: 'Expert', from: 61, shelves: 12, types: 15, layers: 3, color: '#ef4565' }
+    { name: 'Médio', from: 1001, shelves: 8, types: 8, layers: 3, color: '#2a8bd8' },
+    { name: 'Difícil', from: 2001, shelves: 9, types: 11, layers: 3, color: '#f2a516' },
+    { name: 'Expert', from: 3001, shelves: 12, types: 15, layers: 3, color: '#ef4565' }
   ];
   const GOODS = ['🍎', '🍌', '🍇', '🍓', '🍊', '🥑', '🍉', '🍒', '🥥', '🍋', '🍑', '🥕', '🌽', '🍩', '🧁', '🍪', '🧃', '🍿', '🥐', '🧀'];
   function buildShelves(level) {
@@ -321,7 +321,7 @@
   AH.engines.prateleiras = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(SHELF_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('prateleiras');
+      let level = duel ? AH.duelLevel(SHELF_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.startLevel('prateleiras');
       let st, sel, left, secs, timer, done, combo;
       el.innerHTML = L.levelShell({
         duel, board: '<div class="sh-board" role="group" aria-label="Prateleiras"></div>',
@@ -335,14 +335,14 @@
       function start(lvl = level) {
         level = lvl; st = buildShelves(level); sel = null; left = st.total; done = false; combo = 0;
         secs = duel ? 9999 : st.limit;
-        L.setTitle(el, SHELF_TIERS[L.tierIndex(SHELF_TIERS, level)], `Nível ${level}`);
+        L.setTitle(el, SHELF_TIERS[L.tierIndex(SHELF_TIERS, level)], `Nível ${L.numOf(level)}`);
         msg('Toque num produto e depois numa prateleira com espaço.');
         clearInterval(timer);
         timer = setInterval(() => {
           if (done) return;
           secs--; $('[data-time]').textContent = duel ? '—' : fmtT(secs);
           if (!duel && secs <= 10) $('[data-time]').style.color = '#f87171';
-          if (!duel && secs <= 0) { done = true; clearInterval(timer); msg('O tempo acabou!'); setTimeout(() => ctx.end({ result: 'loss', summary: `Nível ${level} · faltaram ${left} produtos` }), 500); }
+          if (!duel && secs <= 0) { done = true; clearInterval(timer); msg('O tempo acabou!'); setTimeout(() => ctx.end({ result: 'loss', summary: `Nível ${L.numOf(level)} · faltaram ${left} produtos` }), 500); }
         }, 1000);
         $('[data-time]').textContent = duel ? '—' : fmtT(secs); $('[data-time]').style.color = '';
         draw();
@@ -373,7 +373,7 @@
         if (left > 0 || done) return;
         done = true; clearInterval(timer); msg('Prateleiras arrumadas!');
         const tier = L.tierIndex(SHELF_TIERS, level);
-        setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${SHELF_TIERS[tier].name} · sobrou ${fmtT(secs)}`, next: duel ? null : 'Próxima fase' }), 500);
+        setTimeout(() => ctx.end({ result: 'win', score: duel ? L.numOf(level) : L.advance('prateleiras', tier, level), extra: { tier }, summary: `Nível ${L.numOf(level)} · ${SHELF_TIERS[tier].name} · sobrou ${fmtT(secs)}`, next: duel ? null : 'Próxima fase' }), 500);
       }
       board.onclick = e => {
         if (done) return;
@@ -399,8 +399,8 @@
         check();
       };
       $('[data-restart]').onclick = () => start(level);
-      el.querySelector('[data-levels]')?.addEventListener('click', () => L.levelPicker(SHELF_TIERS, L.unlockedOf('prateleiras'), level, start, t => `${t.types} produtos`));
-      start(level);
+      el.querySelector('[data-levels]')?.addEventListener('click', () => L.tierModal('prateleiras', SHELF_TIERS, t => `${t.types} produtos`, () => start(L.startLevel('prateleiras'))));
+      L.begin(ctx, 'prateleiras', SHELF_TIERS, t => `${t.types} produtos`, start);
       return () => clearInterval(timer);
     }
   };
@@ -421,9 +421,9 @@
   ];
   const CUP_TIERS = [
     { name: 'Fácil', from: 1, belt: 6, cap: 10, color: '#1fb37a' },
-    { name: 'Médio', from: 16, belt: 5, cap: 8, color: '#2a8bd8' },
-    { name: 'Difícil', from: 36, belt: 4, cap: 6, color: '#f2a516' },
-    { name: 'Expert', from: 61, belt: 3, cap: 5, color: '#ef4565' }
+    { name: 'Médio', from: 1001, belt: 5, cap: 8, color: '#2a8bd8' },
+    { name: 'Difícil', from: 2001, belt: 4, cap: 6, color: '#f2a516' },
+    { name: 'Expert', from: 3001, belt: 3, cap: 5, color: '#ef4565' }
   ];
   function buildCups(level) {
     const t = CUP_TIERS[L.tierIndex(CUP_TIERS, level)], art = ART[(level - 1) % ART.length];
@@ -442,7 +442,7 @@
   AH.engines.copinhos = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(CUP_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('copinhos');
+      let level = duel ? AH.duelLevel(CUP_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.startLevel('copinhos');
       let lv, belt, tick, done, stall;
       el.innerHTML = L.levelShell({
         duel, board: `<div class="cp-wrap"><div class="cp-art"></div><div class="cp-belt"><span class="cp-count" data-belt>0/5</span><div class="cp-slots"></div></div><div class="cp-cols"></div></div>`,
@@ -456,7 +456,7 @@
       const paintable = p => !p.done && lv.pix.every(q => q.c !== p.c || q.r <= p.r || q.done);
       function start(lvl = level) {
         level = lvl; lv = buildCups(level); belt = []; done = false; stall = 0;
-        L.setTitle(el, CUP_TIERS[L.tierIndex(CUP_TIERS, level)], `Nível ${level} · ${lv.art.name}`);
+        L.setTitle(el, CUP_TIERS[L.tierIndex(CUP_TIERS, level)], `Nível ${L.numOf(level)} · ${lv.art.name}`);
         msg('Toque nos copinhos da frente para mandá-los para a esteira.');
         art.style.setProperty('--w', lv.w);
         art.innerHTML = Array.from({ length: lv.w * lv.h }, (_, i) => {
@@ -489,11 +489,11 @@
         if (lv.pix.every(p => p.done)) {
           done = true; clearInterval(tick); art.classList.add('win'); msg(`${lv.art.name} completo!`);
           const tier = L.tierIndex(CUP_TIERS, level);
-          return setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${CUP_TIERS[tier].name} · ${lv.art.name}`, next: duel ? null : 'Próxima fase' }), 700);
+          return setTimeout(() => ctx.end({ result: 'win', score: duel ? L.numOf(level) : L.advance('copinhos', tier, level), extra: { tier }, summary: `Nível ${L.numOf(level)} · ${CUP_TIERS[tier].name} · ${lv.art.name}`, next: duel ? null : 'Próxima fase' }), 700);
         }
         // esteira lotada e ninguém consegue pintar: fim de jogo
         if (!progressed && belt.length >= lv.belt) {
-          if (++stall > 14) { done = true; clearInterval(tick); msg('A esteira travou!'); setTimeout(() => ctx.end({ result: 'loss', summary: `Nível ${level} · a esteira lotou` }), 600); }
+          if (++stall > 14) { done = true; clearInterval(tick); msg('A esteira travou!'); setTimeout(() => ctx.end({ result: 'loss', summary: `Nível ${L.numOf(level)} · a esteira lotou` }), 600); }
           else if (stall === 3) msg('Esteira cheia! Nenhum copinho consegue pintar agora…');
         }
       }
@@ -504,8 +504,8 @@
         belt.push(col.shift()); msg(''); draw();
       };
       $('[data-restart]').onclick = () => start(level);
-      el.querySelector('[data-levels]')?.addEventListener('click', () => L.levelPicker(CUP_TIERS, L.unlockedOf('copinhos'), level, start, t => `esteira ${t.belt}`));
-      start(level);
+      el.querySelector('[data-levels]')?.addEventListener('click', () => L.tierModal('copinhos', CUP_TIERS, t => `esteira ${t.belt}`, () => start(L.startLevel('copinhos'))));
+      L.begin(ctx, 'copinhos', CUP_TIERS, t => `esteira ${t.belt}`, start);
       return () => clearInterval(tick);
     }
   };

@@ -28,19 +28,42 @@
     t.textContent = tier.name.toUpperCase(); t.style.background = tier.color;
     el.querySelector('[data-level]').textContent = label;
   }
-  function levelPicker(tiers, max, current, onPick, sub) {
-    const upto = Math.max(max + 4, (tiers[tiers.length - 1].from || 1) + 19);
+  /* ---------- progresso por dificuldade ---------- */
+  // Cada dificuldade tem a sua própria contagem de fases. As fases 1–20 são fixas (sempre o mesmo tabuleiro);
+  // depois delas cada fase é gerada na hora, sem fim. Número interno = dificuldade * 1000 + semente.
+  const localOf = new Map();
+  const virt = (t, n) => { const v = t * 1000 + (n <= 20 ? n : 21 + Math.floor(Math.random() * 970)); localOf.set(v, n); return v; };
+  const numOf = v => localOf.get(v) ?? (v % 1000);
+  const statOf = id => AH.store.user.stats[id];
+  const ensureStat = id => { const u = AH.store.user; return u.stats[id] || (u.stats[id] = { played: 0, wins: 0, best: null, last: 0 }); };
+  const curTier = id => statOf(id)?.tierSel || 0;
+  const progOf = (id, t) => statOf(id)?.prog?.[t] || 1;
+  const startLevel = id => virt(curTier(id), progOf(id, curTier(id)));
+  function advance(id, t, v) {
+    const s = ensureStat(id);
+    s.prog = s.prog || {}; s.prog[t] = Math.max(s.prog[t] || 1, numOf(v) + 1);
+    return Object.values(s.prog).reduce((a, x) => a + x - 1, 0); // total de fases vencidas = recorde
+  }
+  function tierModal(id, tiers, sub, onPick, first) {
+    const cur = curTier(id);
     AH.ui.modal({
-      title: 'Fases', wide: true,
-      body: tiers.map((t, ti) => {
-        const end = (tiers[ti + 1]?.from || upto + 1) - 1;
-        const nums = []; for (let n = t.from; n <= Math.min(end, upto); n++) nums.push(n);
-        return `<h3 class="pz-sec"><span class="pz-tier" style="background:${t.color}">${t.name.toUpperCase()}</span> <small class="faint">${sub(t)}</small></h3>
-          <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === current ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max && n !== t.from ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max && n !== t.from ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
-      }).join(''),
-      onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (b && !b.disabled) { AH.ui.close(); onPick(+b.dataset.lv); } })
+      title: 'Escolha a dificuldade', dismissable: !first,
+      body: `<div class="stack">${tiers.map((t, i) => `<button class="pz-tierpick ${i === cur ? 'cur' : ''}" data-pick="${i}"><span class="pz-tier" style="background:${t.color}">${t.name.toUpperCase()}</span><small class="faint">${sub(t)}</small><b>Fase ${progOf(id, i)}</b></button>`).join('')}
+        <p class="faint">As 20 primeiras fases de cada dificuldade são fixas; depois disso elas são geradas na hora, sem fim.</p>
+        ${first ? `<a class="btn btn-ghost" href="#/game/${id}">${ic('arrow-left')} Voltar</a>` : ''}</div>`,
+      onMount: m => m.addEventListener('click', e => {
+        const b = e.target.closest('[data-pick]'); if (!b) return;
+        ensureStat(id).tierSel = +b.dataset.pick; AH.store.save(); AH.ui.close(); onPick();
+      })
     });
   }
+  // Abre a escolha de dificuldade uma vez por visita à tela; "próxima fase" continua na mesma dificuldade
+  const begin = (ctx, id, tiers, sub, start) => {
+    if (ctx.mode === 'duel') return start();
+    const go = () => start(startLevel(id));
+    if (ctx.chosen) return go();
+    ctx.chosen = true; tierModal(id, tiers, sub, go, true);
+  };
   const actionBtn = (attr, icon, label, badge) => `<button class="pz-action" ${attr}><span>${ic(icon)}${badge ? `<i class="pz-badge" ${badge}>3</i>` : ''}</span>${label}</button>`;
 
   /* =====================================================
@@ -48,10 +71,10 @@
      ===================================================== */
   const NUT_TIERS = [
     { name: 'Fácil', from: 1, colors: 3, color: '#1fb37a' },
-    { name: 'Médio', from: 11, colors: 5, color: '#2a8bd8' },
-    { name: 'Difícil', from: 26, colors: 6, color: '#f2a516' },
-    { name: 'Muito difícil', from: 46, colors: 8, color: '#ff7a45' },
-    { name: 'Extra difícil', from: 71, colors: 9, color: '#ef4565' }
+    { name: 'Médio', from: 1001, colors: 5, color: '#2a8bd8' },
+    { name: 'Difícil', from: 2001, colors: 6, color: '#f2a516' },
+    { name: 'Muito difícil', from: 3001, colors: 8, color: '#ff7a45' },
+    { name: 'Extra difícil', from: 4001, colors: 9, color: '#ef4565' }
   ];
   function buildNuts(level) {
     const n = NUT_TIERS[tierIndex(NUT_TIERS, level)].colors;
@@ -69,7 +92,7 @@
     mount(el, ctx) {
       const COLORS = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#ec4899', '#a3e635'];
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(NUT_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlockedOf('porcas');
+      let level = duel ? AH.duelLevel(NUT_TIERS, ctx.difficulty ?? 1, ctx.seed) : startLevel('porcas');
       let bolts, sel, moves, undo, hints, done, arrived = null;
       el.innerHTML = levelShell({
         duel, board: '<div class="nb-board" role="group" aria-label="Parafusos"></div>',
@@ -82,7 +105,7 @@
 
       function start(lvl = level) {
         level = lvl; bolts = buildNuts(level); sel = null; moves = 0; undo = []; hints = 3; done = false; arrived = null;
-        setTitle(el, NUT_TIERS[tierIndex(NUT_TIERS, level)], `Nível ${level}`);
+        setTitle(el, NUT_TIERS[tierIndex(NUT_TIERS, level)], `Nível ${numOf(level)}`);
         msg('Toque num parafuso para soltar a porca do topo.'); draw();
       }
       function draw() {
@@ -116,7 +139,7 @@
         if (K.done(bolts)) {
           done = true; draw(); board.classList.add('win');
           const tier = tierIndex(NUT_TIERS, level);
-          setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${NUT_TIERS[tier].name} · ${moves} jogadas`, next: duel ? null : 'Próxima fase' }), 700);
+          setTimeout(() => ctx.end({ result: 'win', score: duel ? numOf(level) : advance('porcas', tier, level), extra: { tier }, summary: `Nível ${numOf(level)} · ${NUT_TIERS[tier].name} · ${moves} jogadas`, next: duel ? null : 'Próxima fase' }), 700);
         }
       };
       $('[data-undo]').onclick = () => { if (undo.length && !done) { bolts = undo.pop(); sel = null; draw(); } };
@@ -130,8 +153,8 @@
         board.querySelector(`[data-b="${i}"]`).classList.add('hint'); board.querySelector(`[data-b="${j}"]`).classList.add('hint');
         msg(`Dica: mova do parafuso ${i + 1} para o ${j + 1}.`);
       };
-      el.querySelector('[data-levels]')?.addEventListener('click', () => levelPicker(NUT_TIERS, unlockedOf('porcas'), level, start, t => `${t.colors} cores`));
-      start(level);
+      el.querySelector('[data-levels]')?.addEventListener('click', () => tierModal('porcas', NUT_TIERS, t => `${t.colors} cores`, () => start(startLevel('porcas'))));
+      begin(ctx, 'porcas', NUT_TIERS, t => `${t.colors} cores`, start);
       return () => {};
     }
   };
@@ -141,9 +164,9 @@
      ===================================================== */
   const CAR_TIERS = [
     { name: 'Fácil', from: 1, cars: 7, min: 3, max: 6, color: '#1fb37a' },
-    { name: 'Médio', from: 16, cars: 9, min: 7, max: 11, color: '#2a8bd8' },
-    { name: 'Difícil', from: 36, cars: 11, min: 12, max: 17, color: '#f2a516' },
-    { name: 'Expert', from: 61, cars: 12, min: 18, max: 60, color: '#ef4565' }
+    { name: 'Médio', from: 1001, cars: 9, min: 7, max: 11, color: '#2a8bd8' },
+    { name: 'Difícil', from: 2001, cars: 11, min: 12, max: 17, color: '#f2a516' },
+    { name: 'Expert', from: 3001, cars: 12, min: 18, max: 60, color: '#ef4565' }
   ];
   const N = 6, EXIT_ROW = 2;
   function occ(cars, skip) {
@@ -264,7 +287,7 @@
     mount(el, ctx) {
       const PAL = ['#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#eab308', '#0ea5e9'];
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(CAR_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlockedOf('carros');
+      let level = duel ? AH.duelLevel(CAR_TIERS, ctx.difficulty ?? 1, ctx.seed) : startLevel('carros');
       let cars, moves, undo, hints, done, focusCar = 0;
       el.innerHTML = levelShell({
         duel, board: `<div class="ub-wrap"><div class="ub-board" tabindex="-1" aria-label="Estacionamento 6 por 6. Arraste os veículos ou selecione e use as setas."><span class="ub-exit" aria-hidden="true">${ic('arrow-right')}</span></div></div>`,
@@ -276,7 +299,7 @@
 
       function start(lvl = level) {
         level = lvl; cars = buildCars(level); moves = 0; undo = []; hints = 3; done = false;
-        setTitle(el, CAR_TIERS[tierIndex(CAR_TIERS, level)], `Nível ${level}`);
+        setTitle(el, CAR_TIERS[tierIndex(CAR_TIERS, level)], `Nível ${numOf(level)}`);
         msg('Arraste os veículos para liberar a saída do carro vermelho.');
         build(); sync();
       }
@@ -319,7 +342,7 @@
         hero.classList.add('leaving');
         const tier = tierIndex(CAR_TIERS, level);
         msg('Saiu da vaga!');
-        setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${CAR_TIERS[tier].name} · ${moves} movimentos`, next: duel ? null : 'Próxima fase' }), 800);
+        setTimeout(() => ctx.end({ result: 'win', score: duel ? numOf(level) : advance('carros', tier, level), extra: { tier }, summary: `Nível ${numOf(level)} · ${CAR_TIERS[tier].name} · ${moves} movimentos`, next: duel ? null : 'Próxima fase' }), 800);
       }
 
       // Arrastar com mouse ou dedo, encaixando nas casas
@@ -372,8 +395,8 @@
         board.querySelector(`[data-car="${i}"]`).classList.add('hint');
         msg(`Dica: mova o veículo destacado ${p > cur ? (c.h ? 'para a direita' : 'para baixo') : (c.h ? 'para a esquerda' : 'para cima')}.`);
       };
-      el.querySelector('[data-levels]')?.addEventListener('click', () => levelPicker(CAR_TIERS, unlockedOf('carros'), level, start, t => `${t.min}+ movimentos`));
-      start(level);
+      el.querySelector('[data-levels]')?.addEventListener('click', () => tierModal('carros', CAR_TIERS, t => `${t.min}+ movimentos`, () => start(startLevel('carros'))));
+      begin(ctx, 'carros', CAR_TIERS, t => `${t.min}+ movimentos`, start);
       return () => {};
     }
   };
@@ -603,9 +626,8 @@
         const pg = g.createLinearGradient(cx - RI, 0, cx + RI, 0);
         pg.addColorStop(0, shade(theme.pole, -0.12)); pg.addColorStop(0.35, theme.pole); pg.addColorStop(1, shade(theme.pole, -0.22));
         g.fillStyle = pg; g.fillRect(cx - RI * 0.92, 0, RI * 1.84, H);
-        for (let i = vis.length - 1; i >= 0; i--) drawPlat(vis[i], true);
-        // respingos de tinta na plataforma
-        splats.forEach(s => {
+        const drawSplats = y => splats.forEach(s => {
+          if (s.y !== y) return;
           const a = rad((((s.a + rot) % 360) + 360) % 360); if (Math.sin(a) <= 0.05) return;
           const r = midR(), x = cx + Math.cos(a) * r, y = s.y - camY + Math.sin(a) * r * K3;
           g.globalAlpha = Math.min(1, s.life * 1.6) * 0.85; g.fillStyle = s.c;
@@ -613,6 +635,7 @@
           for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + Math.cos(k * 1.7) * BR * 1.6 * s.s, y + Math.sin(k * 1.7) * BR * 0.5, BR * 0.22, 0, Math.PI * 2); g.fill(); }
           g.globalAlpha = 1;
         });
+        const drawBall = () => {
         // bolinha: rastro, sombra, corpo com squash & stretch, brilho
         const bx = cx, by = ballY - camY + midR() * K3;
         if (!dead) {
@@ -639,6 +662,15 @@
           g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(-BR * 0.38, -BR * 0.42, BR * 0.28, BR * 0.18, -0.6, 0, Math.PI * 2); g.fill();
           g.restore();
         }
+        };
+        // da plataforma mais baixa para a mais alta; a bolinha entra antes das plataformas que já ficaram acima dela,
+        // senão ela aparece por cima do topo de uma plataforma pela qual acabou de cair
+        let ballDone = false;
+        for (let i = vis.length - 1; i >= 0; i--) {
+          if (!ballDone && vis[i].y < ballY) { drawBall(); ballDone = true; }
+          drawPlat(vis[i], true); drawSplats(vis[i].y);
+        }
+        if (!ballDone) drawBall();
         // partículas e pontos flutuantes
         parts.forEach(q => { g.globalAlpha = Math.max(0, q.life); g.fillStyle = q.color; g.beginPath(); g.arc(q.x, q.y, q.r, 0, Math.PI * 2); g.fill(); });
         g.globalAlpha = 1;
@@ -870,5 +902,5 @@
       return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
     }
   };
-  AH.levelKit = { levelShell, setTitle, levelPicker, actionBtn, tierIndex, unlockedOf };
+  AH.levelKit = { levelShell, setTitle, tierModal, begin, startLevel, advance, numOf, actionBtn, tierIndex, unlockedOf };
 })();

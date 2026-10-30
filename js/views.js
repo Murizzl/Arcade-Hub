@@ -1040,9 +1040,10 @@
           const action = on ? `<span class="tag tag-success">${ic('check')} Equipado</span>`
             : own ? `<button class="btn btn-sm" data-equip="${it.id}">Equipar</button>`
             : it.prestige ? `<span class="tag">${ic('lock')} Prestígio ${it.prestige}</span>`
+            : it.ach ? `<a class="tag" href="#/achievements">${ic('lock')} Conquista</a>`
             : `<button class="btn btn-sm btn-primary" data-buy="${it.id}" ${S.user.coins < it.price ? 'disabled title="Moedas insuficientes"' : ''}>${ic('star')} ${fmt(it.price)}</button>`;
           return `<div class="shop-item ${on ? 'on' : ''}"><div class="shop-prev">${preview(tab, it)}</div>
-            <b>${esc(itemName(tab, it))}</b><small class="faint">${it.prestige ? 'Exclusivo de prestígio' : !it.price ? 'Grátis' : own ? 'Na sua coleção' : 'Cosmético'}</small>${action}</div>`;
+            <b>${esc(itemName(tab, it))}</b><small class="faint">${it.prestige ? 'Exclusivo de prestígio' : it.ach ? (own ? 'Conquistado' : AH.achievements.find(a => a.id === it.ach)?.desc || 'Exclusivo de conquista') : !it.price ? 'Grátis' : own ? 'Na sua coleção' : 'Cosmético'}</small>${action}</div>`;
         }).join('')}</div>
         <p class="faint" style="margin-top:14px">${ic('info', 'style="width:14px;height:14px;vertical-align:-2px"')} Ganhe moedas jogando, vencendo duelos e completando desafios. Moedas não têm valor real.</p>`;
       U.refreshIcons();

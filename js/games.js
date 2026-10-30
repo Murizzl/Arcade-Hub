@@ -292,10 +292,10 @@
   // Fases infinitas e determinísticas (mesma fase = mesmo tabuleiro), em 5 dificuldades.
   const POTION_TIERS = [
     { name: 'Fácil',         from: 1,  colors: 4,  color: '#1fb37a' },
-    { name: 'Médio',         from: 11, colors: 5,  color: '#2a8bd8' },
-    { name: 'Difícil',       from: 26, colors: 7,  color: '#f2a516' },
-    { name: 'Muito difícil', from: 46, colors: 9,  color: '#ff7a45' },
-    { name: 'Extra difícil', from: 71, colors: 10, color: '#ef4565' }
+    { name: 'Médio',         from: 1001, colors: 5,  color: '#2a8bd8' },
+    { name: 'Difícil',       from: 2001, colors: 7,  color: '#f2a516' },
+    { name: 'Muito difícil', from: 3001, colors: 9,  color: '#ff7a45' },
+    { name: 'Extra difícil', from: 4001, colors: 10, color: '#ef4565' }
   ];
   // fase aleatória dentro da dificuldade escolhida no duelo
   const duelLevel = (tiers, i, seed) => { const t = tiers[Math.min(i, tiers.length - 1)], span = (tiers[i + 1]?.from || t.from + 20) - t.from; return t.from + Math.floor((seed != null ? mulberry(seed)() : Math.random()) * span); };
@@ -360,8 +360,8 @@
     mount(el, ctx) {
       const PALETTE = ['#ef0f3a', '#0a84d8', '#ffd000', '#13a81a', '#ff38d2', '#ff7a00', '#2fe0d0', '#b04a2c', '#a2d20a', '#d9a882'];
       const duel = ctx.mode === 'duel';
-      const unlocked = () => AH.store.user?.stats.pocoes?.unlocked || 1;
-      let level = duel ? duelLevel(POTION_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlocked();
+      const LK = AH.levelKit, SUB = t => `${t.colors} cores`;
+      let level = duel ? duelLevel(POTION_TIERS, ctx.difficulty ?? 1, ctx.seed) : LK.startLevel('pocoes');
       let tubes, sel, moves, undo, hints, busy, done;
 
       el.innerHTML = `<div class="pz">
@@ -389,7 +389,7 @@
         const t = POTION_TIERS[tierOf(level)];
         $('[data-tier]').textContent = t.name.toUpperCase();
         $('[data-tier]').style.background = t.color;
-        $('[data-level]').textContent = `Nível ${level}`;
+        $('[data-level]').textContent = `Nível ${LK.numOf(level)}`;
         msg('Toque em um frasco e depois no frasco de destino.');
         draw();
       }
@@ -448,9 +448,9 @@
         msg('Fase concluída!');
         board.classList.add('win');
         setTimeout(() => ctx.end({
-          result: 'win', score: level,
-          extra: duel ? { tier } : { tier, unlocked: level + 1 },
-          summary: `Nível ${level} · ${POTION_TIERS[tier].name} · ${moves} jogadas`,
+          result: 'win', score: duel ? LK.numOf(level) : LK.advance('pocoes', tier, level),
+          extra: { tier },
+          summary: `Nível ${LK.numOf(level)} · ${POTION_TIERS[tier].name} · ${moves} jogadas`,
           next: duel ? null : 'Próxima fase'
         }), 650);
       }
@@ -476,22 +476,9 @@
         msg(`Dica: despeje o frasco ${i + 1} no frasco ${j + 1}.`);
       };
       const levelsBtn = $('[data-levels]');
-      if (levelsBtn) levelsBtn.onclick = () => {
-        const max = unlocked();
-        const upto = Math.max(max + 4, 90);
-        AH.ui.modal({
-          title: 'Fases', wide: true,
-          body: POTION_TIERS.map((t, ti) => {
-            const end = (POTION_TIERS[ti + 1]?.from || upto + 1) - 1;
-            const nums = []; for (let n = t.from; n <= Math.min(end, upto); n++) nums.push(n);
-            return `<h3 class="pz-sec"><span class="pz-tier" style="background:${t.color}">${t.name.toUpperCase()}</span> <small class="faint">${t.colors} cores</small></h3>
-              <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === level ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max && n !== t.from ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max && n !== t.from ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
-          }).join(''),
-          onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (b && !b.disabled) { AH.ui.close(); start(+b.dataset.lv); } })
-        });
-      };
+      if (levelsBtn) levelsBtn.onclick = () => LK.tierModal('pocoes', POTION_TIERS, SUB, () => start(LK.startLevel('pocoes')));
       if (duel) $('[data-restart]').hidden = true;
-      start(level);
+      LK.begin(ctx, 'pocoes', POTION_TIERS, SUB, start);
       return () => {};
     }
   };

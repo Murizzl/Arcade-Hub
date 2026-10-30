@@ -125,11 +125,12 @@
     const item = catalog(kind).find(x => x.id === id);
     if (!item) return false;
     if (item.prestige) return (state.user.prestige || 0) >= item.prestige;
+    if (item.ach) return !!state.user.achievements[item.ach]; // título liberado por conquista
     return !item.price || state.user.inventory[kind].includes(id);
   }
   function buy(kind, id) {
     const u = state.user, item = catalog(kind).find(x => x.id === id);
-    if (!item || item.prestige || owns(kind, id)) return { ok: false, error: 'Item indisponível.' };
+    if (!item || item.prestige || item.ach || owns(kind, id)) return { ok: false, error: 'Item indisponível.' };
     if (u.coins < item.price) return { ok: false, error: `Faltam ${item.price - u.coins} moedas.` };
     u.coins -= item.price;
     u.inventory[kind].push(id);

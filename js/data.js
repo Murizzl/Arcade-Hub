@@ -203,6 +203,31 @@
     { id: 'daily_7', name: 'Constância', desc: 'Complete 7 desafios.', icon: 'calendar-check', xp: 200, check: s => [s.user.challengesDone, 7] }
   ];
 
+  // ---------- Conquistas e títulos de cada jogo (gerados) ----------
+  // Cada jogo ganha: "Aficionado" (partidas), "Campeão" (vitórias), um marco de recorde e um título exclusivo
+  // que é liberado por uma delas (aparece na loja como bloqueado até a conquista).
+  (function () {
+    const HIGH = { '2048': 4000, snake: 200, flappy: 20, tetra: 3000, calculo: 200, helix: 500, empilhar: 40, territorio: 400, pocoes: 30, porcas: 30, carros: 30, labirinto: 30, prateleiras: 30, copinhos: 30 };
+    const LOW = { sudoku: 600, minado: 90, kakuro: 300, mahjong: 300, paciencia: 420, deslizante: 60, lights: 20 };
+    const VERSUS_GAMES = ['velha', 'ppt', 'xadrez', 'damas', 'conecta4', 'pong', 'batalha', 'domino', 'gamao', 'blackjack', 'cores'];
+    const unit = id => ({ '2048': 'pontos', snake: 'pontos', flappy: 'canos', tetra: 'pontos', calculo: 'pontos', helix: 'pontos', empilhar: 'blocos', territorio: 'de área (400 = 40%)', sudoku: 'segundos', minado: 'segundos', kakuro: 'segundos', mahjong: 'segundos', paciencia: 'segundos', deslizante: 'movimentos', lights: 'toques' }[id] || 'fases vencidas');
+    AH.games.filter(g => g.playable).forEach(g => {
+      const st = s => s.user.stats[g.id] || {};
+      const list = [];
+      list.push({ id: g.id + '_play', name: `Aficionado: ${g.name}`, desc: `Jogue 10 partidas de ${g.name}.`, icon: g.icon, xp: 60, check: s => [Math.min(st(s).played || 0, 10), 10] });
+      if (!g.noWins) {
+        const n = VERSUS_GAMES.includes(g.id) ? 10 : 5;
+        list.push({ id: g.id + '_win', name: `Campeão: ${g.name}`, desc: `Vença ${n} partidas de ${g.name}.`, icon: 'trophy', xp: 100, check: s => [Math.min(st(s).wins || 0, n), n] });
+      }
+      if (HIGH[g.id]) list.push({ id: g.id + '_rec', name: `Lenda: ${g.name}`, desc: `Chegue a ${HIGH[g.id]} ${unit(g.id)} em ${g.name}.`, icon: 'medal', xp: 150, check: s => [Math.min(st(s).best || 0, HIGH[g.id]), HIGH[g.id]] });
+      if (LOW[g.id]) list.push({ id: g.id + '_rec', name: `Velocista: ${g.name}`, desc: `Termine ${g.name} em até ${LOW[g.id]} ${unit(g.id)}.`, icon: 'timer', xp: 150, check: s => [st(s).best != null && st(s).best <= LOW[g.id] ? 1 : 0, 1] });
+      AH.achievements.push(...list);
+      const unlock = list[list.length - 1];
+      AH.config.titles.push({ id: 't_' + g.id, name: (HIGH[g.id] || LOW[g.id] ? 'Mestre ' : 'Craque ') + (g.name.length > 14 ? g.name.split(' ')[0] : g.name), price: 0, ach: unlock.id });
+    });
+  })();
+
+
   // ---------- Desafios ----------
   // metric: chave de contador no estado do desafio
   AH.challengeTemplates = {
