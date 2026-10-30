@@ -58,9 +58,11 @@
     document.title = `${TITLES[name] || 'Arcade Hub'} · Arcade Hub`;
     if (current !== name + params.join('/')) { window.scrollTo(0, 0); current = name + params.join('/'); }
     renderShell(name);
+    U.countUp(el);
     U.refreshIcons();
   }
 
+  let lastCoins = null;
   function renderShell(active) {
     if (!S.user || !S.state.session) return;
     const u = S.user;
@@ -72,11 +74,13 @@
     document.getElementById('sideNav').innerHTML = NAV.map(n => `<a href="#/${n.r}" class="side-link ${act === n.r ? 'active' : ''}" ${act === n.r ? 'aria-current="page"' : ''}>${ic(n.icon)}<span>${n.label}</span>${n.r === 'friends' && reqs ? '<span class="badge-dot" aria-label="solicitações pendentes"></span>' : ''}</a>`).join('');
     document.querySelector('.side-footer .side-link').classList.toggle('active', act === 'settings');
     document.getElementById('bottomNav').innerHTML = NAV.filter(n => n.mobile).map(n => `<a href="#/${n.r}" class="${act === n.r ? 'active' : ''}" ${act === n.r ? 'aria-current="page"' : ''}>${ic(n.icon)}<span>${n.mobile}</span></a>`).join('');
+    const coinsUp = lastCoins != null && u.coins > lastCoins; lastCoins = u.coins;
     document.getElementById('topActions').innerHTML = `
       <button class="icon-btn mobile-search" data-act="search" aria-label="Buscar">${ic('search')}</button>
       <button class="coin-pill" data-act="coins" aria-label="${fmt(u.coins)} moedas — abrir loja"><span class="coin">${ic('star')}</span>${fmt(u.coins)}</button>
       <button class="icon-btn" data-act="notifs" aria-label="Notificações${unread ? `, ${unread} não lidas` : ''}">${ic('bell')}${unread ? `<span class="count">${unread}</span>` : ''}</button>
       <button class="user-chip" data-act="me" aria-label="Meu perfil">${avatar(u, 'sm')}<span class="uc-name">${esc(u.username)}<small>Nível ${u.level}</small></span></button>`;
+    if (coinsUp) document.querySelector('#topActions .coin-pill')?.classList.add('bump');
   }
 
   function applyTheme() {

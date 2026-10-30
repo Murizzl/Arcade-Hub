@@ -1044,3 +1044,136 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .sh-shelf { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px 10px; }
 .sh-back { position: static; height: 20px; overflow: hidden; filter: grayscale(.7) brightness(.6); opacity: .55; }
 .sh-back span { font-size: .95rem; transform: none; line-height: 20px; }
+
+/* =========================================================
+   Animações extras
+   ========================================================= */
+@keyframes cardIn { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+@keyframes barIn { from { transform: scaleX(0); } }
+@keyframes ruleIn { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes coinFlip { 50% { transform: rotateY(180deg) scale(1.3); } }
+@keyframes pillPop { 40% { transform: scale(1.12); } }
+@keyframes iconPop { 0% { transform: scale(.3) rotate(-25deg); opacity: 0; } 70% { transform: scale(1.12) rotate(4deg); } }
+@keyframes burstIn { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: 1; transform: scale(1.1); } 40% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.06) translateY(-20px); } }
+@keyframes raysSpin { to { transform: rotate(360deg); } }
+@keyframes floatY { 50% { transform: translateY(-6px); } }
+@keyframes shine { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(220%) skewX(-20deg); } }
+.game-grid > *, .game-row > *, .ach-grid > *, .shop-grid > *, .mode-grid > *, .quick-stats > *, .div-cards > * { animation: cardIn .45s var(--ease) backwards; }
+.progress > span { transform-origin: left center; animation: barIn 1s var(--ease) both; }
+.xp-rules > * { animation: ruleIn .35s var(--ease) both; }
+.modal-ic { animation: iconPop .5s var(--ease) both; }
+.coin-pill.bump { animation: pillPop .5s var(--ease); }
+.coin-pill.bump .coin { animation: coinFlip .6s var(--ease); }
+.brand-mark { transition: transform .3s var(--ease); }
+.brand:hover .brand-mark { transform: rotate(6deg) scale(1.06); }
+.thumb-art { animation: floatY 3.2s ease-in-out infinite; }
+.game-card:hover .thumb-art { animation-play-state: paused; }
+.btn-primary, .btn-accent, .btn-success { position: relative; overflow: hidden; }
+.btn-primary::after, .btn-accent::after, .btn-success::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); transform: translateX(-120%) skewX(-20deg); pointer-events: none; }
+.btn-primary:hover::after, .btn-accent:hover::after, .btn-success:hover::after { animation: shine .7s ease-out; }
+.side-link svg, .bottom-nav svg { transition: transform .2s var(--ease); }
+.side-link:hover svg { transform: scale(1.15) rotate(-6deg); }
+.bottom-nav a.active svg { animation: iconPop .4s var(--ease); }
+.lvl-burst { position: fixed; inset: 0; z-index: 180; display: grid; place-items: center; pointer-events: none; }
+.lvl-burst .lb-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: burstIn 2.2s var(--ease) forwards; }
+.lvl-burst .lb-rays { position: absolute; width: 320px; height: 320px; border-radius: 50%; background: repeating-conic-gradient(rgba(255,214,0,.35) 0 10deg, transparent 10deg 20deg); animation: raysSpin 6s linear infinite; mask: radial-gradient(circle, #000 20%, transparent 70%); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); }
+.lvl-burst small { position: relative; font-family: var(--font-display); font-weight: 700; letter-spacing: .2em; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.lvl-burst b { position: relative; width: 120px; height: 120px; display: grid; place-items: center; border-radius: 34px; background: var(--primary); color: #fff; font-family: var(--font-display); font-size: 3.4rem; box-shadow: 0 8px 0 var(--primary-600), 0 20px 50px rgba(0,0,0,.35); transform: rotate(-6deg); }
+.lvl-burst span { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.game-grid > :nth-child(1), .game-row > :nth-child(1), .ach-grid > :nth-child(1), .shop-grid > :nth-child(1), .mode-grid > :nth-child(1), .quick-stats > :nth-child(1), .div-cards > :nth-child(1) { animation-delay: 0.000s; }
+.game-grid > :nth-child(2), .game-row > :nth-child(2), .ach-grid > :nth-child(2), .shop-grid > :nth-child(2), .mode-grid > :nth-child(2), .quick-stats > :nth-child(2), .div-cards > :nth-child(2) { animation-delay: 0.035s; }
+.game-grid > :nth-child(3), .game-row > :nth-child(3), .ach-grid > :nth-child(3), .shop-grid > :nth-child(3), .mode-grid > :nth-child(3), .quick-stats > :nth-child(3), .div-cards > :nth-child(3) { animation-delay: 0.070s; }
+.game-grid > :nth-child(4), .game-row > :nth-child(4), .ach-grid > :nth-child(4), .shop-grid > :nth-child(4), .mode-grid > :nth-child(4), .quick-stats > :nth-child(4), .div-cards > :nth-child(4) { animation-delay: 0.105s; }
+.game-grid > :nth-child(5), .game-row > :nth-child(5), .ach-grid > :nth-child(5), .shop-grid > :nth-child(5), .mode-grid > :nth-child(5), .quick-stats > :nth-child(5), .div-cards > :nth-child(5) { animation-delay: 0.140s; }
+.game-grid > :nth-child(6), .game-row > :nth-child(6), .ach-grid > :nth-child(6), .shop-grid > :nth-child(6), .mode-grid > :nth-child(6), .quick-stats > :nth-child(6), .div-cards > :nth-child(6) { animation-delay: 0.175s; }
+.game-grid > :nth-child(7), .game-row > :nth-child(7), .ach-grid > :nth-child(7), .shop-grid > :nth-child(7), .mode-grid > :nth-child(7), .quick-stats > :nth-child(7), .div-cards > :nth-child(7) { animation-delay: 0.210s; }
+.game-grid > :nth-child(8), .game-row > :nth-child(8), .ach-grid > :nth-child(8), .shop-grid > :nth-child(8), .mode-grid > :nth-child(8), .quick-stats > :nth-child(8), .div-cards > :nth-child(8) { animation-delay: 0.245s; }
+.game-grid > :nth-child(9), .game-row > :nth-child(9), .ach-grid > :nth-child(9), .shop-grid > :nth-child(9), .mode-grid > :nth-child(9), .quick-stats > :nth-child(9), .div-cards > :nth-child(9) { animation-delay: 0.280s; }
+.game-grid > :nth-child(10), .game-row > :nth-child(10), .ach-grid > :nth-child(10), .shop-grid > :nth-child(10), .mode-grid > :nth-child(10), .quick-stats > :nth-child(10), .div-cards > :nth-child(10) { animation-delay: 0.315s; }
+.game-grid > :nth-child(11), .game-row > :nth-child(11), .ach-grid > :nth-child(11), .shop-grid > :nth-child(11), .mode-grid > :nth-child(11), .quick-stats > :nth-child(11), .div-cards > :nth-child(11) { animation-delay: 0.350s; }
+.game-grid > :nth-child(12), .game-row > :nth-child(12), .ach-grid > :nth-child(12), .shop-grid > :nth-child(12), .mode-grid > :nth-child(12), .quick-stats > :nth-child(12), .div-cards > :nth-child(12) { animation-delay: 0.385s; }
+.game-grid > :nth-child(13), .game-row > :nth-child(13), .ach-grid > :nth-child(13), .shop-grid > :nth-child(13), .mode-grid > :nth-child(13), .quick-stats > :nth-child(13), .div-cards > :nth-child(13) { animation-delay: 0.420s; }
+.game-grid > :nth-child(14), .game-row > :nth-child(14), .ach-grid > :nth-child(14), .shop-grid > :nth-child(14), .mode-grid > :nth-child(14), .quick-stats > :nth-child(14), .div-cards > :nth-child(14) { animation-delay: 0.455s; }
+.game-grid > :nth-child(15), .game-row > :nth-child(15), .ach-grid > :nth-child(15), .shop-grid > :nth-child(15), .mode-grid > :nth-child(15), .quick-stats > :nth-child(15), .div-cards > :nth-child(15) { animation-delay: 0.490s; }
+.game-grid > :nth-child(16), .game-row > :nth-child(16), .ach-grid > :nth-child(16), .shop-grid > :nth-child(16), .mode-grid > :nth-child(16), .quick-stats > :nth-child(16), .div-cards > :nth-child(16) { animation-delay: 0.525s; }
+.xp-rules > :nth-child(1) { animation-delay: 0.15s; }
+.xp-rules > :nth-child(2) { animation-delay: 0.27s; }
+.xp-rules > :nth-child(3) { animation-delay: 0.39s; }
+.xp-rules > :nth-child(4) { animation-delay: 0.51s; }
+.xp-rules > :nth-child(5) { animation-delay: 0.63s; }
+.xp-rules > :nth-child(6) { animation-delay: 0.75s; }
+.xp-rules > :nth-child(7) { animation-delay: 0.87s; }
+.xp-rules > :nth-child(8) { animation-delay: 0.99s; }
+
+/* =========================================================
+   Animações dentro dos jogos
+   ========================================================= */
+/* 2048 */
+.g2048 .tile { box-shadow: inset 0 -4px 0 rgba(0,0,0,.08); }
+.g2048 .tile.merged { animation: bump .22s var(--ease); box-shadow: 0 0 0 3px rgba(255,255,255,.55), 0 0 18px rgba(237,197,63,.6); }
+.score-float { position: fixed; z-index: 60; pointer-events: none; font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 1.2rem; animation: scoreFloat .9s ease-out forwards; }
+@keyframes scoreFloat { to { transform: translateY(-36px); opacity: 0; } }
+
+/* Jogo da Velha */
+.ttt button { transition: background .15s, transform .12s var(--ease); }
+.ttt button:not(:disabled):hover { transform: scale(1.04); }
+.ttt button span { animation: tttIn .35s cubic-bezier(.3,1.6,.5,1); display: inline-block; }
+.ttt button.win { background: var(--success-soft); animation: winGlow .8s ease-in-out infinite alternate; }
+.ttt button.win span { animation: winSpin .6s var(--ease); }
+@keyframes tttIn { from { transform: scale(0) rotate(-90deg); opacity: 0; } }
+@keyframes winGlow { to { box-shadow: 0 0 0 4px var(--success), 0 0 24px rgba(31,179,122,.45); } }
+@keyframes winSpin { 50% { transform: scale(1.35) rotate(10deg); } }
+
+/* Memória */
+.mem-card:not(.done):not(.flip):hover .mem-inner { transform: translateY(-3px) rotateX(8deg); }
+.mem-card.done .mem-inner { animation: memMatch .5s var(--ease); }
+.mem-card.done .mem-front { box-shadow: 0 0 0 3px var(--success) inset; }
+.mem-card.nope .mem-inner { animation: memNope .4s ease-in-out; }
+@keyframes memMatch { 0% { transform: rotateY(180deg) scale(1); } 45% { transform: rotateY(180deg) scale(1.15); } 100% { transform: rotateY(180deg) scale(1); } }
+@keyframes memNope { 0%, 100% { transform: rotateY(180deg) translateX(0); } 25% { transform: rotateY(180deg) translateX(-6px); } 75% { transform: rotateY(180deg) translateX(6px); } }
+
+/* Pedra, Papel e Tesoura */
+.rps-hand { transition: transform .25s var(--ease), filter .25s, background .25s; }
+.rps-hand.won { transform: scale(1.18); background: var(--success-soft); box-shadow: 0 0 0 4px var(--success); }
+.rps-hand.lost { transform: scale(.88) rotate(-8deg); filter: grayscale(.8); opacity: .7; }
+.rps-hand.wait { animation: floatY 1s ease-in-out infinite; }
+.rps-choices .btn.picked { background: var(--primary); color: #fff; transform: translateY(-4px); }
+
+/* Poções e Porcas: frasco/parafuso completo brilha */
+.pz-tube.full .pz-glass { animation: tubeDone .9s ease-in-out infinite alternate; }
+.pz-tube.full .pz-liquid::after { content: ""; position: absolute; left: 25%; bottom: 10%; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.7); animation: bubble 1.6s ease-in infinite; }
+.pz-tube.full .pz-liquid::before { content: ""; position: absolute; left: 60%; bottom: 5%; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.6); animation: bubble 2.1s .5s ease-in infinite; }
+.pz-tube.sel { transform: translateY(-18px) rotate(-3deg); }
+.nb-bolt.full .nb-nuts { animation: tubeLift .8s ease-in-out infinite alternate; }
+@keyframes tubeDone { to { box-shadow: 0 0 0 2px rgba(127,240,176,.5), 0 0 22px rgba(127,240,176,.45); } }
+@keyframes bubble { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-110px); opacity: 0; } }
+@keyframes tubeLift { to { transform: translateY(-3px); } }
+
+/* Saia da Vaga: encaixe com leve elástico e sombra ao arrastar */
+.ub-car { transition: left .24s cubic-bezier(.3,1.4,.5,1), top .24s cubic-bezier(.3,1.4,.5,1); }
+.ub-car.drag .ub-body { box-shadow: inset 0 -5px 0 rgba(0,0,0,.22), inset 0 3px 0 rgba(255,255,255,.25), 0 10px 18px rgba(0,0,0,.45); transform: scale(1.03); }
+.ub-car .ub-body { transition: transform .15s, box-shadow .15s; }
+.ub-car.hero .ub-body::after { content: ""; position: absolute; inset: -4px; border-radius: 12px; border: 2px solid rgba(255,255,255,.5); animation: heroPulse 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes heroPulse { 50% { opacity: .2; transform: scale(1.04); } }
+
+/* Sudoku */
+.sd-cell.pop { animation: sdPop .3s var(--ease); }
+.sd-cell.flash { animation: sdFlash .7s ease-out; }
+.sd-cell.wrong { animation: sdShake .35s ease-in-out; }
+@keyframes sdPop { 50% { transform: scale(1.25); } }
+@keyframes sdFlash { 0% { background: color-mix(in srgb, var(--success) 45%, var(--surface)); } }
+@keyframes sdShake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+/* Labirinto, Prateleiras e Copinhos */
+.mz-board.win { animation: pzJump .6s var(--ease); }
+.sh-item.land { animation: shLand .3s cubic-bezier(.3,1.6,.5,1); }
+.sh-item:not(.empty):hover { transform: translateY(-3px); }
+.cp-slots .cp-cup { animation: cupIn .35s cubic-bezier(.3,1.6,.5,1); }
+.cp-px.on { animation: pxIn .35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes shLand { from { transform: translateY(-18px) scale(.8); } }
+@keyframes cupIn { from { transform: translateY(40px) scale(.6); opacity: 0; } }
+@keyframes pxIn { from { transform: scale(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb-art, .ttt button.win, .pz-tube.full .pz-glass, .nb-bolt.full .nb-nuts, .ub-car.hero .ub-body::after { animation: none !important; }
+}

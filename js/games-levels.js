@@ -69,7 +69,7 @@
     mount(el, ctx) {
       const COLORS = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#ec4899', '#a3e635'];
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(NUT_TIERS, ctx.difficulty ?? 1) : unlockedOf('porcas');
+      let level = duel ? AH.duelLevel(NUT_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlockedOf('porcas');
       let bolts, sel, moves, undo, hints, done, arrived = null;
       el.innerHTML = levelShell({
         duel, board: '<div class="nb-board" role="group" aria-label="Parafusos"></div>',
@@ -264,7 +264,7 @@
     mount(el, ctx) {
       const PAL = ['#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#eab308', '#0ea5e9'];
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(CAR_TIERS, ctx.difficulty ?? 1) : unlockedOf('carros');
+      let level = duel ? AH.duelLevel(CAR_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlockedOf('carros');
       let cars, moves, undo, hints, done, focusCar = 0;
       el.innerHTML = levelShell({
         duel, board: `<div class="ub-wrap"><div class="ub-board" tabindex="-1" aria-label="Estacionamento 6 por 6. Arraste os veículos ou selecione e use as setas."><span class="ub-exit" aria-hidden="true">${ic('arrow-right')}</span></div></div>`,
@@ -574,8 +574,23 @@
               g.beginPath(); g.ellipse(cx + ox, y + oy, R, R * K3, 0, rad(a0), rad(a1));
               g.ellipse(cx + ox, y + oy + TH, R, R * K3, 0, rad(a1), rad(a0), true); g.closePath(); g.fill();
             }
+            // paredes laterais onde o segmento encosta num buraco (deixa a borda do buraco bem visível)
+            const face = ang => {
+              const c = Math.cos(rad(ang)), sn = Math.sin(rad(ang)) * K3;
+              g.fillStyle = shade(col, -0.38);
+              g.beginPath();
+              g.moveTo(cx + ox + c * RI, y + oy + sn * RI); g.lineTo(cx + ox + c * R, y + oy + sn * R);
+              g.lineTo(cx + ox + c * R, y + oy + sn * R + TH); g.lineTo(cx + ox + c * RI, y + oy + sn * RI + TH);
+              g.closePath(); g.fill();
+            };
+            if (p.segs[(i + SEG - 1) % SEG] === 1) face(a0);
+            if (p.segs[(i + 1) % SEG] === 1) face(a0 + st);
             g.fillStyle = s === 2 ? '#f87171' : p.finish && i % 2 ? '#facc15' : col;
             ring(cx + ox, y + oy, R, RI, rad(a0), rad(a1)); g.fill();
+            // fio claro na beirada do buraco, por cima do topo
+            const edge = ang => { const c = Math.cos(rad(ang)), sn = Math.sin(rad(ang)) * K3; g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx + ox + c * RI, y + oy + sn * RI); g.lineTo(cx + ox + c * R, y + oy + sn * R); g.stroke(); };
+            if (p.segs[(i + SEG - 1) % SEG] === 1) edge(a0);
+            if (p.segs[(i + 1) % SEG] === 1) edge(a0 + st);
             if (s === 2) { g.fillStyle = 'rgba(255,255,255,.18)'; ring(cx + ox, y + oy, R * 0.98, R * 0.8, rad(a0 + 2), rad(a1 - 2)); g.fill(); }
           });
           g.globalAlpha = 1;
@@ -700,12 +715,12 @@
     rec();
     return { count, solution };
   }
-  function makeSudoku(tier) {
+  function makeSudoku(tier, rnd = Math.random) {
     // grade completa aleatória
     const full = Array(81).fill(0);
     const fill = i => {
       if (i === 81) return true;
-      const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+      const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => rnd() - 0.5);
       for (const v of nums) {
         let ok = true;
         for (let k = 0; k < 81 && ok; k++) if (full[k] === v && ((k / 9 | 0) === (i / 9 | 0) || k % 9 === i % 9 || BOX(k) === BOX(i))) ok = false;
@@ -715,7 +730,7 @@
     };
     fill(0);
     const puzzle = full.slice();
-    const order = [...Array(81).keys()].sort(() => Math.random() - 0.5);
+    const order = [...Array(81).keys()].sort(() => rnd() - 0.5);
     let clues = 81;
     for (const i of order) {
       if (clues <= SUDOKU_TIERS[tier].clues) break;
@@ -754,7 +769,7 @@
         tier = t; clearInterval(timer);
         grid.innerHTML = `<div class="sd-loading">${ic('loader-2')} Gerando tabuleiro…</div>`; AH.ui.refreshIcons();
         setTimeout(() => {
-          const s = makeSudoku(tier);
+          const s = makeSudoku(tier, ctx.seed != null ? K.rng(ctx.seed) : Math.random);
           puzzle = s.puzzle; solution = s.solution;
           cells = puzzle.slice(); given = puzzle.map(Boolean); notes = Array.from({ length: 81 }, () => new Set());
           sel = cells.findIndex(v => !v); notesMode = false; mistakes = 0; hints = 3; undo = []; secs = 0; done = false; timer = null;
@@ -803,7 +818,14 @@
           const r = (sel / 9) | 0, c = sel % 9, b = BOX(sel);
           notes.forEach((s, i) => { if ((i / 9 | 0) === r || i % 9 === c || BOX(i) === b) s.delete(n); });
         }
-        draw(); checkWin();
+        draw();
+        if (n && n === solution[sel]) {
+          grid.querySelector(`[data-i="${sel}"]`)?.classList.add('pop');
+          const r = (sel / 9) | 0, c = sel % 9, bx = BOX(sel);
+          const units = [[...Array(9)].map((_, k) => r * 9 + k), [...Array(9)].map((_, k) => k * 9 + c), [...Array(81).keys()].filter(i => BOX(i) === bx)];
+          units.filter(u => u.every(i => cells[i] === solution[i])).forEach((u, ui) => u.forEach((i, k) => setTimeout(() => grid.querySelector(`[data-i="${i}"]`)?.classList.add('flash'), k * 35 + ui * 80)));
+        }
+        checkWin();
       }
       function checkWin() {
         if (done || !cells.every((v, i) => v === solution[i])) return;

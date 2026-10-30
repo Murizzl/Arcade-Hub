@@ -83,3 +83,38 @@ drop policy if exists "remove o proprio avatar" on storage.objects;
 create policy "remove o proprio avatar" on storage.objects
   for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Amizades ----------------------------------------------
+-- Uma linha por relação: quem pediu (user_id) → quem recebeu (friend_id).
+-- status: 'pending' (pedido), 'accepted' (amigos) ou 'blocked' (user_id bloqueou friend_id).
+create table if not exists public.friendships (
+  user_id    uuid not null references auth.users on delete cascade,
+  friend_id  uuid not null references auth.users on delete cascade,
+  status     text not null check (status in ('pending', 'accepted', 'blocked')),
+  created_at timestamptz not null default now(),
+  primary key (user_id, friend_id),
+  check (user_id <> friend_id)
+);
+alter table public.friendships enable row level security;
+
+drop policy if exists "ve as proprias amizades" on public.friendships;
+create policy "ve as proprias amizades" on public.friendships
+  for select to authenticated using (auth.uid() in (user_id, friend_id));
+
+drop policy if exists "cria pedido ou bloqueio" on public.friendships;
+create policy "cria pedido ou bloqueio" on public.friendships
+  for insert to authenticated with check (
+    auth.uid() = user_id and status in ('pending', 'blocked')
+    -- quem foi bloqueado não consegue mandar pedido para quem bloqueou
+    and (status = 'blocked' or not exists (
+      select 1 from public.friendships f
+      where f.user_id = friendships.friend_id and f.friend_id = auth.uid() and f.status = 'blocked'))
+  );
+
+drop policy if exists "aceita pedido recebido" on public.friendships;
+create policy "aceita pedido recebido" on public.friendships
+  for update to authenticated using (auth.uid() = friend_id and status = 'pending') with check (status = 'accepted');
+
+drop policy if exists "desfaz amizade" on public.friendships;
+create policy "desfaz amizade" on public.friendships
+  for delete to authenticated using (auth.uid() = user_id or (auth.uid() = friend_id and status <> 'blocked'));

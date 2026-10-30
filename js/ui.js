@@ -94,7 +94,34 @@
     if (r.record) toast('Novo recorde pessoal!', 'success', 'trophy');
     (r.levelUps || []).forEach(e => toast(`Subiu para o nível <b>${e.level}</b>!`, 'success', 'trending-up'));
     (r.achievements || []).forEach(a => toast(`Conquista: <b>${esc(a.name)}</b>`, 'success', 'award'));
-    if ((r.levelUps || []).length) confetti(40);
+    if ((r.levelUps || []).length) { confetti(70); levelBurst(r.levelUps[r.levelUps.length - 1].level); }
+  }
+
+  // Comemoração grande ao subir de nível
+  function levelBurst(level) {
+    const el = document.createElement('div');
+    el.className = 'lvl-burst'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `<div class="lb-card"><i class="lb-rays"></i><small>SUBIU DE NÍVEL</small><b>${level}</b><span>Continue assim!</span></div>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2300);
+  }
+
+  // Números "contando" até o valor final (estatísticas e cartões)
+  function countUp(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    root.querySelectorAll('.qs b, .stat-box b, .kv b').forEach(b => {
+      const m = b.textContent.trim().match(/^([\d.]+)(%?)$/);
+      if (!m || b.children.length) return;
+      const target = parseInt(m[1].replace(/\./g, ''), 10);
+      if (!target || target < 3) return;
+      const t0 = performance.now(), dur = 700;
+      const step = t => {
+        const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        b.textContent = fmt(Math.round(target * e)) + m[2];
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
   }
 
   // ---------- Modal ----------
@@ -167,5 +194,5 @@
     if (window.lucide) lucide.createIcons({ attrs: { 'aria-hidden': 'true' }, nameAttr: 'data-lucide' });
   }
 
-  AH.ui = { esc, ic, fmt, timeAgo, dateBR, avatar, emblem, thumb, gameCard, empty, skeletonGrid, toast, rewardToasts, modal, close, confirm, confetti, refreshIcons };
+  AH.ui = { levelBurst, countUp, esc, ic, fmt, timeAgo, dateBR, avatar, emblem, thumb, gameCard, empty, skeletonGrid, toast, rewardToasts, modal, close, confirm, confetti, refreshIcons };
 })();

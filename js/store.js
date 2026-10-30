@@ -306,7 +306,7 @@
   }
 
   // ---------- Social ----------
-  const player = id => id === state.user?.id ? state.user : AH.players.find(p => p.id === id);
+  const player = id => id === state.user?.id ? state.user : (AH.online?.enabled && AH.online.get(id)) || AH.players.find(p => p.id === id);
   function friendship(id) {
     if (state.blocked.includes(id)) return 'blocked';
     if (state.friends.includes(id)) return 'friend';
@@ -315,6 +315,7 @@
     return 'none';
   }
   function sendRequest(id) {
+    if (AH.online?.enabled) { if (!state.sent.includes(id)) state.sent.push(id); save(); return AH.online.request(id); }
     if (friendship(id) !== 'none') return;
     state.sent.push(id); save();
     // Simulação: alguns jogadores aceitam após alguns segundos.
@@ -329,23 +330,25 @@
       AH.ui && AH.ui.toast(`${p.username} aceitou seu pedido de amizade (simulação)`, 'success', 'user-check');
     }, 4000);
   }
-  function cancelRequest(id) { state.sent = state.sent.filter(x => x !== id); save(); }
+  function cancelRequest(id) { if (AH.online?.enabled) AH.online.unlink(id); state.sent = state.sent.filter(x => x !== id); save(); }
   function acceptRequest(id) {
+    if (AH.online?.enabled) AH.online.accept(id);
     state.requests = state.requests.filter(x => x !== id);
     if (!state.friends.includes(id)) state.friends.push(id);
     pushHistory('user-plus', `Ficou amigo de ${player(id)?.username}`);
     checkAchievements(); save();
   }
-  function declineRequest(id) { state.requests = state.requests.filter(x => x !== id); save(); }
-  function removeFriend(id) { state.friends = state.friends.filter(x => x !== id); save(); }
+  function declineRequest(id) { if (AH.online?.enabled) AH.online.unlink(id); state.requests = state.requests.filter(x => x !== id); save(); }
+  function removeFriend(id) { if (AH.online?.enabled) AH.online.unlink(id); state.friends = state.friends.filter(x => x !== id); save(); }
   function block(id) {
+    if (AH.online?.enabled) AH.online.block(id);
     state.friends = state.friends.filter(x => x !== id);
     state.requests = state.requests.filter(x => x !== id);
     state.sent = state.sent.filter(x => x !== id);
     if (!state.blocked.includes(id)) state.blocked.push(id);
     save();
   }
-  function unblock(id) { state.blocked = state.blocked.filter(x => x !== id); save(); }
+  function unblock(id) { if (AH.online?.enabled) AH.online.unblock(id); state.blocked = state.blocked.filter(x => x !== id); save(); }
 
   function toggleFavorite(gameId) {
     const f = state.user.favorites;
@@ -381,7 +384,12 @@
   function reset() { state = freshState(true); migrate(); save(); }
   // Usados pelo modo nuvem (js/cloud.js)
   function newUser(username) { return defaultUser(username); }
-  function setUser(u) { state.user = u; migrate(); state.session = { userId: u.id, since: now() }; save(); }
+  function setUser(u) {
+    state.user = u; migrate(); state.session = { userId: u.id, since: now() };
+    // no modo online, amigos e pedidos vêm do banco (AH.online.refreshFriends)
+    if (AH.cloud?.enabled) Object.assign(state, { friends: [], requests: [], sent: [], blocked: [], duels: state.duels.filter(d => String(d.opp).length > 10) });
+    save();
+  }
   function clearSession() { state.session = null; if (AH.cloud?.enabled) state.user = null; save(); }
 
   load();

@@ -19,7 +19,7 @@
   AH.engines['2048'] = {
     mount(el, ctx) {
       const N = 4;
-      let tiles, score, nextId, over, won;
+      let tiles, score, nextId, over, won, lastScore = 0;
       const best = () => AH.store.user?.stats['2048']?.best || 0;
       el.innerHTML = `
         <div class="score-row">
@@ -40,7 +40,7 @@
       const colors = { 2: ['#eee4da', '#776e65'], 4: ['#ede0c8', '#776e65'], 8: ['#f2b179', '#fff'], 16: ['#f59563', '#fff'], 32: ['#f67c5f', '#fff'], 64: ['#f65e3b', '#fff'], 128: ['#edcf72', '#fff'], 256: ['#edcc61', '#fff'], 512: ['#edc850', '#fff'], 1024: ['#edc53f', '#fff'], 2048: ['#6c4cf5', '#fff'] };
 
       function start() {
-        tiles = []; score = 0; nextId = 1; over = false; won = false;
+        tiles = []; score = 0; lastScore = 0; nextId = 1; over = false; won = false;
         nodes.forEach(n => n.remove()); nodes.clear();
         spawn(); spawn(); render();
         board.focus({ preventScroll: true });
@@ -98,6 +98,13 @@
         ctx.end({ result: maxTile >= 2048 ? 'win' : 'complete', score, extra: { maxTile }, summary: `Maior bloco: ${maxTile}` });
       }
       function render() {
+        if (score > lastScore) {
+          const r = scoreEl.getBoundingClientRect(), f = document.createElement('span');
+          f.className = 'score-float'; f.textContent = '+' + (score - lastScore);
+          f.style.left = r.left + r.width / 2 - 14 + 'px'; f.style.top = r.top - 6 + 'px';
+          document.body.appendChild(f); setTimeout(() => f.remove(), 900);
+        }
+        lastScore = score;
         scoreEl.textContent = fmt(score);
         tiles.forEach(t => {
           let n = nodes.get(t.id);
@@ -138,15 +145,17 @@
       const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
       let b, turn, done, diff = ctx.mode === 'duel' ? ['facil', 'medio', 'dificil'][ctx.difficulty ?? 1] : 'medio';
       const opp = ctx.opponent?.username || 'CPU';
+      // online: o anfitrião é o X e começa; o convidado é o O
+      const net = ctx.net, ME = net && !net.host ? 'O' : 'X', OP = ME === 'X' ? 'O' : 'X';
       const tally = { you: 0, opp: 0, draw: 0 };
       el.innerHTML = `
         ${ctx.mode === 'solo' ? `<div class="tabs" role="tablist" aria-label="Dificuldade" style="margin-bottom:14px">
           ${[['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']].map(([k, l]) => `<button class="tab ${k === diff ? 'active' : ''}" data-diff="${k}" role="tab" aria-selected="${k === diff}">${l}</button>`).join('')}
         </div>` : ''}
         <div class="score-row">
-          <div class="score-box"><small>Você (X)</small><b data-t="you">0</b></div>
+          <div class="score-box"><small>Você (${ME})</small><b data-t="you">0</b></div>
           <div class="score-box"><small>Empates</small><b data-t="draw">0</b></div>
-          <div class="score-box"><small>${esc(opp)} (O)</small><b data-t="opp">0</b></div>
+          <div class="score-box"><small>${esc(opp)} (${OP})</small><b data-t="opp">0</b></div>
         </div>
         <div class="game-surface">
           <p data-status style="text-align:center;font-weight:700;margin-bottom:12px" aria-live="polite"></p>
@@ -170,18 +179,18 @@
       }
       function start() {
         b = Array(9).fill(null); turn = 'X'; done = false;
-        status.textContent = 'Sua vez — você é o X';
+        status.textContent = turn === ME ? `Sua vez — você é o ${ME}` : `${opp} começa…`;
         draw();
       }
       function draw(line = []) {
-        grid.innerHTML = b.map((v, i) => `<button role="gridcell" class="${v ? v.toLowerCase() : ''} ${line.includes(i) ? 'win' : ''}" data-i="${i}" ${v || done || turn !== 'X' ? 'disabled' : ''} aria-label="Casa ${i + 1}${v ? ': ' + v : ' vazia'}">${v ? `<span>${v}</span>` : ''}</button>`).join('');
+        grid.innerHTML = b.map((v, i) => `<button role="gridcell" class="${v ? v.toLowerCase() : ''} ${line.includes(i) ? 'win' : ''}" data-i="${i}" ${v || done || turn !== ME ? 'disabled' : ''} aria-label="Casa ${i + 1}${v ? ': ' + v : ' vazia'}">${v ? `<span>${v}</span>` : ''}</button>`).join('');
       }
       function play(i, p) {
         b[i] = p;
         const w = winner(b);
         if (w) {
           done = true;
-          const res = w.p === 'X' ? 'win' : w.p === 'O' ? 'loss' : 'draw';
+          const res = w.p === ME ? 'win' : w.p === OP ? 'loss' : 'draw';
           tally[res === 'win' ? 'you' : res === 'loss' ? 'opp' : 'draw']++;
           el.querySelectorAll('[data-t]').forEach(n => n.textContent = tally[n.dataset.t]);
           status.textContent = { win: 'Você venceu!', loss: `${opp} venceu.`, draw: 'Deu velha!' }[res];
@@ -190,11 +199,18 @@
           return;
         }
         turn = p === 'X' ? 'O' : 'X';
-        status.textContent = turn === 'X' ? 'Sua vez' : `${opp} está pensando…`;
+        status.textContent = turn === ME ? 'Sua vez' : `${opp} está pensando…`;
         draw();
-        if (turn === 'O') setTimeout(() => play(cpuMove(), 'O'), 450 + Math.random() * 400);
+        if (!net && turn === OP) setTimeout(() => play(cpuMove(), OP), 450 + Math.random() * 400);
       }
-      grid.onclick = e => { const btn = e.target.closest('[data-i]'); if (btn && !done && turn === 'X' && !b[btn.dataset.i]) play(+btn.dataset.i, 'X'); };
+      grid.onclick = e => {
+        const btn = e.target.closest('[data-i]');
+        if (!btn || done || turn !== ME || b[btn.dataset.i]) return;
+        const i = +btn.dataset.i;
+        if (net) net.send('move', { i });
+        play(i, ME);
+      };
+      if (net) net.on('move', ({ i }) => { if (!done && turn === OP && !b[i]) play(i, OP); });
       el.querySelectorAll('[data-diff]').forEach(t => t.onclick = () => {
         diff = t.dataset.diff;
         el.querySelectorAll('[data-diff]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); });
@@ -249,7 +265,8 @@
               if (found === 8) { clearInterval(timer); ctx.end({ result: 'win', score: moves, summary: `${moves} jogadas em ${secs}s` }); }
             }, 300);
           } else {
-            setTimeout(() => { open.forEach(x => { x.classList.remove('flip'); x.setAttribute('aria-label', 'Carta virada para baixo'); }); open = []; lock = false; }, 800);
+            setTimeout(() => open.forEach(x => x.classList.add('nope')), 420);
+            setTimeout(() => { open.forEach(x => { x.classList.remove('flip', 'nope'); x.setAttribute('aria-label', 'Carta virada para baixo'); }); open = []; lock = false; }, 850);
           }
           upd();
         }
@@ -270,7 +287,7 @@
     { name: 'Extra difícil', from: 71, colors: 10, color: '#ef4565' }
   ];
   // fase aleatória dentro da dificuldade escolhida no duelo
-  const duelLevel = (tiers, i) => { const t = tiers[Math.min(i, tiers.length - 1)], span = (tiers[i + 1]?.from || t.from + 20) - t.from; return t.from + Math.floor(Math.random() * span); };
+  const duelLevel = (tiers, i, seed) => { const t = tiers[Math.min(i, tiers.length - 1)], span = (tiers[i + 1]?.from || t.from + 20) - t.from; return t.from + Math.floor((seed != null ? mulberry(seed)() : Math.random()) * span); };
   AH.duelLevel = duelLevel;
   const tierOf = lvl => POTION_TIERS.reduce((t, x, i) => lvl >= x.from ? i : t, 0);
   AH.potionTiers = POTION_TIERS;
@@ -333,7 +350,7 @@
       const PALETTE = ['#ef0f3a', '#0a84d8', '#ffd000', '#13a81a', '#ff38d2', '#ff7a00', '#2fe0d0', '#b04a2c', '#a2d20a', '#d9a882'];
       const duel = ctx.mode === 'duel';
       const unlocked = () => AH.store.user?.stats.pocoes?.unlocked || 1;
-      let level = duel ? duelLevel(POTION_TIERS, ctx.difficulty ?? 1) : unlocked();
+      let level = duel ? duelLevel(POTION_TIERS, ctx.difficulty ?? 1, ctx.seed) : unlocked();
       let tubes, sel, moves, undo, hints, busy, done;
 
       el.innerHTML = `<div class="pz">
@@ -474,7 +491,8 @@
       const H = { pedra: '✊', papel: '✋', tesoura: '✌️' };
       const beats = { pedra: 'tesoura', papel: 'pedra', tesoura: 'papel' };
       const opp = ctx.opponent?.username || 'CPU';
-      let me, them, busy, done, history;
+      let me, them, busy, done, history, round = 0, theirPicks = {}, myPick = null;
+      const net = ctx.net;
       el.innerHTML = `
         <div class="score-row">
           <div class="score-box"><small>Você</small><b data-me>0</b></div>
@@ -504,13 +522,27 @@
         return keys[Math.floor(Math.random() * 3)];
       }
       function start() { me = 0; them = 0; busy = false; done = false; history = []; $('[data-me]').textContent = 0; $('[data-them]').textContent = 0; $('[data-msg]').textContent = 'Escolha sua jogada'; $('[data-hand-me]').textContent = '❔'; $('[data-hand-them]').textContent = '❔'; }
+      // online: cada um escolhe em segredo; só revela quando as duas jogadas chegam
+      if (net) net.on('pick', ({ r, p }) => { theirPicks[r] = p; if (myPick) tryReveal(); });
+      function tryReveal() { if (theirPicks[round]) reveal(myPick, theirPicks[round]); }
       el.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
         if (busy || done) return;
         busy = true;
-        const p = b.dataset.pick; const c = cpuPick(); history.push(p);
+        const p = b.dataset.pick; history.push(p);
+        el.querySelectorAll('[data-pick]').forEach(x => x.classList.toggle('picked', x === b));
+        if (net) {
+          myPick = p; net.send('pick', { r: round, p });
+          $('[data-hand-me]').textContent = '✊'; $('[data-hand-me]').classList.add('wait');
+          if (!theirPicks[round]) $('[data-msg]').textContent = `Aguardando ${opp} escolher…`;
+          tryReveal();
+        } else reveal(p, cpuPick());
+      });
+      function reveal(p, c) {
         const hm = $('[data-hand-me]'), ht = $('[data-hand-them]');
+        hm.classList.remove('wait');
         hm.textContent = '✊'; ht.textContent = '✊';
         hm.classList.add('shake'); ht.classList.add('shake');
+        $('[data-msg]').textContent = 'Pedra… papel… tesoura!';
         setTimeout(() => {
           hm.classList.remove('shake'); ht.classList.remove('shake');
           hm.textContent = H[p]; ht.textContent = H[c];
@@ -519,10 +551,13 @@
           else if (beats[p] === c) { me++; msg = 'Você levou a rodada!'; }
           else { them++; msg = `${opp} levou a rodada.`; }
           $('[data-me]').textContent = me; $('[data-them]').textContent = them; $('[data-msg]').textContent = msg;
-          busy = false;
-          if (me === 3 || them === 3) { done = true; setTimeout(() => ctx.end({ result: me === 3 ? 'win' : 'loss', summary: `Placar ${me} × ${them}` }), 600); }
+          hm.classList.remove('won', 'lost'); ht.classList.remove('won', 'lost');
+          if (p !== c) { (beats[p] === c ? hm : ht).classList.add('won'); (beats[p] === c ? ht : hm).classList.add('lost'); }
+          busy = false; myPick = null; round++;
+          el.querySelectorAll('[data-pick]').forEach(x => x.classList.remove('picked'));
+          if (me === 3 || them === 3) { done = true; setTimeout(() => ctx.end({ result: me === 3 ? 'win' : 'loss', summary: `Placar ${me} × ${them}` }), 700); }
         }, 1000);
-      });
+      }
       ctx.restart = start;
       start();
       return () => {};

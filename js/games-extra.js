@@ -101,7 +101,7 @@
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
       const HUES = ['#ff5a7a', '#a855f7', '#22c55e', '#f59e0b', '#06b6d4', '#ef4444', '#3b82f6'];
-      let level = duel ? AH.duelLevel(MAZE_TIERS, ctx.difficulty ?? 1) : L.unlockedOf('labirinto');
+      let level = duel ? AH.duelLevel(MAZE_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('labirinto');
       let mz, ball, painted, moves, busy, done, color;
       el.innerHTML = L.levelShell({
         duel, board: '<div class="mz-wrap"><div class="mz-board" tabindex="0" aria-label="Labirinto. Deslize ou use as setas."></div></div>',
@@ -176,7 +176,7 @@
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, running = false, over = false, lastT = 0;
       const BH = 10, BASE = 100;
-      let stack, cur, dir, speed, camY, debris, perfectStreak, hue0, score;
+      let stack, cur, dir, speed, camY, debris, perfectStreak, hue0, score, ripples = [];
       function size() { ({ g, W, H } = fitCanvas(cv)); }
       function reset() {
         size();
@@ -202,6 +202,7 @@
           if (perfectStreak >= 3) cur[sz] = Math.min(BASE, cur[sz] + 6); // recompensa: cresce de volta
           const p = $('[data-perfect]'); p.textContent = perfectStreak > 1 ? `Perfeito ×${perfectStreak}!` : 'Perfeito!';
           p.classList.remove('show'); void p.offsetWidth; p.classList.add('show');
+          ripples.push({ b: { ...cur }, y: stack.length, t: 0 });
         } else {
           perfectStreak = 0;
           const overlap = cur[sz] - Math.abs(delta);
@@ -252,6 +253,15 @@
         const from = Math.max(0, top - 30);
         for (let i = from; i < stack.length; i++) box(stack[i], i, colorAt(i), s, ox, oy);
         if (running && cur) box(cur, stack.length, colorAt(stack.length), s, ox, oy);
+        // contorno que se expande quando o bloco cai em cheio
+        ripples.forEach(r => {
+          r.t += 0.04; const grow = 1 + r.t * 0.5, b = r.b, y = (r.y) * BH + BH;
+          const x0 = b.x - b.w / 2 * grow, x1 = b.x + b.w / 2 * grow, z0 = b.z - b.d / 2 * grow, z1 = b.z + b.d / 2 * grow;
+          const pts = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => iso(x, y, z, s, ox, oy));
+          g.strokeStyle = `rgba(255,255,255,${Math.max(0, 1 - r.t)})`; g.lineWidth = 3;
+          g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.stroke();
+        });
+        ripples = ripples.filter(r => r.t < 1);
         debris.forEach(b => { g.globalAlpha = Math.max(0, Math.min(1, (b.y - (stack.length - 30)) / 10)); box(b, b.y, b.c, s, ox, oy); g.globalAlpha = 1; });
       }
       function loop(t) {
@@ -309,7 +319,7 @@
   AH.engines.prateleiras = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(SHELF_TIERS, ctx.difficulty ?? 1) : L.unlockedOf('prateleiras');
+      let level = duel ? AH.duelLevel(SHELF_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('prateleiras');
       let st, sel, left, secs, timer, done, combo;
       el.innerHTML = L.levelShell({
         duel, board: '<div class="sh-board" role="group" aria-label="Prateleiras"></div>',
@@ -382,7 +392,7 @@
         dst.front[slot] = src.front[sel[1]]; src.front[sel[1]] = null;
         const from = sel[0]; sel = null;
         const cleared = settle(si);
-        if (!cleared) { combo = 0; settle(from); draw(); }
+        if (!cleared) { combo = 0; settle(from); draw(); board.querySelector(`[data-s="${si}"] [data-j="${slot}"]`)?.classList.add('land'); }
         else settle(from);
         check();
       };
@@ -430,7 +440,7 @@
   AH.engines.copinhos = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let level = duel ? AH.duelLevel(CUP_TIERS, ctx.difficulty ?? 1) : L.unlockedOf('copinhos');
+      let level = duel ? AH.duelLevel(CUP_TIERS, ctx.difficulty ?? 1, ctx.seed) : L.unlockedOf('copinhos');
       let lv, belt, tick, done, stall;
       el.innerHTML = L.levelShell({
         duel, board: `<div class="cp-wrap"><div class="cp-art"></div><div class="cp-belt"><span class="cp-count" data-belt>0/5</span><div class="cp-slots"></div></div><div class="cp-cols"></div></div>`,
@@ -540,7 +550,8 @@
         hud(); render();
       }
       const owner = (r, c) => grid[r]?.[c];
-      function paint(r, c, team) { if (r < 0 || c < 0 || r >= ROWS || c >= COLS) return false; if (grid[r][c] === team) return false; grid[r][c] = team; return true; }
+      const fx = new Map(); // casa -> momento em que mudou de cor
+      function paint(r, c, team) { if (r < 0 || c < 0 || r >= ROWS || c >= COLS) return false; if (grid[r][c] === team) return false; grid[r][c] = team; fx.set(r * COLS + c, performance.now()); return true; }
       function fireBalls(team, col, n = 8) {
         const y = team === 0 ? ROWS - 0.5 : 0.5, dirY = team === 0 ? -1 : 1;
         for (let i = 0; i < n; i++) {
@@ -616,6 +627,8 @@
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
           const x = ox + c * cell, y = oy + r * cell;
           g.fillStyle = grid[r][c] ? RED : BLUE; g.fillRect(x, y, cell, cell);
+          const age = performance.now() - (fx.get(r * COLS + c) || -1e9);
+          if (age < 320) { const k = 1 - age / 320; g.fillStyle = `rgba(255,255,255,${0.7 * k})`; const pad = cell * 0.5 * (1 - k); g.fillRect(x + pad / 2, y + pad / 2, cell - pad, cell - pad); }
           g.fillStyle = grid[r][c] ? 'rgba(127,29,29,.35)' : 'rgba(30,58,138,.35)'; g.fillRect(x, y + cell - 2, cell, 2); g.fillRect(x + cell - 2, y, 2, cell);
         }
         lasers.forEach(l => {
@@ -679,6 +692,7 @@
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, timer, running = false, over = false;
       let own, trail, players, time, acc, lastT, kills;
+      const glow = new Map(); // casa -> momento da conquista
       const idx = (r, c) => r * N + c;
       function size() { ({ g, W, H } = fitCanvas(cv)); }
       function spawn(p) {
@@ -720,7 +734,9 @@
             const nk = idx(nr, nc); if (!outside[nk] && own[nk] !== p.id) { outside[nk] = 1; q.push(nk); }
           });
         }
+        const t0 = performance.now();
         for (let k = 0; k < N * N; k++) if (!outside[k] && own[k] !== p.id) {
+          glow.set(k, t0);
           if (trail[k]) { const v = players.find(x => x.id === trail[k]); if (v && v !== p) kill(v); }
           own[k] = p.id;
         }
@@ -791,6 +807,8 @@
           const k = idx(r, c), x = c * cs - camX, y = r * cs - camY;
           if (own[k]) { g.fillStyle = players[own[k] - 1].color; g.fillRect(x, y, cs + 0.5, cs + 0.5); }
           else if ((r + c) % 2) { g.fillStyle = '#eef2f7'; g.fillRect(x, y, cs, cs); }
+          const ga = performance.now() - (glow.get(k) || -1e9);
+          if (ga < 600) { g.fillStyle = `rgba(255,255,255,${0.55 * (1 - ga / 600)})`; g.fillRect(x, y, cs + 0.5, cs + 0.5); }
           if (trail[k]) { g.globalAlpha = 0.5; g.fillStyle = players[trail[k] - 1].color; g.fillRect(x + cs * 0.15, y + cs * 0.15, cs * 0.7, cs * 0.7); g.globalAlpha = 1; }
         }
         g.strokeStyle = '#94a3b8'; g.lineWidth = 3; g.strokeRect(-camX, -camY, N * cs, N * cs);

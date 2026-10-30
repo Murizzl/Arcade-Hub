@@ -108,6 +108,8 @@
     copinhos: { metric: 'time', limit: 180 }, territorio: { metric: 'score', limit: 120 } };
   AH.games.forEach(game => {
     game.duel = true;
+    // jogos de pontuação infinita: não existe "vencer" fora de duelos/multiplayer
+    game.noWins = ['helix', 'empilhar'].includes(game.id) && !game.cats.includes('multiplayer');
     game.duelType = VERSUS.includes(game.id) ? 'versus' : 'race';
     if (game.duelType === 'race') {
       const metric = game.scoreDir === 'low' || game.scoreLabel === 'Tempo' ? 'time' : 'score';

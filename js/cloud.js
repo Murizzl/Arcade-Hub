@@ -49,6 +49,7 @@
     if (data?.username) u.username = data.username;
     uid = user.id;
     AH.store.setUser(u);
+    AH.online?.start();
     lastSaved = fresh ? '' : JSON.stringify(u);
     if (fresh) await saveNow();
   }
@@ -75,7 +76,7 @@
     else AH.store.clearSession();
     sb.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setTimeout(() => AH.views.newPasswordModal(true), 300);
-      if (event === 'SIGNED_OUT') { uid = null; AH.store.clearSession(); location.hash = '#/login'; }
+      if (event === 'SIGNED_OUT') { uid = null; AH.online?.stop(); AH.store.clearSession(); location.hash = '#/login'; }
     });
     AH.store.subscribe(() => { if (uid) queueSave(); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && uid) saveNow(); });

@@ -141,14 +141,15 @@
 
   /* ==================== DETALHE DO JOGO ==================== */
   function gameLeaderboard(g) {
-    const people = [...AH.players, S.user].map(p => {
-      let score = p === S.user ? S.user.stats[g.id]?.best : null;
-      if (score == null && p !== S.user) {
+    const pool = AH.online?.enabled ? AH.online.board() : AH.players;
+    const people = [...pool, S.user].map(p => {
+      let score = p === S.user || p.real ? p.stats?.[g.id]?.best ?? null : null;
+      if (score == null && p !== S.user && !p.real) {
         const h = hash(p.id + g.id);
         score = g.scoreDir === 'low' ? 10 + (h % 40) : Math.round((p.level * 120 + (h % 3000)) / 10) * 10;
         if (g.scoreLabel === 'Vitórias') score = Math.round(p.wins * (0.1 + (h % 20) / 100));
       }
-      if (score == null && g.scoreLabel === 'Vitórias' && p === S.user) score = S.user.stats[g.id]?.wins || 0;
+      if (score == null && g.scoreLabel === 'Vitórias' && (p === S.user || p.real)) score = p.stats?.[g.id]?.wins || 0;
       return { p, score };
     }).filter(x => x.score != null);
     people.sort((a, b) => g.scoreDir === 'low' ? a.score - b.score : b.score - a.score);
@@ -179,7 +180,7 @@
           <div class="stat-boxes">
             <div class="stat-box"><small>Seu recorde</small><b>${s.best != null ? fmt(s.best) : '—'}</b></div>
             <div class="stat-box"><small>Partidas</small><b>${fmt(s.played || 0)}</b></div>
-            <div class="stat-box"><small>Vitórias</small><b>${fmt(s.wins || 0)}</b></div>
+            ${g.noWins ? '' : `<div class="stat-box"><small>Vitórias</small><b>${fmt(s.wins || 0)}</b></div>`}
             <div class="stat-box"><small>Jogadores</small><b>${fmt(g.players)}</b></div>
           </div>
         </div>
@@ -214,12 +215,15 @@
       el.querySelector('.wip .thumb').style.cssText += ';border-radius:20px;max-width:280px;margin:0 auto';
       return;
     }
+    const online = !!(duel && duel.online && duel.room);
+    const offs = []; // handlers da sala para remover ao sair
     let cleanup = () => {};
+    AH.online?.enabled && AH.online.setPlaying(g.id);
     const mount = () => {
       el.innerHTML = `<div class="play-wrap">
         <div class="play-head"><a class="icon-btn" href="${duel ? '#/duels' : '#/game/' + g.id}" aria-label="Sair do jogo">${ic('arrow-left')}</a><h1>${esc(g.name)}</h1>
-        ${duel ? `<span class="tag tag-warning">${ic('swords')} Duelo</span>` : `<button class="icon-btn" data-fav="${g.id}" aria-label="Favoritar">${ic('heart', S.user.favorites.includes(g.id) ? 'style="fill:var(--danger);color:var(--danger)"' : '')}</button>`}</div>
-        ${duel ? `<div class="sim-banner">${ic('flask-conical')} Simulação local: o adversário “${esc(duel.opp.username)}” é controlado pelo navegador. Duelos online reais exigem servidor.</div>` : ''}
+        ${duel ? `<span class="tag ${online ? 'tag-success' : 'tag-warning'}">${ic(online ? 'wifi' : 'bot')} ${online ? 'Online' : 'CPU'}</span>` : `<button class="icon-btn" data-fav="${g.id}" aria-label="Favoritar">${ic('heart', S.user.favorites.includes(g.id) ? 'style="fill:var(--danger);color:var(--danger)"' : '')}</button>`}</div>
+        ${duel && !online ? `<div class="sim-banner">${ic('bot')} Treino contra a CPU: “${esc(duel.opp.username)}” é controlado pelo computador.</div>` : ''}
         ${race ? '<div class="race-bar" id="race" aria-live="polite"></div>' : ''}
         <div id="engine"></div></div>`;
       U.refreshIcons();
@@ -232,7 +236,13 @@
         duel.result = { result, summary, rewards: r }; U.rewardToasts(r); go('#/duels/result');
       };
       const ctx = {
-        mode: duel ? 'duel' : 'solo', opponent: duel ? duel.opp : null, difficulty: duel ? duel.difficulty : undefined,
+        mode: duel ? 'duel' : 'solo', opponent: duel ? duel.opp : null, difficulty: duel ? duel.difficulty : undefined, seed: duel?.seed,
+        // jogos de confronto direto online recebem um canal para trocar jogadas
+        net: online && g.duelType === 'versus' ? {
+          host: duel.host,
+          send: (e, p) => duel.room.send('g:' + e, p),
+          on: (e, f) => { const off = duel.room.on('g:' + e, f); offs.push(off); return off; }
+        } : null,
         end: ({ result, score, extra, summary, next }) => {
           if (race) return raceEnd(score, extra, result);
           if (duel) return finishDuel(result, summary, score, extra);
@@ -240,50 +250,87 @@
           showResult(result, summary, r, score, g, next);
         }
       };
+      if (online) offs.push(duel.room.on('peer-left', () => { if (!ended) { U.toast(`${esc(duel.opp.username)} saiu da partida`, 'info', 'log-out'); finishDuel('win', `${duel.opp.username} desconectou`); } }));
       cleanup = AH.engines[g.id].mount(host, ctx) || (() => {});
       if (duel) host.querySelectorAll('[data-restart]').forEach(b => b.hidden = true);
       if (race) startRace();
       U.refreshIcons();
 
-      /* --- Duelo "corrida": cada um joga sua partida; o adversário é simulado --- */
+      /* --- Duelo "corrida": cada um joga sua partida e comparamos o resultado --- */
       function startRace() {
         const metric = g.race.metric, limit = AH.raceLimit(g, duel.difficulty);
         const t0 = Date.now();
-        const myBest = S.user.stats[g.id]?.best;
-        // Adversário simulado: pontuação-alvo ou tempo de conclusão plausíveis
-        race.oppScore = Math.round(((myBest || 2400) * (0.45 + Math.random() * 0.8)) / 4) * 4;
-        race.oppTime = Math.round(limit * (0.3 + Math.random() * 0.45));
         race.elapsed = () => Math.round((Date.now() - t0) / 1000);
+        race.mine = null; race.opp = { done: false };
+        if (online) {
+          offs.push(duel.room.on('race-finish', p => { race.opp = { done: true, ...p }; tick(); resolve(); }));
+        } else {
+          // CPU: pontuação-alvo ou tempo de conclusão plausíveis
+          const myBest = S.user.stats[g.id]?.best;
+          race.cpuScore = Math.round(((myBest || 2400) * (0.45 + Math.random() * 0.8)) / 4) * 4;
+          race.cpuTime = Math.round(limit * (0.3 + Math.random() * 0.45));
+        }
         const bar = el.querySelector('#race');
-        const tick = () => {
-          const t = race.elapsed(), left = Math.max(0, limit - t);
-          const opp = duel.opp.username;
-          const oppNow = metric === 'score'
-            ? `${esc(opp)}: <b>${fmt(Math.round(race.oppScore * Math.min(1, Math.pow(t / limit, .9)) / 4) * 4)}</b> pts`
-            : t >= race.oppTime ? `${esc(opp)} <b>terminou em ${race.oppTime}s</b>` : `${esc(opp)} ainda está jogando…`;
-          bar.innerHTML = `<span class="race-clock ${left <= 15 ? 'low' : ''}">${ic('timer')} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</span>
-            <span class="race-goal">${esc(AH.duelLabel(g, duel.difficulty))}${diffName(g, duel.difficulty)}</span><span class="race-opp">${avatar(duel.opp, 'sm')} <span>${oppNow}</span></span>`;
-          U.refreshIcons();
-          if (left <= 0) {
-            if (metric === 'score' && ctx.finish) ctx.finish();
-            else finishDuel('loss', `Tempo esgotado · ${duel.opp.username} terminou em ${race.oppTime}s`);
+        const oppText = t => {
+          const opp = esc(duel.opp.username);
+          if (online) {
+            if (!race.opp.done) return `${opp} está jogando…`;
+            if (race.opp.failed) return `${opp} <b>não completou</b>`;
+            return metric === 'score' ? `${opp} fez <b>${fmt(race.opp.score)}</b> pts` : `${opp} <b>terminou em ${race.opp.t}s</b>`;
           }
+          return metric === 'score'
+            ? `${opp}: <b>${fmt(Math.round(race.cpuScore * Math.min(1, Math.pow(t / limit, .9)) / 4) * 4)}</b> pts`
+            : t >= race.cpuTime ? `${opp} <b>terminou em ${race.cpuTime}s</b>` : `${opp} ainda está jogando…`;
         };
+        function tick() {
+          const t = race.elapsed(), left = Math.max(0, limit - t);
+          bar.innerHTML = `<span class="race-clock ${left <= 15 ? 'low' : ''}">${ic(race.mine ? 'hourglass' : 'timer')} ${race.mine ? 'Aguardando' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`}</span>
+            <span class="race-goal">${esc(AH.duelLabel(g, duel.difficulty))}${diffName(g, duel.difficulty)}</span><span class="race-opp">${avatar(duel.opp, 'sm')} <span>${oppText(t)}</span></span>`;
+          U.refreshIcons();
+          if (left <= 0 && !race.mine) {
+            if (metric === 'score' && ctx.finish) ctx.finish();
+            else raceEnd(undefined, undefined, 'loss');
+          }
+          // se o adversário sumir, não esperamos para sempre
+          if (online && race.mine && !race.opp.done && t > limit + 20) { race.opp = { done: true, failed: true }; resolve(); }
+        }
+        race.tick = tick;
         tick();
         race.timer = setInterval(tick, 1000);
       }
       function raceEnd(score, extra, outcome) {
+        if (race.mine) return;
         const t = race.elapsed();
-        if (outcome === 'loss') return finishDuel('loss', `Você não completou · ${duel.opp.username} terminou em ${race.oppTime}s`, undefined, extra);
+        race.mine = { score: score ?? 0, t, failed: outcome === 'loss' };
+        race.extra = extra;
+        if (online) { duel.room.send('race-finish', race.mine); race.tick?.(); return resolve(); }
+        // contra a CPU
+        if (race.mine.failed) return finishDuel('loss', `Você não completou · ${duel.opp.username} terminou em ${race.cpuTime}s`, undefined, extra);
         let result, summary;
         if (g.race.metric === 'score') {
-          result = score > race.oppScore ? 'win' : score < race.oppScore ? 'loss' : 'draw';
-          summary = `Você ${fmt(score)} × ${fmt(race.oppScore)} ${duel.opp.username}`;
+          result = score > race.cpuScore ? 'win' : score < race.cpuScore ? 'loss' : 'draw';
+          summary = `Você ${fmt(score)} × ${fmt(race.cpuScore)} ${duel.opp.username}`;
         } else {
-          result = t < race.oppTime ? 'win' : t > race.oppTime ? 'loss' : 'draw';
-          summary = `Você ${t}s × ${race.oppTime}s ${duel.opp.username}`;
+          result = t < race.cpuTime ? 'win' : t > race.cpuTime ? 'loss' : 'draw';
+          summary = `Você ${t}s × ${race.cpuTime}s ${duel.opp.username}`;
         }
         finishDuel(result, summary, score, extra);
+      }
+      // online: decide quando os dois terminaram
+      function resolve() {
+        const a = race.mine, b = race.opp;
+        if (!a || !b.done) return;
+        const name = duel.opp.username;
+        let result, summary;
+        if (g.race.metric === 'score') {
+          const bs = b.failed ? 0 : b.score;
+          result = a.score > bs ? 'win' : a.score < bs ? 'loss' : 'draw';
+          summary = `Você ${fmt(a.score)} × ${fmt(bs)} ${name}`;
+        } else if (a.failed && b.failed) { result = 'draw'; summary = 'Ninguém completou a tempo'; }
+        else if (a.failed) { result = 'loss'; summary = `${name} terminou em ${b.t}s`; }
+        else if (b.failed) { result = 'win'; summary = `Você terminou em ${a.t}s · ${name} não completou`; }
+        else { result = a.t < b.t ? 'win' : a.t > b.t ? 'loss' : 'draw'; summary = `Você ${a.t}s × ${b.t}s ${name}`; }
+        finishDuel(result, summary, a.failed ? undefined : a.score, race.extra);
       }
     };
     const race = duel && g.duelType === 'race' ? {} : null;
@@ -303,43 +350,92 @@
       U.rewardToasts(r);
     }
     mount();
-    return () => { stopRace(); cleanup(); };
+    return () => { stopRace(); cleanup(); offs.forEach(f => f()); AH.online?.enabled && AH.online.setPlaying(null); };
   };
 
   /* ==================== DUELOS ==================== */
   AH.duel = { current: null };
+  const NET = () => !!AH.online?.enabled;
   const duelGames = () => AH.games.filter(g => g.duel);
+  // Online: jogos de corrida e os de confronto direto que já sincronizam jogadas
+  const onlineReady = g => g.playable && (g.duelType === 'race' || ['velha', 'ppt'].includes(g.id));
   const modeInfo = {
-    friend: { label: 'Amigo', icon: 'user-plus', color: '#6c4cf5', title: 'Desafiar amigo', text: 'Escolha um amigo online e envie um convite.' },
-    casual: { label: 'Casual', icon: 'coffee', color: '#14a37f', title: 'Partida casual', text: 'Sem pressão. Não altera sua pontuação competitiva.' },
+    friend: { label: 'Amigo', icon: 'user-plus', color: '#6c4cf5', title: 'Desafiar amigo', text: 'Convide um amigo online para um duelo ao vivo.' },
+    casual: { label: 'Casual', icon: 'coffee', color: '#14a37f', title: 'Partida casual', text: 'Encontre alguém online. Não altera sua pontuação.' },
     ranked: { label: 'Ranqueada', icon: 'medal', color: '#ff7a45', title: 'Partida ranqueada', text: 'Vale pontos de divisão. Suba de Bronze a Mestre.' },
-    private: { label: 'Privada', icon: 'key-round', color: '#2a8bd8', title: 'Sala privada', text: 'Crie uma sala ou entre com um código.' }
+    private: { label: 'Privada', icon: 'key-round', color: '#2a8bd8', title: 'Sala privada', text: 'Crie uma sala ou entre com um código.' },
+    cpu: { label: 'CPU', icon: 'bot', color: '#64748b', title: 'Contra a CPU', text: 'Treine sem esperar ninguém.' }
   };
   const roomCode = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+  const someone = id => S.player(id) || { id, username: 'Jogador', avatar: {}, level: 1, prestige: 0 };
+  function leaveRoom() { const d = AH.duel.current; if (d?.room) { d.room.leave(); d.room = null; } }
   function newDuel(mode, game, opp) {
-    AH.duel.current = { mode, modeLabel: modeInfo[mode].label, game: game || 'velha', difficulty: AH.duelDifficulties[game || 'velha']?.def, opp: opp || null, code: roomCode(), meReady: false, oppReady: false, result: null };
+    leaveRoom();
+    AH.duel.current = { mode, modeLabel: modeInfo[mode].label, game: game || 'velha', difficulty: AH.duelDifficulties[game || 'velha']?.def, opp: opp || null, code: roomCode(), meReady: false, oppReady: false, result: null, online: false, host: true };
     return AH.duel.current;
   }
+  // Conecta o duelo atual à sala Realtime e trata as mensagens do anfitrião
+  function connectRoom(d) {
+    if (d.room) return;
+    d.online = true;
+    d.room = AH.online.joinRoom(d.code, d.host, room => {
+      const p = room.peerPlayer();
+      if (p) { d.opp = { ...(S.player(p.id) || {}), ...p }; d.invited = null; }
+      else if (!d.invited) d.opp = null;
+      d.oppReady = room.peerReady;
+      d.onChange?.();
+    });
+    d.room.on('config', p => { if (!d.host) { d.game = p.game; d.difficulty = p.difficulty; d.onChange?.(); } });
+    d.room.on('start', p => {
+      if (d.host) return;
+      Object.assign(d, { game: p.game, difficulty: p.difficulty, seed: p.seed, meReady: false, result: null });
+      d.room.setReady(false);
+      go(`#/play/${d.game}?duel=1`);
+    });
+    d.room.on('rematch', () => { if (d.result) { Object.assign(d, { meReady: false, result: null }); d.room.setReady(false); go('#/duels/lobby'); U.toast(`${esc(d.opp?.username || 'Adversário')} quer revanche!`, 'info', 'rotate-ccw'); } });
+  }
+
+  // Convite recebido de um amigo (chamado pelo AH.online)
+  V.duelInvite = p => {
+    const g = S.game(p.game) || S.game('velha');
+    const from = someone('u_' + p.from);
+    if (!from.username || from.username === 'Jogador') from.username = p.fromName;
+    S.notify('swords', `${p.fromName} te desafiou para ${g.name}.`, '#/duels');
+    U.modal({
+      title: 'Desafio recebido!', icon: 'swords',
+      body: `<div class="row" style="gap:14px">${avatar(from, 'lg')}<div><b style="font-size:1.1rem">${esc(p.fromName)}</b><p class="muted">te desafiou para <b>${esc(g.name)}</b>${diffName(g, p.difficulty)}</p></div></div>`,
+      actions: [
+        { label: 'Recusar', cls: 'btn-ghost', onClick: () => AH.online.declineInvite('u_' + p.from) },
+        { label: 'Aceitar', cls: 'btn-primary', icon: 'check', onClick: () => {
+          const d = newDuel('friend', g.id, from);
+          Object.assign(d, { code: p.code, host: false, difficulty: p.difficulty });
+          connectRoom(d); go('#/duels/lobby');
+        } }
+      ]
+    });
+  };
 
   V.duels = (el, p, q) => {
+    if (AH.duel.current?.room && !AH.duel.current.result) { leaveRoom(); AH.duel.current = null; }
     const d = S.state.duels;
     const wins = d.filter(x => x.result === 'win').length;
     const div = S.divisionOf(S.user.mmr);
     const preGame = q.game && S.game(q.game)?.duel ? q.game : null;
+    const onlineFriends = S.state.friends.map(S.player).filter(f => f && f.online);
     el.innerHTML = `
       <div class="page-head"><div><h1>Duelos</h1><p>Desafie amigos e jogadores em partidas 1 contra 1.</p></div>
         <div class="row-wrap"><span class="division" style="color:${div.color}"><i style="background:${div.color}"></i>${div.name} · ${S.user.mmr} pts</span></div></div>
-      <div class="sim-banner">${ic('flask-conical')} Protótipo: adversários e salas são simulados localmente. Nenhum servidor multiplayer está conectado ainda.</div>
+      ${NET() ? `<div class="notice" style="margin-bottom:14px">${ic('wifi')} <span><b>Online:</b> ${onlineFriends.length ? `${onlineFriends.length} amigo(s) online agora.` : 'nenhum amigo online agora.'} Você também pode treinar contra a CPU.</span></div>`
+        : `<div class="sim-banner">${ic('flask-conical')} Modo local: os adversários são simulados. Entre com uma conta para jogar online.</div>`}
       <div class="mode-grid">${Object.entries(modeInfo).map(([k, m]) => `<button class="mode-card" data-mode="${k}"><span class="mc-ic" style="background:${m.color}">${ic(m.icon)}</span><h3>${m.title}</h3><p>${m.text}</p></button>`).join('')}</div>
       <div class="grid-2 section">
         <div class="card"><div class="section-head"><h3>${ic('gamepad-2')} Jogos compatíveis</h3></div>
-          <p class="faint" style="margin:-6px 0 6px">Todo jogo vale duelo: nos de confronto direto vocês jogam um contra o outro; nos demais, vence quem fizer mais pontos ou terminar primeiro.</p>
-          <div class="list">${duelGames().filter(g => g.playable).map(g => `<div class="list-item"><span class="ch-icon" style="background:${g.c1};color:#fff">${ic(g.icon)}</span><div class="li-main"><b>${esc(g.name)}</b><small>${esc(AH.duelLabel(g))}</small></div>
-            <button class="btn btn-sm ${preGame === g.id ? 'btn-primary' : ''}" data-quick="${g.id}">${ic('zap')} Casual</button></div>`).join('')}</div>
-          <p class="faint" style="margin-top:8px">+${duelGames().filter(g => !g.playable).length} jogos chegam aos duelos quando ficarem prontos.</p>
+          <p class="faint" style="margin:-6px 0 6px">Nos de confronto direto vocês jogam um contra o outro; nos demais, vence quem fizer mais pontos ou terminar primeiro.</p>
+          <div class="list">${duelGames().filter(g => g.playable).map(g => `<div class="list-item"><span class="ch-icon" style="background:${g.c1};color:#fff">${ic(g.icon)}</span><div class="li-main"><b>${esc(g.name)}</b><small>${esc(AH.duelLabel(g))}${NET() && !onlineReady(g) ? ' · só contra a CPU' : ''}</small></div>
+            <button class="btn btn-sm ${preGame === g.id ? 'btn-primary' : ''}" data-quick="${g.id}">${ic(NET() && onlineReady(g) ? 'zap' : 'bot')} ${NET() && onlineReady(g) ? 'Casual' : 'CPU'}</button></div>`).join('')}</div>
         </div>
         <div class="card"><div class="section-head"><h3>${ic('history')} Confrontos recentes</h3><span class="faint">${wins}V · ${d.filter(x => x.result === 'loss').length}D · ${d.filter(x => x.result === 'draw').length}E</span></div>
-          ${d.length ? `<div class="list">${d.slice(0, 8).map(x => { const o = S.player(x.opp); const g = S.game(x.game); return `<div class="list-item">${avatar(o, 'sm')}<div class="li-main"><b>${esc(o.username)}</b><small>${esc(g.name)} · ${esc(x.mode)} · ${timeAgo(x.t)}</small></div><span class="tag ${x.result === 'win' ? 'tag-success' : x.result === 'loss' ? 'tag-danger' : ''}">${{ win: 'Vitória', loss: 'Derrota', draw: 'Empate' }[x.result]}</span></div>`; }).join('')}</div>`
+          ${d.length ? `<div class="list">${d.slice(0, 8).map(x => { const o = someone(x.opp); const g = S.game(x.game); return `<div class="list-item">${avatar(o, 'sm')}<div class="li-main"><b>${esc(o.username)}</b><small>${esc(g.name)} · ${esc(x.mode)} · ${timeAgo(x.t)}</small></div><span class="tag ${x.result === 'win' ? 'tag-success' : x.result === 'loss' ? 'tag-danger' : ''}">${{ win: 'Vitória', loss: 'Derrota', draw: 'Empate' }[x.result]}</span></div>`; }).join('')}</div>`
             : U.empty('swords', 'Nenhum duelo ainda', 'Seus confrontos aparecerão aqui.')}
         </div>
       </div>`;
@@ -347,118 +443,171 @@
       const m = e.target.closest('[data-mode]');
       if (m) startMode(m.dataset.mode, preGame);
       const qk = e.target.closest('[data-quick]');
-      if (qk) { newDuel('casual', qk.dataset.quick); go('#/duels/search'); }
+      if (qk) { const g = S.game(qk.dataset.quick); startMode(NET() && onlineReady(g) ? 'casual' : 'cpu', g.id); }
     });
   };
 
   function startMode(mode, game, friendId) {
+    const g0 = game && S.game(game);
+    if (mode === 'cpu' || !NET()) {
+      // sem conta online tudo é simulado; com conta, "CPU" é o treino
+      if (mode === 'friend' && friendId) { newDuel('friend', game, S.player(friendId)); go('#/duels/lobby'); return; }
+      if (mode === 'private' && !NET()) return privateModal(game);
+      if (mode === 'friend' && !NET()) return friendModal(game);
+      newDuel(mode === 'cpu' ? 'cpu' : mode, game); go('#/duels/search'); return;
+    }
+    if (g0 && !onlineReady(g0)) game = 'velha';
     if (mode === 'casual' || mode === 'ranked') { newDuel(mode, game); go('#/duels/search'); return; }
     if (mode === 'friend') {
-      if (friendId) { newDuel('friend', game, S.player(friendId)); go('#/duels/lobby'); return; }
-      const fr = S.state.friends.map(S.player).filter(Boolean).sort((a, b) => b.online - a.online);
-      U.modal({
-        title: 'Desafiar amigo', icon: 'user-plus',
-        body: fr.length ? `<div class="list">${fr.map(f => `<div class="list-item">${avatar(f, 'sm', { status: true })}<div class="li-main"><b>${esc(f.username)}</b><small>${f.online ? 'Online' : 'Offline · ' + timeAgo(f.lastSeen)}</small></div><button class="btn btn-sm ${f.online ? 'btn-primary' : ''}" data-pick-friend="${f.id}" ${f.online ? '' : 'disabled'}>${ic('swords')} Desafiar</button></div>`).join('')}</div>`
-          : U.empty('users', 'Sem amigos ainda', 'Adicione amigos para desafiá-los.', '<a class="btn btn-primary" href="#/friends?tab=find">Encontrar jogadores</a>'),
-        onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-pick-friend]'); if (b) { U.close(); newDuel('friend', game, S.player(b.dataset.pickFriend)); go('#/duels/lobby'); } })
-      });
-      return;
+      if (friendId) return inviteFriend(S.player(friendId), game);
+      return friendModal(game);
     }
-    if (mode === 'private') {
-      U.modal({
-        title: 'Sala privada', icon: 'key-round',
-        body: `<div class="stack"><button class="btn btn-primary btn-block" data-create>${ic('plus')} Criar nova sala</button>
-          <div class="faint" style="text-align:center">ou</div>
-          <div class="field"><label for="joinCode">Código da sala</label><input class="input" id="joinCode" maxlength="6" placeholder="Ex.: K7Q2ZP" style="text-transform:uppercase;letter-spacing:.2em;font-weight:700" autocomplete="off"><span class="err" id="joinErr"></span></div>
-          <button class="btn btn-block" data-join>${ic('log-in')} Entrar na sala</button></div>`,
-        onMount: m => {
-          m.querySelector('[data-create]').onclick = () => { U.close(); newDuel('private', game); go('#/duels/lobby'); };
-          const join = () => {
-            const v = m.querySelector('#joinCode').value.trim().toUpperCase();
-            if (!/^[A-Z0-9]{6}$/.test(v)) { m.querySelector('#joinErr').textContent = 'Digite um código de 6 caracteres.'; return; }
-            U.close();
-            const d = newDuel('private', game, AH.players[hash(v) % AH.players.length]);
-            d.code = v; d.oppReady = true; d.host = 'opp';
-            go('#/duels/lobby');
-          };
-          m.querySelector('[data-join]').onclick = join;
-          m.querySelector('#joinCode').onkeydown = e => { if (e.key === 'Enter') join(); };
-        }
-      });
-    }
+    if (mode === 'private') privateModal(game);
+  }
+  function inviteFriend(f, game) {
+    if (!NET()) { newDuel('friend', game, f); go('#/duels/lobby'); return; }
+    if (!f?.online) { U.toast(`${esc(f?.username || 'Esse amigo')} está offline agora`, 'info', 'moon'); return; }
+    const d = newDuel('friend', game, null);
+    d.invited = f; d.opp = null; d.host = true;
+    connectRoom(d);
+    AH.online.invite(f.id, { code: d.code, game: d.game, difficulty: d.difficulty });
+    U.toast(`Convite enviado para <b>${esc(f.username)}</b>`, 'success', 'send');
+    go('#/duels/lobby');
+  }
+  function friendModal(game) {
+    const fr = S.state.friends.map(S.player).filter(Boolean).sort((a, b) => b.online - a.online);
+    U.modal({
+      title: 'Desafiar amigo', icon: 'user-plus',
+      body: fr.length ? `<div class="list">${fr.map(f => `<div class="list-item">${avatar(f, 'sm', { status: true })}<div class="li-main"><b>${esc(f.username)}</b><small>${f.online ? 'Online' : 'Offline · ' + timeAgo(f.lastSeen)}</small></div><button class="btn btn-sm ${f.online ? 'btn-primary' : ''}" data-pick-friend="${f.id}" ${f.online ? '' : 'disabled'}>${ic('swords')} Desafiar</button></div>`).join('')}</div>`
+        : U.empty('users', 'Sem amigos ainda', 'Adicione amigos para desafiá-los.', '<a class="btn btn-primary" href="#/friends?tab=find">Encontrar jogadores</a>'),
+      onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-pick-friend]'); if (b) { U.close(); inviteFriend(S.player(b.dataset.pickFriend), game); } })
+    });
+  }
+  function privateModal(game) {
+    U.modal({
+      title: 'Sala privada', icon: 'key-round',
+      body: `<div class="stack"><button class="btn btn-primary btn-block" data-create>${ic('plus')} Criar nova sala</button>
+        <div class="faint" style="text-align:center">ou</div>
+        <div class="field"><label for="joinCode">Código da sala</label><input class="input" id="joinCode" maxlength="6" placeholder="Ex.: K7Q2ZP" style="text-transform:uppercase;letter-spacing:.2em;font-weight:700" autocomplete="off"><span class="err" id="joinErr"></span></div>
+        <button class="btn btn-block" data-join>${ic('log-in')} Entrar na sala</button></div>`,
+      onMount: m => {
+        m.querySelector('[data-create]').onclick = () => { U.close(); const d = newDuel('private', game); if (NET()) connectRoom(d); go('#/duels/lobby'); };
+        const join = () => {
+          const v = m.querySelector('#joinCode').value.trim().toUpperCase();
+          if (!/^[A-Z0-9]{6}$/.test(v)) { m.querySelector('#joinErr').textContent = 'Digite um código de 6 caracteres.'; return; }
+          U.close();
+          if (NET()) { const d = newDuel('private', game); Object.assign(d, { code: v, host: false }); connectRoom(d); }
+          else { const d = newDuel('private', game, AH.players[hash(v) % AH.players.length]); d.code = v; d.oppReady = true; }
+          go('#/duels/lobby');
+        };
+        m.querySelector('[data-join]').onclick = join;
+        m.querySelector('#joinCode').onkeydown = e => { if (e.key === 'Enter') join(); };
+      }
+    });
   }
   V.startDuelMode = startMode;
 
+  const findCpu = d => {
+    const near = AH.players.filter(p => !S.state.blocked.includes(p.id)).sort((a, b) => Math.abs(a.mmr - S.user.mmr) - Math.abs(b.mmr - S.user.mmr));
+    d.opp = near[Math.floor(Math.random() * Math.min(5, near.length))];
+    d.oppReady = true; d.online = false;
+  };
   V.duelSearch = el => {
     const d = AH.duel.current;
     if (!d) return go('#/duels');
-    let secs = 0;
+    const live = NET() && d.mode !== 'cpu';
+    let secs = 0, stopMM = null, found = null;
     el.innerHTML = `<div class="card searching" style="max-width:520px;margin:20px auto">
       <div class="radar">${avatar(S.user, 'lg')}</div>
-      <h2>Procurando adversário…</h2>
-      <p class="muted" style="margin:6px 0 4px">${esc(modeInfo[d.mode].title)} · ${esc(S.game(d.game).name)}</p>
-      <p class="faint" aria-live="polite">Tempo de busca: <b data-secs>0s</b> · simulação local</p>
+      <h2>${live ? 'Procurando jogador online…' : 'Preparando a CPU…'}</h2>
+      <p class="muted" style="margin:6px 0 4px">${esc(modeInfo[d.mode].title)}${live ? '' : ` · ${esc(S.game(d.game).name)}`}</p>
+      <p class="faint" aria-live="polite">Tempo de busca: <b data-secs>0s</b></p>
+      <div data-fallback hidden style="margin-top:14px"><p class="muted">Ninguém procurando partida agora.</p>
+        <div class="row-wrap" style="justify-content:center;margin-top:10px"><button class="btn btn-primary" data-cpu>${ic('bot')} Jogar contra a CPU</button><button class="btn" data-more>Continuar procurando</button></div></div>
       <button class="btn btn-outline" style="margin-top:18px" data-cancel>${ic('x')} Cancelar busca</button></div>`;
-    const tick = setInterval(() => { secs++; el.querySelector('[data-secs]').textContent = secs + 's'; }, 1000);
-    const found = setTimeout(() => {
-      const near = AH.players.filter(p => !S.state.blocked.includes(p.id)).sort((a, b) => Math.abs(a.mmr - S.user.mmr) - Math.abs(b.mmr - S.user.mmr));
-      d.opp = near[Math.floor(Math.random() * Math.min(5, near.length))];
-      d.oppReady = true;
-      U.toast(`Adversário encontrado: <b>${esc(d.opp.username)}</b>`, 'success', 'user-check');
-      go('#/duels/lobby');
-    }, 2200 + Math.random() * 1800);
+    const tick = setInterval(() => {
+      secs++; el.querySelector('[data-secs]').textContent = secs + 's';
+      if (live && secs === 20) el.querySelector('[data-fallback]').hidden = false;
+    }, 1000);
+    if (live) {
+      stopMM = AH.online.matchmake(d.mode, m => {
+        Object.assign(d, { code: m.code, host: m.host, opp: m.peer, online: true });
+        connectRoom(d);
+        U.toast(`Adversário encontrado: <b>${esc(m.peer?.username || 'jogador')}</b>`, 'success', 'user-check');
+        go('#/duels/lobby');
+      });
+    } else {
+      found = setTimeout(() => { findCpu(d); go('#/duels/lobby'); }, 1200 + Math.random() * 1200);
+    }
     el.querySelector('[data-cancel]').onclick = () => { AH.duel.current = null; go('#/duels'); };
-    return () => { clearInterval(tick); clearTimeout(found); };
+    el.querySelector('[data-cpu]').onclick = () => { stopMM?.(); stopMM = null; d.mode = 'cpu'; d.modeLabel = modeInfo.cpu.label; findCpu(d); go('#/duels/lobby'); };
+    el.querySelector('[data-more]').onclick = () => { el.querySelector('[data-fallback]').hidden = true; secs = 0; };
+    return () => { clearInterval(tick); clearTimeout(found); stopMM?.(); };
   };
 
   V.duelLobby = el => {
     const d = AH.duel.current;
     if (!d) return go('#/duels');
     const timers = [];
+    const live = d.online && d.room;
     const draw = () => {
       const g = S.game(d.game);
       const opp = d.opp;
       const pCard = (p, ready, me) => p ? `<div class="lobby-player">${avatar(p, 'xl')}<h3>${esc(p.username)}${me ? ' <span class="faint">(você)</span>' : ''}</h3>
-        <div class="row-wrap" style="justify-content:center">${lvlTag(p)} ${emblem(p.prestige)} <span class="faint">Prestígio ${p.prestige}</span></div>
+        <div class="row-wrap" style="justify-content:center">${lvlTag(p)} ${emblem(p.prestige || 0)} <span class="faint">Prestígio ${p.prestige || 0}</span></div>
         <span class="ready ${ready ? 'yes' : 'no'}">${ic(ready ? 'check-circle-2' : 'clock')} ${ready ? 'Pronto' : 'Não está pronto'}</span></div>`
+        : d.invited ? `<div class="lobby-player empty">${avatar(d.invited, 'xl')}<h3>${esc(d.invited.username)}</h3><p class="faint">Convite enviado… aguardando aceitar</p></div>`
         : `<div class="lobby-player empty"><div class="avatar av-xl" style="--av:var(--surface-3);color:var(--text-3)">${ic('user-round-plus')}</div><h3>Aguardando jogador…</h3><p class="faint">Compartilhe o código da sala</p></div>`;
+      const canEdit = !live || d.host;
       el.innerHTML = `
         <div class="page-head"><div><a class="link-more" href="#/duels" data-leave>${ic('arrow-left')} Sair do lobby</a><h1 style="margin-top:6px">Lobby · ${esc(modeInfo[d.mode].title)}</h1></div>
           <div style="text-align:right"><div class="faint">Código da sala</div><div class="row"><span class="room-code">${d.code}</span><button class="icon-btn" data-copy aria-label="Copiar código">${ic('copy')}</button></div></div></div>
-        <div class="sim-banner">${ic('flask-conical')} Lobby simulado localmente. A presença e a prontidão do adversário são geradas pelo navegador.</div>
+        ${live ? `<div class="notice" style="margin-bottom:14px">${ic('wifi')} <span>Sala online ${d.host ? '— você é o anfitrião e escolhe o jogo.' : '— o anfitrião escolhe o jogo.'}</span></div>`
+          : `<div class="sim-banner">${ic('bot')} Treino contra a CPU.</div>`}
         <div class="card">
           <div class="lobby">${pCard(S.user, d.meReady, true)}<div class="lobby-vs">VS</div>${pCard(opp, d.oppReady)}</div>
           <div class="section" style="margin-top:22px">
             <h3 style="margin-bottom:10px">Jogo selecionado</h3>
-            <div class="chips">${[...duelGames()].sort((a, b) => b.playable - a.playable).map(x => `<button class="chip ${x.id === d.game ? 'active' : ''}" data-game="${x.id}" ${x.playable ? '' : 'disabled title="Em desenvolvimento"'} aria-pressed="${x.id === d.game}">${ic(x.icon)} ${esc(x.name)}${x.playable ? '' : ' · em breve'}</button>`).join('')}</div>
+            <div class="chips">${[...duelGames()].sort((a, b) => (live ? onlineReady(b) - onlineReady(a) : 0) || b.playable - a.playable).map(x => {
+              const ok = x.playable && (!live || onlineReady(x));
+              return `<button class="chip ${x.id === d.game ? 'active' : ''}" data-game="${x.id}" ${ok && canEdit ? '' : 'disabled'} ${!ok ? `title="${x.playable ? 'Só contra a CPU por enquanto' : 'Em desenvolvimento'}"` : ''} aria-pressed="${x.id === d.game}">${ic(x.icon)} ${esc(x.name)}${!x.playable ? ' · em breve' : !ok ? ' · só CPU' : ''}</button>`;
+            }).join('')}</div>
             ${AH.duelDifficulties[g.id] ? `<h3 style="margin:16px 0 10px">Dificuldade</h3>
-            <div class="chips" role="radiogroup" aria-label="Dificuldade do duelo">${AH.duelDifficulties[g.id].names.map((n, i) => `<button class="chip ${i === d.difficulty ? 'active' : ''}" role="radio" aria-checked="${i === d.difficulty}" data-diff="${i}">${esc(n)}</button>`).join('')}</div>` : ''}
+            <div class="chips" role="radiogroup" aria-label="Dificuldade do duelo">${AH.duelDifficulties[g.id].names.map((n, i) => `<button class="chip ${i === d.difficulty ? 'active' : ''}" role="radio" aria-checked="${i === d.difficulty}" data-diff="${i}" ${canEdit ? '' : 'disabled'}>${esc(n)}</button>`).join('')}</div>` : ''}
             <p class="row" style="gap:6px;margin-top:8px;font-weight:600">${ic(g.duelType === 'versus' ? 'swords' : 'timer')} ${esc(AH.duelLabel(g, d.difficulty))}</p>
           </div>
           <div class="row-wrap" style="justify-content:center;margin-top:20px">
             <button class="btn btn-lg ${d.meReady ? 'btn-outline' : 'btn-success'}" data-ready>${ic(d.meReady ? 'x' : 'check')} ${d.meReady ? 'Cancelar prontidão' : 'Estou pronto'}</button>
-            <button class="btn btn-lg btn-primary" data-start ${d.meReady && d.oppReady && opp ? '' : 'disabled'}>${ic('play')} Iniciar partida</button>
+            ${canEdit ? `<button class="btn btn-lg btn-primary" data-start ${d.meReady && d.oppReady && opp ? '' : 'disabled'}>${ic('play')} Iniciar partida</button>` : ''}
           </div>
-          <p class="faint" style="text-align:center;margin-top:10px">${!opp ? 'Esperando alguém entrar na sala.' : !d.oppReady ? `Aguardando ${esc(opp.username)} ficar pronto…` : !d.meReady ? 'Marque que está pronto para começar.' : 'Tudo certo! Inicie a partida.'}</p>
+          <p class="faint" style="text-align:center;margin-top:10px">${!opp ? (d.invited ? 'Assim que o convite for aceito, o amigo aparece aqui.' : 'Esperando alguém entrar na sala.') : !d.oppReady ? `Aguardando ${esc(opp.username)} ficar pronto…` : !d.meReady ? 'Marque que está pronto para começar.' : canEdit ? 'Tudo certo! Inicie a partida.' : 'Aguardando o anfitrião iniciar…'}</p>
         </div>
         ${opp ? `<div class="card section"><h3 style="margin-bottom:10px">${ic('history')} Histórico contra ${esc(opp.username)}</h3>
           ${(() => { const h = S.state.duels.filter(x => x.opp === opp.id); return h.length ? `<div class="list">${h.slice(0, 5).map(x => `<div class="list-item"><span class="ch-icon">${ic(S.game(x.game).icon)}</span><div class="li-main"><b>${esc(S.game(x.game).name)}</b><small>${timeAgo(x.t)}</small></div><span class="tag ${x.result === 'win' ? 'tag-success' : x.result === 'loss' ? 'tag-danger' : ''}">${{ win: 'Vitória', loss: 'Derrota', draw: 'Empate' }[x.result]}</span></div>`).join('')}</div>` : '<p class="faint">Primeiro confronto entre vocês.</p>'; })()}
         </div>` : ''}`;
       U.refreshIcons();
     };
+    d.onChange = draw;
     draw();
-    // Simulações de presença
-    if (!d.opp && d.mode === 'private') timers.push(setTimeout(() => { d.opp = AH.players.find(p => p.online && !S.state.blocked.includes(p.id)); U.toast(`${d.opp.username} entrou na sala (simulação)`, 'info', 'log-in'); draw(); timers.push(setTimeout(() => { d.oppReady = true; draw(); }, 1500)); }, 3500));
-    if (d.opp && !d.oppReady) timers.push(setTimeout(() => { d.oppReady = true; U.toast(`${d.opp.username} aceitou e está pronto (simulação)`, 'success', 'check'); draw(); }, 2500));
+    if (!live && d.opp && !d.oppReady) timers.push(setTimeout(() => { d.oppReady = true; draw(); }, 1200));
+    if (!live && !d.opp && d.mode === 'private') timers.push(setTimeout(() => { findCpu(d); U.toast(`${d.opp.username} entrou na sala (simulação)`, 'info', 'log-in'); draw(); }, 2500));
+    const pushConfig = () => { if (live && d.host) d.room.send('config', { game: d.game, difficulty: d.difficulty }); };
     el.addEventListener('click', e => {
-      if (e.target.closest('[data-ready]')) { d.meReady = !d.meReady; draw(); }
-      const gb = e.target.closest('[data-game]'); if (gb && !gb.disabled) { d.game = gb.dataset.game; d.difficulty = AH.duelDifficulties[d.game]?.def; draw(); }
-      const db = e.target.closest('[data-diff]'); if (db) { d.difficulty = +db.dataset.diff; if (d.opp && d.mode !== 'friend') { d.oppReady = true; } draw(); }
-      if (e.target.closest('[data-start]') && d.meReady && d.oppReady) go(`#/play/${d.game}?duel=1`);
+      if (e.target.closest('[data-ready]')) { d.meReady = !d.meReady; if (live) d.room.setReady(d.meReady); draw(); }
+      const gb = e.target.closest('[data-game]'); if (gb && !gb.disabled) { d.game = gb.dataset.game; d.difficulty = AH.duelDifficulties[d.game]?.def; pushConfig(); draw(); }
+      const db = e.target.closest('[data-diff]'); if (db && !db.disabled) { d.difficulty = +db.dataset.diff; pushConfig(); draw(); }
+      if (e.target.closest('[data-start]') && d.meReady && d.oppReady && d.opp) {
+        d.seed = Math.floor(Math.random() * 1e9);
+        if (live) { d.room.send('start', { game: d.game, difficulty: d.difficulty, seed: d.seed }); d.meReady = false; d.room.setReady(false); }
+        go(`#/play/${d.game}?duel=1`);
+      }
       if (e.target.closest('[data-copy]')) { navigator.clipboard?.writeText(d.code).then(() => U.toast('Código copiado!', 'success', 'copy'), () => U.toast('Não foi possível copiar', 'error')); }
-      if (e.target.closest('[data-leave]')) AH.duel.current = null;
+      if (e.target.closest('[data-leave]')) { leaveRoom(); AH.duel.current = null; }
     });
-    return () => timers.forEach(clearTimeout);
+    // ao entrar, o anfitrião manda a configuração para quem chegar
+    if (live && d.host) { const off = d.room.on('config-request', pushConfig); timers.push(setTimeout(pushConfig, 800)); return () => { timers.forEach(clearTimeout); off(); d.onChange = null; }; }
+    if (live && !d.host) setTimeout(() => d.room?.send('config-request'), 900);
+    return () => { timers.forEach(clearTimeout); d.onChange = null; };
   };
 
   V.duelResult = el => {
@@ -483,11 +632,13 @@
         ${d.mode === 'ranked' ? `<div class="xp-rule"><span>Pontos de divisão</span><span style="color:${result === 'win' ? 'var(--success)' : result === 'loss' ? 'var(--danger)' : 'inherit'}">${result === 'win' ? '+24' : result === 'loss' ? '−18' : '0'}</span></div>` : ''}
       </div>
       <div class="row-wrap" style="justify-content:center;margin-top:22px">
-        <a class="btn btn-lg" href="#/duels">${ic('arrow-left')} Voltar</a>
+        <a class="btn btn-lg" href="#/duels" data-back>${ic('arrow-left')} Voltar</a>
         <button class="btn btn-lg btn-primary" data-rematch>${ic('rotate-ccw')} Revanche</button>
       </div></div>`;
+    el.querySelector('[data-back]').onclick = () => { leaveRoom(); AH.duel.current = null; };
     el.querySelector('[data-rematch]').onclick = () => {
-      Object.assign(d, { meReady: false, oppReady: false, result: null });
+      Object.assign(d, { meReady: false, oppReady: d.online ? d.oppReady : false, result: null });
+      if (d.online && d.room) { d.room.setReady(false); d.room.send('rematch'); }
       U.toast(`Pedido de revanche enviado a ${esc(d.opp.username)}`, 'info', 'rotate-ccw');
       go('#/duels/lobby');
     };
@@ -497,7 +648,7 @@
   V.rankings = (el, p, q) => {
     let tab = q.tab || 'xp', gameId = q.game || '2048';
     const tabs = [['xp', 'XP global', 'zap'], ['prestige', 'Prestígio', 'sparkles'], ['wins', 'Vitórias', 'trophy'], ['comp', 'Competitivo', 'medal'], ['game', 'Por jogo', 'gamepad-2'], ['friends', 'Amigos', 'users']];
-    const everyone = () => [...AH.players.filter(x => !S.state.blocked.includes(x.id)), S.user];
+    const everyone = () => [...(AH.online?.enabled ? AH.online.board() : AH.players).filter(x => !S.state.blocked.includes(x.id)), S.user];
     const draw = () => {
       let list, metric;
       const lvlScore = x => x.prestige * 100 + x.level;
@@ -518,23 +669,25 @@
           ${avatar(x, 'md')}
           <div class="li-main"><b>${esc(x.username)} ${x === S.user ? '<span class="tag tag-primary">Você</span>' : ''}</b><small>Nível ${x.level} · ${esc(S.prestigeOf(x.prestige).name)}</small></div>
           ${emblem(x.prestige)}<div style="text-align:right;font-weight:700;min-width:96px;font-size:.9rem">${metric(x)}</div></a>`).join('')}</div></div>
-        <p class="faint" style="margin-top:10px">${ic('info', 'style="width:14px;height:14px;vertical-align:-2px"')} Rankings com dados de exemplo até a conexão com o servidor.</p>`;
+        ${AH.online?.enabled ? '' : `<p class="faint" style="margin-top:10px">${ic('info', 'style="width:14px;height:14px;vertical-align:-2px"')} Rankings com dados de exemplo até a conexão com o servidor.</p>`}`;
       U.refreshIcons();
     };
     el.innerHTML = `<div class="page-head"><div><h1>Rankings</h1><p>Veja quem está no topo do Arcade Hub.</p></div></div>
       <div class="tabs" role="tablist" style="margin-bottom:18px">${tabs.map(([k, l, i]) => `<button class="tab ${k === tab ? 'active' : ''}" role="tab" aria-selected="${k === tab}" data-tab="${k}">${ic(i)} ${l}</button>`).join('')}</div>
       <div id="rkBody"></div>`;
+    if (AH.online?.enabled) el.querySelector('#rkBody').innerHTML = U.skeletonGrid(4);
     el.addEventListener('click', e => {
       const t = e.target.closest('[data-tab]');
       if (t) { tab = t.dataset.tab; el.querySelectorAll('[data-tab]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); }); draw(); }
       const rg = e.target.closest('[data-rg]'); if (rg) { gameId = rg.dataset.rg; draw(); }
     });
     draw();
+    if (AH.online?.enabled) AH.online.loadBoard().then(() => { if (el.isConnected) draw(); });
   };
 
   /* ==================== AMIGOS ==================== */
   V.friends = (el, p, q) => {
-    let tab = q.tab || 'list', term = '';
+    let tab = q.tab || 'list', term = '', searched = false, searchT = null;
     const draw = () => {
       const st = S.state;
       const friends = st.friends.map(S.player).filter(Boolean).sort((a, b) => b.online - a.online || a.username.localeCompare(b.username));
@@ -564,7 +717,9 @@
       }
       if (tab === 'find') {
         const t = term.trim().toLowerCase();
-        const res = t ? AH.players.filter(x => x.username.toLowerCase().includes(t) || x.id.includes(t)) : AH.players.filter(x => S.friendship(x.id) === 'none').slice(0, 6);
+        const res = AH.online?.enabled ? AH.online.results().filter(x => S.friendship(x.id) !== 'blocked' || t)
+          : t ? AH.players.filter(x => x.username.toLowerCase().includes(t) || x.id.includes(t)) : AH.players.filter(x => S.friendship(x.id) === 'none').slice(0, 6);
+        if (AH.online?.enabled && !searched) { searched = true; AH.online.search(term).then(() => { if (el.isConnected && tab === 'find') draw(); }); }
         body = `<div class="card"><div class="search" style="max-width:none;margin-bottom:12px">${ic('search')}<input class="input" style="border-radius:999px;padding-left:42px" id="findInput" placeholder="Buscar por username ou ID (ex.: LunaPixel)" value="${esc(term)}" aria-label="Buscar jogadores"></div>
           <p class="faint" style="margin-bottom:6px">${t ? `${res.length} resultado(s)` : 'Sugestões de jogadores'}</p>
           ${res.length ? `<div class="list">${res.map(f => { const fs = S.friendship(f.id); return `<div class="list-item"><a class="li-link" href="#/user/${f.id}">${avatar(f, 'md', { status: true })}<div class="li-main"><b>${esc(f.username)} ${lvlTag(f)}</b><small>#${f.id.slice(2)} · Prestígio ${f.prestige}</small></div></a>
@@ -579,7 +734,12 @@
         <div class="tabs" role="tablist" style="margin-bottom:16px">${tabs.map(([k, l, i]) => `<button class="tab ${k === tab ? 'active' : ''}" role="tab" aria-selected="${k === tab}" data-goto="${k}">${ic(i)} ${l}</button>`).join('')}</div>${body}`;
       U.refreshIcons();
       const fi = el.querySelector('#findInput');
-      if (fi) { fi.oninput = e => { term = e.target.value; const pos = e.target.selectionStart; draw(); const n = el.querySelector('#findInput'); n.focus(); n.setSelectionRange(pos, pos); }; }
+      const refocus = pos => { const n = el.querySelector('#findInput'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } };
+      if (fi) fi.oninput = e => {
+        term = e.target.value; const pos = e.target.selectionStart;
+        if (AH.online?.enabled) { clearTimeout(searchT); searchT = setTimeout(() => AH.online.search(term).then(() => { if (el.isConnected) { draw(); refocus(pos); } }), 300); return; }
+        draw(); refocus(pos);
+      };
     };
     el.addEventListener('click', e => {
       const b = e.target.closest('button[data-goto],button[data-add],button[data-accept],button[data-decline],button[data-cancel],button[data-remove],button[data-block],button[data-unblock],button[data-duel]');
@@ -636,12 +796,12 @@
   /* ==================== PERFIL ==================== */
   function profileLayout(el, p, isMe) {
     const pr = S.prestigeOf(p.prestige);
-    const theme = isMe ? p.cardTheme : ['violet', 'sunset', 'ocean', 'mint', 'night'][hash(p.id) % 5];
-    const stats = isMe ? p.stats : Object.fromEntries(AH.games.filter(g => g.playable || hash(p.id + g.id) % 3 === 0).slice(0, 6).map(g => { const h = hash(p.id + g.id); return [g.id, { played: 10 + h % 120, wins: 5 + h % 60, best: g.scoreLabel === 'Vitórias' ? null : g.scoreDir === 'low' ? 12 + h % 30 : 500 + h % 9000 }]; }));
+    const theme = isMe || p.cardTheme ? p.cardTheme || 'violet' : ['violet', 'sunset', 'ocean', 'mint', 'night'][hash(p.id) % 5];
+    const stats = isMe || p.real ? p.stats || {} : Object.fromEntries(AH.games.filter(g => g.playable || hash(p.id + g.id) % 3 === 0).slice(0, 6).map(g => { const h = hash(p.id + g.id); return [g.id, { played: 10 + h % 120, wins: 5 + h % 60, best: g.scoreLabel === 'Vitórias' ? null : g.scoreDir === 'low' ? 12 + h % 30 : 500 + h % 9000 }]; }));
     const matches = isMe ? p.matches : p.wins + p.losses;
-    const favs = isMe ? p.favorites : AH.games.filter(g => hash(p.id + g.id) % 5 === 0).slice(0, 4).map(g => g.id);
-    const achCount = isMe ? Object.keys(p.achievements).length : Math.min(AH.achievements.length, 3 + p.level % 10);
-    const history = isMe ? p.history : [
+    const favs = isMe || p.real ? p.favorites || [] : AH.games.filter(g => hash(p.id + g.id) % 5 === 0).slice(0, 4).map(g => g.id);
+    const achCount = isMe ? Object.keys(p.achievements).length : p.real ? p.achCount || 0 : Math.min(AH.achievements.length, 3 + p.level % 10);
+    const history = isMe ? p.history : p.real ? [] : [
       { t: Date.now() - 3600e3 * (1 + hash(p.id) % 8), icon: 'trophy', text: `Venceu uma partida de ${S.game(p.playing || 'velha').name}` },
       { t: Date.now() - 86400e3 * 2, icon: 'trending-up', text: `Alcançou o nível ${p.level}` },
       { t: Date.now() - 86400e3 * 9, icon: 'award', text: 'Desbloqueou “Explorador”' }];
@@ -696,7 +856,7 @@
 
       <div class="card section"><h3 style="margin-bottom:10px">${ic('bar-chart-3')} Estatísticas por jogo</h3>
         ${Object.keys(stats).length ? `<div class="table-scroll"><table class="stat-table"><thead><tr><th>Jogo</th><th>Partidas</th><th>Vitórias</th><th>Recorde</th></tr></thead><tbody>
-          ${Object.entries(stats).map(([id, s]) => { const g = S.game(id); return `<tr><td><a href="#/game/${id}" class="row" style="gap:8px"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span>${esc(g.name)}</a></td><td>${fmt(s.played)}</td><td>${fmt(s.wins)}</td><td>${s.best != null ? fmt(s.best) + ' <span class="faint">' + esc(g.scoreLabel.toLowerCase()) + '</span>' : '—'}</td></tr>`; }).join('')}
+          ${Object.entries(stats).map(([id, s]) => { const g = S.game(id); return `<tr><td><a href="#/game/${id}" class="row" style="gap:8px"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span>${esc(g.name)}</a></td><td>${fmt(s.played)}</td><td>${g.noWins ? '<span class="faint">—</span>' : fmt(s.wins)}</td><td>${s.best != null ? fmt(s.best) + ' <span class="faint">' + esc(g.scoreLabel.toLowerCase()) + '</span>' : '—'}</td></tr>`; }).join('')}
         </tbody></table></div>` : U.empty('bar-chart-3', 'Nenhuma estatística ainda', 'Jogue para ver seus números aqui.')}
       </div>
 
@@ -883,6 +1043,11 @@
   V.user = (el, [id]) => {
     if (id === S.user.id) return go('#/profile');
     const p = S.player(id);
+    if (!p && AH.online?.enabled) {
+      el.innerHTML = U.skeletonGrid(2);
+      AH.online.loadProfile(id).then(pp => { if (!el.isConnected) return; pp ? profileLayout(el, pp, false) : V.notFound(el); U.refreshIcons(); });
+      return;
+    }
     if (!p) return V.notFound(el);
     profileLayout(el, p, false);
   };
