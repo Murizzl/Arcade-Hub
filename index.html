@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Arcade Hub</title>
+  <meta name="description" content="Arcade Hub — minijogos sociais gratuitos com níveis, prestígio, amigos e duelos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+  <div class="app" id="app">
+    <!-- Sidebar (desktop) -->
+    <aside class="sidebar" aria-label="Navegação principal">
+      <a href="#/home" class="brand" aria-label="Arcade Hub — início">
+        <span class="brand-mark"><i data-lucide="gamepad-2"></i></span>
+        <span class="brand-name">Arcade<b>Hub</b></span>
+      </a>
+      <nav class="side-nav" id="sideNav"></nav>
+      <div class="side-footer">
+        <a href="#/settings" class="side-link" data-route="settings"><i data-lucide="settings"></i><span>Configurações</span></a>
+        <div class="side-note"><i data-lucide="flask-conical"></i> Protótipo · dados locais</div>
+      </div>
+    </aside>
+
+    <div class="main-col">
+      <header class="topbar" id="topbar">
+        <a href="#/home" class="brand brand-compact" aria-label="Arcade Hub — início">
+          <span class="brand-mark"><i data-lucide="gamepad-2"></i></span>
+          <span class="brand-name">Arcade<b>Hub</b></span>
+        </a>
+        <form class="search" id="searchForm" role="search">
+          <i data-lucide="search"></i>
+          <input id="searchInput" type="search" placeholder="Buscar jogos…" aria-label="Buscar jogos" autocomplete="off">
+        </form>
+        <div class="top-actions" id="topActions"></div>
+      </header>
+
+      <main id="main" class="view" tabindex="-1"></main>
+    </div>
+
+    <!-- Bottom nav (mobile) -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Navegação"></nav>
+  </div>
+
+  <div class="modal-root" id="modalRoot"></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/cars-levels.js"></script>
+  <script src="js/games-levels.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
