@@ -172,9 +172,11 @@
     save(); return true;
   }
   // Item equipado (ou o padrão) de um espaço do jogo; os motores leem item.fx e a tela de jogo aplica item.vars
+  let preview = null; // { game, slot, id }: item em teste na loja (não é comprado nem salvo)
   function skin(gameId, slot) {
     const s = AH.gameShop.slots(gameId).find(x => x.id === slot);
     if (!s) return { fx: {} };
+    if (preview && preview.game === gameId && preview.slot === slot) { const p = s.items.find(x => x.id === preview.id); if (p) return p; }
     const id = state.user?.gear?.equipped[gearKey(gameId, slot)];
     return s.items.find(x => x.id === id && gameOwns(gameId, slot, x.id)) || s.items[0];
   }
@@ -447,7 +449,7 @@
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
     levelInfo, addXp, reportMatch, claimChallenge, challenges, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
-    catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, newUser, setUser, clearSession,
+    catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, setPreview: p => { preview = p; }, isPreview: () => !!preview, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,
     prestigeOf: n => C.prestiges[Math.min(n, C.prestiges.length - 1)],
     divisionOf: mmr => [...C.divisions].reverse().find(d => mmr >= d.min),

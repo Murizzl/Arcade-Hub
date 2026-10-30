@@ -1401,3 +1401,22 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .pz-tube { transition: transform .26s cubic-bezier(.3,1.3,.5,1); will-change: transform; }
 .pz-tube.sel { transform: translateY(-14px); }
 .pz-liquid span { box-shadow: inset 0 -2px 0 rgba(0,0,0,.1); }
+
+/* ---------- Molduras novas ---------- */
+.avatar.frame-ice { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #bae6fd, 0 0 12px 4px rgba(186,230,253,.6); }
+.avatar.frame-ocean { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #0ea5e9, 0 0 0 9px #0369a1; }
+.avatar.frame-forest { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #16a34a, 0 0 0 9px #a3e635; }
+.avatar.frame-shadow { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #1e1b4b, 0 0 14px 6px rgba(30,27,75,.55); }
+.avatar.frame-flame { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #ef4444, 0 0 0 9px #f59e0b, 0 0 14px 6px rgba(239,68,68,.45); }
+.avatar.frame-neon { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px #22d3ee, 0 0 0 8px #f0abfc, 0 0 16px 6px rgba(34,211,238,.55); }
+.avatar.frame-royal { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #7c3aed, 0 0 0 8px var(--surface), 0 0 0 11px #f5b524; }
+.avatar.frame-rainbow { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #ef4444, 0 0 0 9px #facc15, 0 0 0 12px #22c55e, 0 0 0 15px #3b82f6; }
+
+/* ---------- Prévia dentro do jogo (loja do jogo) ---------- */
+.shop-item { position: relative; }
+.gs-eye { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text); display: grid; place-items: center; box-shadow: var(--shadow-sm); z-index: 2; cursor: pointer; }
+.gs-eye:hover { background: var(--primary); color: #fff; }
+.gs-eye svg { width: 18px; height: 18px; }
+.gs-preview { position: fixed; inset: 0; z-index: 300; background: var(--bg); overflow: auto; padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); }
+.gs-pv-head { max-width: 560px; margin: 0 auto 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gs-pv-head b { flex: 1; min-width: 140px; }

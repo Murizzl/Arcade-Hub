@@ -40,6 +40,7 @@
   const progOf = (id, t) => statOf(id)?.prog?.[t] || 1;
   const startLevel = id => virt(curTier(id), progOf(id, curTier(id)));
   function advance(id, t, v) {
+    if (AH.store.isPreview()) return 0; // prévia da loja não conta progresso
     const s = ensureStat(id);
     s.prog = s.prog || {}; s.prog[t] = Math.max(s.prog[t] || 1, numOf(v) + 1);
     return Object.values(s.prog).reduce((a, x) => a + x - 1, 0); // total de fases vencidas = recorde

@@ -83,13 +83,21 @@ AH.config = {
     { id: 'mint',     name: 'Menta',       price: 150 },
     { id: 'sunset',   name: 'Pôr do sol',  price: 300 },
     { id: 'arcade',   name: 'Arcade',      price: 500 },
+    { id: 'ice',      name: 'Gelo',        price: 200 },
+    { id: 'ocean',    name: 'Oceano',      price: 200 },
+    { id: 'forest',   name: 'Floresta',    price: 250 },
+    { id: 'shadow',   name: 'Sombra',      price: 300 },
+    { id: 'flame',    name: 'Chamas',      price: 350 },
+    { id: 'neon',     name: 'Neon',        price: 400 },
+    { id: 'royal',    name: 'Realeza',     price: 600 },
+    { id: 'rainbow',  name: 'Arco-íris',   price: 700 },
     { id: 'emerald',  name: 'Esmeralda',   prestige: 1 },
     { id: 'sapphire', name: 'Safira',      prestige: 2 },
     { id: 'gold',     name: 'Dourada',     prestige: 3 },
     { id: 'ruby',     name: 'Rubi',        prestige: 4 },
     { id: 'cosmic',   name: 'Cósmica',     prestige: 5 }
   ],
-  avatarIcons: ['cat', 'dog', 'rabbit', 'bird', 'fish', 'ghost', 'rocket', 'crown', 'gamepad-2', 'star', 'zap', 'flame', 'leaf', 'skull', 'bot', 'snail'],
+  avatarIcons: ['cat', 'dog', 'rabbit', 'bird', 'fish', 'ghost', 'rocket', 'crown', 'gamepad-2', 'star', 'zap', 'flame', 'leaf', 'skull', 'bot', 'snail', 'sword', 'shield', 'heart', 'moon', 'sun', 'cloud', 'gem', 'trophy', 'music', 'pizza', 'coffee', 'smile', 'flower-2', 'anchor', 'car', 'plane', 'bug', 'cookie', 'candy', 'dumbbell', 'apple', 'cherry', 'carrot', 'orbit', 'sparkles', 'wand-2', 'palette', 'turtle', 'squirrel', 'origami'],
   freeIcons: 6, iconPrice: 80,
   avatarColors: ['#6c4cf5', '#ff7a45', '#2a8bd8', '#14a37f', '#ef4565', '#f2a516', '#a24cf5', '#232035', '#0ea5a4', '#d9468f'],
   cardThemes: [
@@ -99,7 +107,16 @@ AH.config = {
     { id: 'mint',   name: 'Menta',      color: '#14a37f', price: 120 },
     { id: 'berry',  name: 'Frutas vermelhas', color: '#d9468f', price: 200 },
     { id: 'gold',   name: 'Ouro',       color: '#d99a00', price: 350 },
-    { id: 'night',  name: 'Noite',      color: '#232035', price: 250 }
+    { id: 'night',  name: 'Noite',      color: '#232035', price: 250 },
+    { id: 'forest', name: 'Floresta',   color: '#16a34a', price: 120 },
+    { id: 'rose',   name: 'Rosa',       color: '#f43f5e', price: 120 },
+    { id: 'grape',  name: 'Uva',        color: '#7c3aed', price: 150 },
+    { id: 'teal',   name: 'Turquesa',   color: '#0d9488', price: 150 },
+    { id: 'sky',    name: 'Céu',        color: '#38bdf8', price: 150 },
+    { id: 'cherry', name: 'Cereja',     color: '#be123c', price: 200 },
+    { id: 'sand',   name: 'Areia',      color: '#b45309', price: 200 },
+    { id: 'graphite', name: 'Grafite',  color: '#475569', price: 250 },
+    { id: 'aurora', name: 'Aurora',     color: '#10b981', price: 450 }
   ],
   titles: [
     { id: 'novato',    name: 'Novato',           price: 0 },
@@ -107,7 +124,18 @@ AH.config = {
     { id: 'rei_velha', name: 'Rei da Velha',     price: 250 },
     { id: 'duelista',  name: 'Duelista',         price: 250 },
     { id: 'mestre2048', name: 'Mestre do 2048',  price: 300 },
-    { id: 'lenda',     name: 'Lenda do Arcade',  price: 1000 }
+    { id: 'lenda',     name: 'Lenda do Arcade',  price: 1000 },
+    { id: 'sem_pressa', name: 'Sem Pressa',      price: 150 },
+    { id: 'madrugador', name: 'Madrugador',      price: 150 },
+    { id: 'insone',    name: 'Insone',           price: 200 },
+    { id: 'sortudo',   name: 'Sortudo',          price: 250 },
+    { id: 'cacador',   name: 'Caçador de Recordes', price: 300 },
+    { id: 'estrela',   name: 'Estrela Cadente',  price: 300 },
+    { id: 'estrategista', name: 'Estrategista',  price: 350 },
+    { id: 'genio',     name: 'Gênio',            price: 400 },
+    { id: 'rei_arcade', name: 'Rei do Arcade',   price: 500 },
+    { id: 'boss',      name: 'Chefe Final',      price: 800 },
+    { id: 'imbativel', name: 'Imbatível',        price: 1200 }
   ],
   // Duelos "corrida": cada jogador joga a própria partida e comparamos o resultado.
   raceDefaults: { score: { label: 'Quem fizer mais pontos', limit: 120 }, time: { label: 'Quem terminar mais rápido', limit: 180 } }

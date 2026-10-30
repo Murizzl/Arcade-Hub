@@ -1072,6 +1072,34 @@
   };
 
   /* ==================== LOJA DO JOGO ==================== */
+  // Joga o próprio jogo, de verdade, com o item aplicado — nada é comprado, salvo ou contado.
+  function openPreview(g, slotId, it) {
+    const root = document.createElement('div');
+    root.className = 'gs-preview';
+    root.innerHTML = `<div class="gs-pv-head"><b>${ic('eye')} Prévia: ${esc(it.name)}</b><button class="btn btn-sm btn-primary" data-close>${ic('x')} Fechar</button><span class="faint" style="flex-basis:100%">Jogue à vontade: nada daqui é salvo nem dá recompensa.</span></div>
+      <div class="play-wrap"><div id="pvEngine"></div></div>`;
+    document.body.appendChild(root);
+    document.body.style.overflow = 'hidden';
+    S.setPreview({ game: g.id, slot: slotId, id: it.id });
+    Object.entries(S.skin(g.id, 'theme').vars || {}).forEach(([k, val]) => root.querySelector('.play-wrap').style.setProperty(k, val));
+    const host = root.querySelector('#pvEngine');
+    let cleanup = null, closed = false;
+    const run = () => {
+      if (closed) return;
+      cleanup?.();
+      const ctx = { mode: 'solo', opponent: null, chosen: true, preview: true, end: () => setTimeout(run, 900) };
+      host.innerHTML = '';
+      cleanup = AH.engines[g.id].mount(host, ctx) || null;
+      host.querySelectorAll('[data-restart], [data-levels]').forEach(b => { b.hidden = false; });
+      U.refreshIcons();
+    };
+    const close = () => { closed = true; cleanup?.(); S.setPreview(null); root.remove(); document.body.style.overflow = ''; };
+    root.querySelector('[data-close]').onclick = close;
+    window.addEventListener('hashchange', close, { once: true });
+    U.refreshIcons();
+    run();
+  }
+
   V.gameShop = (el, [id], q) => {
     const g = S.game(id);
     if (!g) return V.notFound(el);
@@ -1092,7 +1120,7 @@
           const action = on ? `<span class="tag tag-success">${ic('check')} Equipado</span>`
             : own ? `<button class="btn btn-sm" data-equip="${it.id}">Equipar</button>`
             : `<button class="btn btn-sm btn-primary" data-buy="${it.id}" ${S.user.coins < it.price ? 'disabled title="Moedas insuficientes"' : ''}>${ic('star')} ${fmt(it.price)}</button>`;
-          return `<div class="shop-item ${on ? 'on' : ''}"><div class="shop-prev">${preview(it)}</div><b>${esc(it.name)}</b><small class="faint">${!it.price ? 'Grátis' : own ? 'Na sua coleção' : 'Cosmético'}</small>${action}</div>`;
+          return `<div class="shop-item ${on ? 'on' : ''}"><button class="gs-eye" data-eye="${it.id}" aria-label="Ver ${esc(it.name)} no jogo" title="Ver no jogo">${ic('eye')}</button><div class="shop-prev">${preview(it)}</div><b>${esc(it.name)}</b><small class="faint">${!it.price ? 'Grátis' : own ? 'Na sua coleção' : 'Cosmético'}</small>${action}</div>`;
         }).join('')}</div>
         <div class="row-wrap" style="margin-top:18px"><a class="btn btn-primary" href="#/play/${g.id}">${ic('play')} Jogar com os itens</a><a class="btn" href="#/shop">${ic('shopping-bag')} Loja do perfil</a></div>
         <p class="faint" style="margin-top:14px">${ic('info', 'style="width:14px;height:14px;vertical-align:-2px"')} Ganhe moedas jogando, vencendo duelos e completando desafios. Moedas não têm valor real.</p>`;
@@ -1101,6 +1129,8 @@
     el.onclick = e => {
       const t = e.target.closest('[data-slot]');
       if (t) { slotId = t.dataset.slot; history.replaceState(null, '', `#/gshop/${id}?slot=${slotId}`); draw(); return; }
+      const eye = e.target.closest('[data-eye]');
+      if (eye) return openPreview(g, slotId, AH.gameShop.item(id, slotId, eye.dataset.eye));
       const eqb = e.target.closest('[data-equip]');
       if (eqb) { S.gameEquip(id, slotId, eqb.dataset.equip); U.toast('Item equipado!', 'success', 'check'); draw(); return; }
       const b = e.target.closest('[data-buy]');
