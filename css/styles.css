@@ -1385,3 +1385,13 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .pz-tierpick { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface-2); color: var(--text); text-align: left; }
 .pz-tierpick:hover, .pz-tierpick.cur { border-color: var(--primary); }
 .pz-tierpick b { font-family: var(--font-display); }
+
+/* ---------- Desempenho no celular ---------- */
+.view-inner > .section { content-visibility: auto; contain-intrinsic-size: auto 320px; }
+@media (hover: none), (max-width: 860px) {
+  .thumb-art { animation: none !important; }
+  .game-grid > *, .game-row > *, .ach-grid > *, .shop-grid > *, .mode-grid > *, .quick-stats > *, .div-cards > * { animation: none !important; }
+  .topbar, .bottom-nav, .modal-backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .game-card { transition: none; }
+}
+@media (hover: none), (max-width: 860px) { .topbar { background: var(--bg); } }

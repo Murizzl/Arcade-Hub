@@ -626,8 +626,8 @@
         const pg = g.createLinearGradient(cx - RI, 0, cx + RI, 0);
         pg.addColorStop(0, shade(theme.pole, -0.12)); pg.addColorStop(0.35, theme.pole); pg.addColorStop(1, shade(theme.pole, -0.22));
         g.fillStyle = pg; g.fillRect(cx - RI * 0.92, 0, RI * 1.84, H);
-        const drawSplats = y => splats.forEach(s => {
-          if (s.y !== y) return;
+        const drawSplats = py => splats.forEach(s => {
+          if (s.y !== py) return;
           const a = rad((((s.a + rot) % 360) + 360) % 360); if (Math.sin(a) <= 0.05) return;
           const r = midR(), x = cx + Math.cos(a) * r, y = s.y - camY + Math.sin(a) * r * K3;
           g.globalAlpha = Math.min(1, s.life * 1.6) * 0.85; g.fillStyle = s.c;

@@ -198,7 +198,9 @@
   // No desktop não há como "deslizar": mostramos setas e deixamos arrastar com o mouse.
   let drag = null, suppressClick = false;
   function enhanceScrollers(root = document) {
-    root.querySelectorAll('.game-row:not([data-scroller]), .chips:not([data-scroller])').forEach(el => {
+    const fresh = root.querySelectorAll('.game-row:not([data-scroller]), .chips:not([data-scroller])');
+    if (!fresh.length) return; // nada novo: não mexe no DOM (evita laço com o MutationObserver)
+    fresh.forEach(el => {
       el.dataset.scroller = '1';
       const wrap = document.createElement('div');
       wrap.className = 'scroller';
