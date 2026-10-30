@@ -92,11 +92,19 @@
       { playable: true, isNew: true, popularity: 88, players: 9600, desc: 'Mande os copinhos para a esteira e eles pintam o desenho em pixel art — de baixo para cima. Planeje a ordem para a esteira não lotar!', scoreLabel: 'Fase' }),
     g('cores', 'Batalha de Cores', ['arcade', 'estrategia', 'multiplayer'], 'paintbrush', '#2563eb', '#ef4444', 'checks',
       { playable: true, isNew: true, popularity: 94, players: 18900, desc: 'Pinte o campo com bolas, laser, serra e bomba. Quem tiver mais território quando o tempo acabar vence!', scoreLabel: '% do campo' }),
-    g('territorio', 'Território', ['arcade', 'multiplayer'], 'square-dashed', '#0ea5e9', '#fde047', 'grid',
+    g('territorio', 'Território', ['arcade', 'multiplayer'], 'land-plot', '#0ea5e9', '#fde047', 'grid',
       { playable: true, isNew: true, popularity: 93, players: 22700, desc: 'Saia da sua área, desenhe um rastro e volte para conquistar território. Cuidado: se cortarem seu rastro, você perde!' }),
     g('gamao', 'Gamão', ['tabuleiro', 'estrategia', 'multiplayer'], 'dices', '#92400e', '#f59e0b', 'stripes',
       { popularity: 44, players: 3100, desc: 'Um dos jogos de tabuleiro mais antigos do mundo. Corra com suas peças até a saída.' })
   ];
+
+  // ---------- Jogos implementados em games-arcade.js e games-board.js ----------
+  const byId = id => AH.games.find(g => g.id === id);
+  ['snake', 'minado', 'xadrez', 'damas', 'conecta4', 'pong', 'deslizante', 'paciencia', 'blackjack', 'tetra', 'calculo', 'kakuro', 'batalha', 'flappy', 'domino', 'lights', 'mahjong', 'gamao']
+    .forEach(id => { byId(id).playable = true; });
+  Object.assign(byId('lights'), { scoreLabel: 'Movimentos', scoreDir: 'low' });
+  ['kakuro', 'mahjong', 'paciencia'].forEach(id => Object.assign(byId(id), { scoreLabel: 'Tempo', scoreDir: 'low' }));
+  ['xadrez', 'damas', 'conecta4', 'pong', 'batalha', 'domino', 'gamao', 'blackjack'].forEach(id => Object.assign(byId(id), { scoreLabel: 'Vitórias' }));
 
   // ---------- Modo de duelo de cada jogo ----------
   // versus: confronto direto (turnos/rodadas contra o adversário)
@@ -105,11 +113,14 @@
   const RACE = { '2048': { metric: 'score', limit: 120 }, memoria: { metric: 'time', limit: 120 }, pocoes: { metric: 'time', limit: 240 },
     porcas: { metric: 'time', limit: 240 }, carros: { metric: 'time', limit: 180 }, helix: { metric: 'score', limit: 120 }, sudoku: { metric: 'time', limit: 600 },
     labirinto: { metric: 'time', limit: 120 }, empilhar: { metric: 'score', limit: 120 }, prateleiras: { metric: 'time', limit: 180 },
-    copinhos: { metric: 'time', limit: 180 }, territorio: { metric: 'score', limit: 120 } };
+    copinhos: { metric: 'time', limit: 180 }, territorio: { metric: 'score', limit: 120 },
+    snake: { metric: 'score', limit: 120 }, flappy: { metric: 'score', limit: 120 }, tetra: { metric: 'score', limit: 150 }, calculo: { metric: 'score', limit: 70 },
+    minado: { metric: 'time', limit: 240 }, deslizante: { metric: 'time', limit: 180 }, lights: { metric: 'time', limit: 150 }, kakuro: { metric: 'time', limit: 600 },
+    mahjong: { metric: 'time', limit: 480 }, paciencia: { metric: 'time', limit: 600 } };
   AH.games.forEach(game => {
     game.duel = true;
     // jogos de pontuação infinita: não existe "vencer" fora de duelos/multiplayer
-    game.noWins = ['helix', 'empilhar'].includes(game.id) && !game.cats.includes('multiplayer');
+    game.noWins = ['helix', 'empilhar', 'snake', 'flappy', 'tetra', 'calculo'].includes(game.id) && !game.cats.includes('multiplayer');
     game.duelType = VERSUS.includes(game.id) ? 'versus' : 'race';
     if (game.duelType === 'race') {
       const metric = game.scoreDir === 'low' || game.scoreLabel === 'Tempo' ? 'time' : 'score';
@@ -126,7 +137,15 @@
     sudoku: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [300, 600, 900, 1200], def: 0 },
     labirinto: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [60, 90, 150, 240], def: 1 },
     prateleiras: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [90, 150, 210, 300], def: 1 },
-    copinhos: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [120, 180, 240, 300], def: 1 }
+    copinhos: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [120, 180, 240, 300], def: 1 },
+    minado: { names: ['Fácil', 'Médio', 'Difícil'], limits: [120, 240, 420], def: 0 },
+    deslizante: { names: ['3×3', '4×4', '5×5'], limits: [90, 180, 360], def: 1 },
+    lights: { names: ['3×3', '4×4', '5×5'], limits: [60, 120, 240], def: 1 },
+    kakuro: { names: ['Fácil', 'Médio', 'Difícil'], limits: [300, 600, 900], def: 0 },
+    xadrez: { names: ['Fácil', 'Médio', 'Difícil'], def: 1 },
+    damas: { names: ['Fácil', 'Médio', 'Difícil'], def: 1 },
+    conecta4: { names: ['Fácil', 'Médio', 'Difícil'], def: 1 },
+    pong: { names: ['Fácil', 'Médio', 'Difícil'], def: 1 }
   };
   AH.raceLimit = (game, diff) => AH.duelDifficulties[game.id]?.limits?.[diff] ?? game.race.limit;
   AH.duelLabel = (game, diff) => {

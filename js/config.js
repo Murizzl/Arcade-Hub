@@ -42,7 +42,17 @@ AH.config = {
     copinhos:    { label: 'Dificuldade da fase', calc: (s, x) => [15, 30, 55, 90][x?.tier || 0] },
     empilhar:    { label: 'Altura da torre (2 XP por bloco)', calc: s => Math.min(300, s * 2) },
     cores:       { label: 'Território conquistado', calc: s => Math.min(120, Math.round(s)) },
-    territorio:  { label: 'Área conquistada', calc: s => Math.min(300, Math.round(s / 5)) }
+    territorio:  { label: 'Área conquistada', calc: s => Math.min(300, Math.round(s / 5)) },
+    snake:       { label: 'Pontos na partida (1 XP a cada 4)', calc: s => Math.min(250, Math.floor(s / 4)) },
+    flappy:      { label: 'Canos ultrapassados (6 XP cada)', calc: s => Math.min(250, s * 6) },
+    tetra:       { label: 'Pontos na partida (1 XP a cada 15)', calc: s => Math.min(350, Math.floor(s / 15)) },
+    calculo:     { label: 'Pontos na partida (1 XP a cada 3)', calc: s => Math.min(200, Math.floor(s / 3)) },
+    minado:      { label: 'Dificuldade do campo', calc: (s, x) => [20, 45, 90][x?.tier || 0] },
+    deslizante:  { label: 'Tamanho do quebra-cabeça', calc: (s, x) => [15, 35, 70][x?.tier || 0] },
+    lights:      { label: 'Tamanho da grade', calc: (s, x) => [15, 35, 70][x?.tier || 0] },
+    kakuro:      { label: 'Dificuldade do Kakuro', calc: (s, x) => [40, 80, 140][x?.tier || 0] },
+    mahjong:     { label: 'Tabuleiro limpo', calc: () => 70 },
+    paciencia:   { label: 'Jogo vencido', calc: () => 60 }
   },
   // XP necessário para subir do nível n para n+1 (crescente).
   xpForLevel(n) { return Math.round(80 + n * 22 + Math.pow(n, 1.45) * 3); },

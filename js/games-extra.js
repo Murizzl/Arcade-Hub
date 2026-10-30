@@ -9,8 +9,8 @@
   const rngOf = seed => K.rng(seed);
   const isModalOpen = () => document.getElementById('modalRoot').classList.contains('open');
   // Canvas nítido em telas retina
-  function fitCanvas(cv) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  function fitCanvas(cv, maxDpr = 2) {
+    const dpr = Math.min(maxDpr, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
     cv.width = W * dpr; cv.height = H * dpr;
     const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { g, W, H };
@@ -112,7 +112,7 @@
       const msg = t => { $('[data-msg]').textContent = t || ' '; };
       function start(lvl = level) {
         level = lvl; mz = buildMaze(level); ball = mz.start; painted = new Set([ball]); moves = 0; busy = false; done = false;
-        color = HUES[(level - 1) % HUES.length];
+        color = AH.store.skin('labirinto', 'paint').fx.paint || HUES[(level - 1) % HUES.length];
         L.setTitle(el, MAZE_TIERS[L.tierIndex(MAZE_TIERS, level)], `Nível ${level}`);
         msg('Deslize para os lados para mover a bolinha.');
         build();
@@ -120,12 +120,14 @@
       function build() {
         const n = mz.n;
         board.style.setProperty('--n', n); board.style.setProperty('--paint', color);
+        const bs = AH.store.skin('labirinto', 'ball').fx;
+        board.style.setProperty('--ball-mid', bs.mid || '#e2e8f0'); board.style.setProperty('--ball-dark', bs.dark || '#94a3b8');
         board.innerHTML = mz.grid.map((v, i) => `<span class="mz-cell ${v ? 'open' : 'wall'} ${painted.has(i) ? 'on' : ''}" data-c="${i}"></span>`).join('') + '<span class="mz-ball"></span>';
         placeBall(false); progress();
       }
       function placeBall(anim, dist = 1) {
         const n = mz.n, b = board.querySelector('.mz-ball');
-        b.style.transition = anim ? `left ${0.05 * dist + 0.06}s ease-in, top ${0.05 * dist + 0.06}s ease-in` : 'none';
+        b.style.transition = anim ? `left ${0.05 * dist}s linear, top ${0.05 * dist}s linear` : 'none'; // 50 ms por casa, igual ao tempo da tinta
         b.style.left = `${(ball % n) * 100 / n}%`; b.style.top = `${((ball / n) | 0) * 100 / n}%`;
       }
       function progress() {
@@ -139,7 +141,7 @@
         if (!path.length) return;
         busy = true; moves++;
         ball = path[path.length - 1]; placeBall(true, path.length);
-        path.forEach((c, i) => setTimeout(() => { painted.add(c); board.querySelector(`[data-c="${c}"]`).classList.add('on'); }, 50 * i + 40));
+        path.forEach((c, i) => setTimeout(() => { painted.add(c); board.querySelector(`[data-c="${c}"]`)?.classList.add('on'); }, 50 * i + 25));
         setTimeout(() => {
           busy = false; msg('');
           board.querySelector('.mz-ball').classList.remove('bump'); void board.offsetWidth; board.querySelector('.mz-ball').classList.add('bump');
@@ -148,7 +150,7 @@
             const tier = L.tierIndex(MAZE_TIERS, level);
             setTimeout(() => ctx.end({ result: 'win', score: level, extra: duel ? { tier } : { tier, unlocked: level + 1 }, summary: `Nível ${level} · ${MAZE_TIERS[tier].name} · ${moves} movimentos`, next: duel ? null : 'Próxima fase' }), 700);
           }
-        }, 50 * path.length + 120);
+        }, 50 * path.length + 70);
       }
       onSwipe(board, move);
       const onKey = e => { if (isModalOpen()) return; const d = KEYDIR[e.key]; if (d) { e.preventDefault(); move(d); } };
@@ -691,17 +693,31 @@
       </div>`;
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, timer, running = false, over = false;
-      let own, trail, players, time, acc, lastT, kills;
-      const glow = new Map(); // casa -> momento da conquista
+      let own, trail, players, time, acc, lastT, kills, lastHud = 0, dirty = true;
+      let glow = []; // [casa, momento da conquista] das conquistas recentes (brilho rápido)
+      // O mapa inteiro vira uma imagem N×N que só é refeita quando algo muda; cada quadro apenas a estica na tela.
+      const layer = document.createElement('canvas'); layer.width = layer.height = N;
+      const lg = layer.getContext('2d'), layerImg = lg.createImageData(N, N);
+      const rgbOf = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
       const idx = (r, c) => r * N + c;
-      function size() { ({ g, W, H } = fitCanvas(cv)); }
+      function size() { ({ g, W, H } = fitCanvas(cv, 1.5)); dirty = true; }
+      function bake() {
+        const d = layerImg.data;
+        for (let k = 0; k < N * N; k++) {
+          const o = own[k], c = o ? players[o - 1].rgb : (((k / N) | 0) + (k % N)) % 2 ? [238, 242, 247] : [248, 250, 252];
+          d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = 255;
+        }
+        lg.putImageData(layerImg, 0, 0);
+        dirty = false;
+      }
       function spawn(p) {
         for (let tries = 0; tries < 50; tries++) {
           const r = 3 + ((Math.random() * (N - 6)) | 0), c = 3 + ((Math.random() * (N - 6)) | 0);
           let free = true; for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) if (own[idx(r + dr, c + dc)] && own[idx(r + dr, c + dc)] !== p.id) free = false;
           if (!free) continue;
           for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) own[idx(r + dr, c + dc)] = p.id;
-          Object.assign(p, { r, c, dir: ['up', 'down', 'left', 'right'][(Math.random() * 4) | 0], next: null, alive: true, trail: [], out: 6 + ((Math.random() * 10) | 0) });
+          Object.assign(p, { r, c, pr: r, pc: c, dir: ['up', 'down', 'left', 'right'][(Math.random() * 4) | 0], next: null, alive: true, trail: [], out: 6 + ((Math.random() * 10) | 0) });
+          dirty = true;
           return;
         }
       }
@@ -709,13 +725,15 @@
         size();
         own = new Int8Array(N * N); trail = new Int8Array(N * N);
         const me = AH.store.user;
-        players = [{ id: 1, name: 'Você', color: me?.avatar?.color || '#ff8a3d', me: true }].concat(BOTS.map((b, i) => ({ id: i + 2, name: b[0], color: b[1] })));
+        players = [{ id: 1, name: 'Você', color: AH.store.skin('territorio', 'color').fx.color || me?.avatar?.color || '#ff8a3d', me: true }].concat(BOTS.map((b, i) => ({ id: i + 2, name: b[0], color: b[1] })));
+        players.forEach(p => { p.rgb = rgbOf(p.color); });
+        glow = [];
         if (ctx.opponent) players[1].name = ctx.opponent.username;
         players.forEach(spawn);
         time = MATCH; acc = 0; kills = 0; over = false; hud(); render();
       }
       function kill(p) {
-        p.alive = false;
+        p.alive = false; dirty = true;
         for (let i = 0; i < N * N; i++) { if (own[i] === p.id) own[i] = 0; if (trail[i] === p.id) trail[i] = 0; }
         p.trail = [];
         if (p.me) return finish();
@@ -734,9 +752,9 @@
             const nk = idx(nr, nc); if (!outside[nk] && own[nk] !== p.id) { outside[nk] = 1; q.push(nk); }
           });
         }
-        const t0 = performance.now();
+        const t0 = performance.now(); dirty = true;
         for (let k = 0; k < N * N; k++) if (!outside[k] && own[k] !== p.id) {
-          glow.set(k, t0);
+          glow.push([k, t0]);
           if (trail[k]) { const v = players.find(x => x.id === trail[k]); if (v && v !== p) kill(v); }
           own[k] = p.id;
         }
@@ -763,6 +781,7 @@
       function tick() {
         players.forEach(p => {
           if (!p.alive) return;
+          p.pr = p.r; p.pc = p.c;
           if (!p.me) botThink(p);
           else if (p.next && p.next !== OPP[p.dir]) { p.dir = p.next; p.next = null; }
           const [dr, dc] = VEC[p.dir]; const nr = p.r + dr, nc = p.c + dc;
@@ -770,7 +789,7 @@
           const k = idx(nr, nc);
           if (trail[k] === p.id) return kill(p);
           if (trail[k]) { const v = players.find(x => x.id === trail[k]); if (v && v.alive) { kill(v); if (p.me) kills++; } }
-          p.r = nr; p.c = nc;
+          p.r = nr; p.c = nc; dirty = true;
           if (own[k] === p.id) { if (p.trail.length) capture(p); }
           else { trail[k] = p.id; p.trail.push(k); }
         });
@@ -798,23 +817,28 @@
       }
       function render() {
         const me = players[0];
+        if (dirty) bake();
         const cs = Math.max(14, Math.min(26, Math.min(W, H) / 22));
-        const camX = me.c * cs - W / 2 + cs / 2, camY = me.r * cs - H / 2 + cs / 2;
+        const f = running ? Math.min(1, acc / TICK) : 1; // fração do passo atual: move suave entre as casas
+        const px = p => (p.pc + (p.c - p.pc) * f) * cs, py = p => (p.pr + (p.r - p.pr) * f) * cs;
+        const camX = px(me) - W / 2 + cs / 2, camY = py(me) - H / 2 + cs / 2;
         g.fillStyle = '#e2e8f0'; g.fillRect(0, 0, W, H);
-        const c0 = Math.max(0, Math.floor(camX / cs)), c1 = Math.min(N, Math.ceil((camX + W) / cs)), r0 = Math.max(0, Math.floor(camY / cs)), r1 = Math.min(N, Math.ceil((camY + H) / cs));
-        g.fillStyle = '#f8fafc'; g.fillRect(-camX, -camY, N * cs, N * cs);
-        for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
-          const k = idx(r, c), x = c * cs - camX, y = r * cs - camY;
-          if (own[k]) { g.fillStyle = players[own[k] - 1].color; g.fillRect(x, y, cs + 0.5, cs + 0.5); }
-          else if ((r + c) % 2) { g.fillStyle = '#eef2f7'; g.fillRect(x, y, cs, cs); }
-          const ga = performance.now() - (glow.get(k) || -1e9);
-          if (ga < 600) { g.fillStyle = `rgba(255,255,255,${0.55 * (1 - ga / 600)})`; g.fillRect(x, y, cs + 0.5, cs + 0.5); }
-          if (trail[k]) { g.globalAlpha = 0.5; g.fillStyle = players[trail[k] - 1].color; g.fillRect(x + cs * 0.15, y + cs * 0.15, cs * 0.7, cs * 0.7); g.globalAlpha = 1; }
+        g.imageSmoothingEnabled = false;
+        g.drawImage(layer, -camX, -camY, N * cs, N * cs);
+        const now = performance.now();
+        if (glow.length) {
+          glow = glow.filter(([, t0]) => now - t0 < 600);
+          glow.forEach(([k, t0]) => { g.fillStyle = `rgba(255,255,255,${0.55 * (1 - (now - t0) / 600)})`; g.fillRect((k % N) * cs - camX, ((k / N) | 0) * cs - camY, cs + 0.5, cs + 0.5); });
         }
+        players.forEach(p => {
+          g.globalAlpha = 0.5; g.fillStyle = p.color;
+          p.trail.forEach(k => g.fillRect((k % N) * cs - camX + cs * 0.15, ((k / N) | 0) * cs - camY + cs * 0.15, cs * 0.7, cs * 0.7));
+          g.globalAlpha = 1;
+        });
         g.strokeStyle = '#94a3b8'; g.lineWidth = 3; g.strokeRect(-camX, -camY, N * cs, N * cs);
         players.forEach(p => {
           if (!p.alive) return;
-          const x = p.c * cs - camX, y = p.r * cs - camY;
+          const x = px(p) - camX, y = py(p) - camY;
           g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x + 2, y + 4, cs, cs);
           g.fillStyle = p.color; g.fillRect(x - 1, y - 1, cs + 2, cs + 2);
           g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x, y, cs, cs * 0.3);
@@ -826,10 +850,11 @@
       function loop(t) {
         if (!running) return;
         const dt = lastT ? t - lastT : 16; lastT = t;
-        time -= dt / 1000; acc += dt;
+        time -= dt / 1000; acc += Math.min(dt, 120); // aba em segundo plano não pode disparar dezenas de passos de uma vez
         while (acc >= TICK && running) { acc -= TICK; tick(); }
         if (time <= 0) return finish();
-        render(); hud();
+        render();
+        if (t - lastHud > 250) { lastHud = t; hud(); }
         raf = requestAnimationFrame(loop);
       }
       function go() { $('[data-overlay]').hidden = true; reset(); running = true; lastT = 0; raf = requestAnimationFrame(loop); cv.focus({ preventScroll: true }); }

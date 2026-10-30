@@ -7,11 +7,14 @@
   const C = AH.config;
   const listeners = new Set();
   const now = () => Date.now();
-  const todayKey = () => new Date().toISOString().slice(0, 10);
+  // Datas no fuso do jogador (UTC viraria o "dia" às 21h no Brasil e liberaria os desafios de novo)
+  const dayStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayKey = () => dayStr(new Date());
   const weekKey = () => {
     const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day);
-    return d.toISOString().slice(0, 10);
+    return dayStr(d);
   };
+  const freshChallenges = () => ({ day: todayKey(), week: weekKey(), progress: {}, claimed: {}, seen: {} });
   const uid = () => 'u_' + Math.floor(10000 + Math.random() * 89999);
 
   function defaultUser(username) {
@@ -20,9 +23,10 @@
       cardTheme: 'violet', bio: '', joined: new Date().toISOString(),
       level: 1, xp: 0, totalXp: 0, prestige: 0, prestigeHistory: [],
       coins: 150, matches: 0, wins: 0, losses: 0, draws: 0, duelWins: 0, duelLosses: 0, mmr: 1000,
-      favorites: [], stats: {}, recent: [], history: [], achievements: {}, challengesDone: 0,
+      favorites: [], stats: {}, recent: [], history: [], achievements: {}, challengesDone: 0, challenges: freshChallenges(),
       privacy: { sharePlaying: true, showOnline: true },
-      inventory: { frames: [], themes: [], icons: [], titles: [] }, title: 'novato'
+      inventory: { frames: [], themes: [], icons: [], titles: [] }, title: 'novato',
+      gear: { owned: {}, equipped: {} } // cosméticos por jogo (veja js/gameshop.js)
     };
   }
 
@@ -54,6 +58,7 @@
       { t: now() - 6 * 86400e3, icon: 'award', text: 'Desbloqueou “Primeiro Sangue”' }
     ];
     u.challengesDone = 4;
+    u.challenges.progress = { d_play3: 1 };
     return u;
   }
 
@@ -78,7 +83,7 @@
         { id: 'd2', t: now() - 26 * 3600e3, game: 'ppt', opp: 'u_4120', result: 'loss', mode: 'Casual' },
         { id: 'd3', t: now() - 3 * 86400e3, game: 'velha', opp: 'u_8123', result: 'draw', mode: 'Ranqueada' }
       ],
-      challenges: { day: todayKey(), week: weekKey(), progress: { 'd_play3': 1 }, claimed: {}, seen: {} }
+      challenges: freshChallenges() // legado: hoje os desafios ficam no perfil (user.challenges)
     };
   }
 
@@ -89,7 +94,6 @@
       state = raw ? JSON.parse(raw) : freshState(true);
     } catch (e) { state = freshState(true); }
     migrate();
-    rolloverChallenges();
   }
   function save() {
     try { localStorage.setItem(C.storageKey, JSON.stringify(state)); } catch (e) { /* armazenamento indisponível */ }
@@ -102,6 +106,10 @@
     const u = state.user; if (!u) return;
     u.inventory = Object.assign({ frames: [], themes: [], icons: [], titles: [] }, u.inventory);
     if (!u.title) u.title = 'novato';
+    u.gear = Object.assign({ owned: {}, equipped: {} }, u.gear);
+    // Perfis antigos guardavam os desafios só neste aparelho: adota o que já existe para não duplicar resgates.
+    if (!u.challenges) u.challenges = JSON.parse(JSON.stringify(state.challenges || freshChallenges()));
+    rolloverChallenges(u);
     if (!owns('icons', u.avatar.icon)) u.inventory.icons.push(u.avatar.icon);
     if (!owns('themes', u.cardTheme)) u.inventory.themes.push(u.cardTheme);
     if (!owns('frames', u.avatar.frame)) u.inventory.frames.push(u.avatar.frame);
@@ -137,11 +145,46 @@
     if (kind === 'titles') u.title = id;
     save(); return true;
   }
+  // ---------- Loja por jogo ----------
+  // PRODUÇÃO: compra via RPC no servidor (debita moedas e grava o item numa só transação).
+  const gearKey = (gameId, slot) => gameId + ':' + slot;
+  function gameOwns(gameId, slot, id) {
+    const item = AH.gameShop.item(gameId, slot, id);
+    if (!item) return false;
+    return !item.price || (state.user.gear.owned[gearKey(gameId, slot)] || []).includes(id);
+  }
+  function gameBuy(gameId, slot, id) {
+    const u = state.user, item = AH.gameShop.item(gameId, slot, id);
+    if (!item || gameOwns(gameId, slot, id)) return { ok: false, error: 'Item indisponível.' };
+    if (u.coins < item.price) return { ok: false, error: `Faltam ${item.price - u.coins} moedas.` };
+    u.coins -= item.price;
+    const k = gearKey(gameId, slot);
+    (u.gear.owned[k] = u.gear.owned[k] || []).push(id);
+    pushHistory('shopping-bag', `Comprou “${item.name}” na loja de ${game(gameId)?.name || gameId}`);
+    save();
+    AH.cloud?.saveNow?.();
+    return { ok: true, item };
+  }
+  function gameEquip(gameId, slot, id) {
+    if (!gameOwns(gameId, slot, id)) return false;
+    state.user.gear.equipped[gearKey(gameId, slot)] = id;
+    save(); return true;
+  }
+  // Item equipado (ou o padrão) de um espaço do jogo; os motores leem item.fx e a tela de jogo aplica item.vars
+  function skin(gameId, slot) {
+    const s = AH.gameShop.slots(gameId).find(x => x.id === slot);
+    if (!s) return { fx: {} };
+    const id = state.user?.gear?.equipped[gearKey(gameId, slot)];
+    return s.items.find(x => x.id === id && gameOwns(gameId, slot, x.id)) || s.items[0];
+  }
+  const game = id => AH.games.find(g => g.id === id);
+
   // Foto já redimensionada (data URL). PRODUÇÃO: upload no Supabase Storage e salvar só a URL.
   function setPhoto(dataUrl) { state.user.avatar.photo = dataUrl || null; save(); }
 
-  function rolloverChallenges() {
-    const ch = state.challenges;
+  function rolloverChallenges(u = state.user) {
+    const ch = u?.challenges; if (!ch) return null;
+    ['progress', 'claimed', 'seen'].forEach(k => { if (!ch[k]) ch[k] = {}; });
     if (ch.day !== todayKey()) {
       AH.challengeTemplates.daily.forEach(t => { delete ch.progress[t.id]; delete ch.claimed[t.id]; });
       ch.day = todayKey();
@@ -150,7 +193,10 @@
       AH.challengeTemplates.weekly.forEach(t => { delete ch.progress[t.id]; delete ch.claimed[t.id]; });
       ch.seen = {}; ch.week = weekKey();
     }
+    return ch;
   }
+  // Estado dos desafios do jogador atual (já virado para o dia/semana de hoje)
+  const challenges = () => rolloverChallenges();
 
   // ---------- XP / níveis ----------
   function levelInfo(u) {
@@ -188,7 +234,7 @@
   }
 
   function bumpChallenge(metric, gameId) {
-    const ch = state.challenges;
+    const ch = challenges();
     const all = [...AH.challengeTemplates.daily, ...AH.challengeTemplates.weekly];
     all.forEach(t => {
       if (ch.claimed[t.id]) return;
@@ -279,8 +325,8 @@
 
   function claimChallenge(id) {
     const t = [...AH.challengeTemplates.daily, ...AH.challengeTemplates.weekly].find(x => x.id === id);
-    const ch = state.challenges;
-    if (!t || ch.claimed[id] || (ch.progress[id] || 0) < t.goal) return null;
+    const ch = challenges();
+    if (!t || !ch || ch.claimed[id] || (ch.progress[id] || 0) < t.goal) return null;
     ch.claimed[id] = now();
     state.user.coins += t.coins;
     state.user.challengesDone++;
@@ -288,6 +334,7 @@
     const ev = addXp(t.xp);
     checkAchievements();
     save();
+    AH.cloud?.saveNow?.(); // grava já: sair do site logo após resgatar não pode perder o resgate
     return { xp: t.xp, coins: t.coins, levelUps: ev };
   }
 
@@ -372,7 +419,6 @@
     migrate();
     state.user.history.unshift({ t: now(), icon: 'party-popper', text: 'Entrou no Arcade Hub' });
     state.session = { userId: state.user.id, since: now() };
-    state.challenges = freshState(false).challenges;
     state.duels = [];
     save();
   }
@@ -398,9 +444,9 @@
     get state() { return state; },
     get user() { return state.user; },
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
-    levelInfo, addXp, reportMatch, claimChallenge, canPrestige, doPrestige,
+    levelInfo, addXp, reportMatch, claimChallenge, challenges, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
-    catalog, owns, buy, equip, setPhoto, newUser, setUser, clearSession,
+    catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,
     prestigeOf: n => C.prestiges[Math.min(n, C.prestiges.length - 1)],
     divisionOf: mmr => [...C.divisions].reverse().find(d => mmr >= d.min),

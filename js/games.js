@@ -38,6 +38,15 @@
       const nodes = new Map();
 
       const colors = { 2: ['#eee4da', '#776e65'], 4: ['#ede0c8', '#776e65'], 8: ['#f2b179', '#fff'], 16: ['#f59563', '#fff'], 32: ['#f67c5f', '#fff'], 64: ['#f65e3b', '#fff'], 128: ['#edcf72', '#fff'], 256: ['#edcc61', '#fff'], 512: ['#edc850', '#fff'], 1024: ['#edc53f', '#fff'], 2048: ['#6c4cf5', '#fff'] };
+      // peças da loja: degradê entre duas cores
+      const sk = AH.store.skin('2048', 'tiles').fx;
+      if (sk.from) {
+        const hx = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+        [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048].forEach((v, i) => {
+          const a = hx(sk.from), b = hx(sk.to), c = a.map((x, k) => Math.round(x + (b[k] - x) * i / 10));
+          colors[v] = ['#' + c.map(x => x.toString(16).padStart(2, '0')).join(''), (c[0] * .299 + c[1] * .587 + c[2] * .114) > 160 ? '#4a4237' : '#fff'];
+        });
+      }
 
       function start() {
         tiles = []; score = 0; lastScore = 0; nextId = 1; over = false; won = false;
@@ -162,6 +171,8 @@
           <div class="ttt" role="grid" aria-label="Tabuleiro do Jogo da Velha"></div>
         </div>`;
       const grid = el.querySelector('.ttt');
+      const marks = AH.store.skin('velha', 'marks').fx;
+      if (marks.x) { grid.style.setProperty('--x', marks.x); grid.style.setProperty('--o', marks.o); }
       const status = el.querySelector('[data-status]');
       const winner = s => { for (const l of LINES) if (s[l[0]] && s[l[0]] === s[l[1]] && s[l[0]] === s[l[2]]) return { p: s[l[0]], line: l }; return s.every(Boolean) ? { p: 'draw' } : null; };
 

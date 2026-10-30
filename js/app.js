@@ -22,11 +22,11 @@
     home: V.home, games: V.games, game: V.game, play: V.play,
     duels: (el, p, q) => ({ search: V.duelSearch, lobby: V.duelLobby, result: V.duelResult }[p[0]] || V.duels)(el, p, q),
     rankings: V.rankings, friends: V.friends, achievements: V.achievements,
-    shop: V.shop, profile: V.profile, user: V.user, prestige: V.prestige, settings: V.settings,
+    shop: V.shop, gshop: V.gameShop, profile: V.profile, user: V.user, prestige: V.prestige, settings: V.settings,
     login: V.login, register: V.register, recover: V.recover
   };
   const PUBLIC = ['login', 'register', 'recover'];
-  const TITLES = { home: 'Início', games: 'Explorar jogos', game: 'Jogo', play: 'Jogando', duels: 'Duelos', rankings: 'Rankings', friends: 'Amigos', achievements: 'Conquistas', shop: 'Loja', profile: 'Perfil', user: 'Jogador', prestige: 'Prestígio', settings: 'Configurações', login: 'Entrar', register: 'Criar conta', recover: 'Recuperar senha' };
+  const TITLES = { home: 'Início', games: 'Explorar jogos', game: 'Jogo', play: 'Jogando', duels: 'Duelos', rankings: 'Rankings', friends: 'Amigos', achievements: 'Conquistas', shop: 'Loja', gshop: 'Loja do jogo', profile: 'Perfil', user: 'Jogador', prestige: 'Prestígio', settings: 'Configurações', login: 'Entrar', register: 'Criar conta', recover: 'Recuperar senha' };
 
   function parse() {
     let raw = location.hash.replace(/^#\/?/, '') || 'home';
@@ -66,7 +66,7 @@
   function renderShell(active) {
     if (!S.user || !S.state.session) return;
     const u = S.user;
-    const map = { game: 'games', play: 'games', user: 'friends', prestige: 'profile' };
+    const map = { game: 'games', play: 'games', gshop: 'games', user: 'friends', prestige: 'profile' };
     const act = map[active] || active;
     const unread = S.state.notifications.filter(n => !n.read).length;
     const reqs = S.state.requests.length;
@@ -168,6 +168,14 @@
   });
   window.addEventListener('scroll', () => document.getElementById('topbar').classList.toggle('scrolled', scrollY > 4), { passive: true });
   window.addEventListener('hashchange', render);
+
+  // Carrosséis e chips ganham setas/arrastar assim que aparecem (inclusive os redesenhados depois)
+  let scrollPending = false;
+  new MutationObserver(() => {
+    if (scrollPending) return;
+    scrollPending = true;
+    requestAnimationFrame(() => { scrollPending = false; U.enhanceScrollers(main); });
+  }).observe(main, { childList: true, subtree: true });
 
   // Atualiza o cabeçalho quando o estado muda (moedas, nível, notificações)
   S.subscribe(() => { if (S.state.session) { renderShell(parse().name); U.refreshIcons(); } });

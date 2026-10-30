@@ -26,7 +26,7 @@
     const fresh = AH.games.filter(g => g.isNew);
     const duel = AH.games.filter(g => g.duel);
     const friendsPlaying = S.state.friends.map(S.player).filter(p => p && p.online && p.playing && p.sharePlaying);
-    const ch = S.state.challenges;
+    const ch = S.challenges();
     const winRate = u.matches ? Math.round(u.wins / u.matches * 100) : 0;
 
     el.innerHTML = `
@@ -176,6 +176,7 @@
             ${g.playable ? `<a class="btn btn-primary btn-lg" href="#/play/${g.id}">${ic('play')} Jogar</a>` : `<a class="btn btn-lg" href="#/play/${g.id}">${ic('eye')} Ver prévia</a>`}
             <button class="btn btn-lg btn-outline" data-fav="${g.id}" aria-pressed="${fav}">${ic('heart', fav ? 'style="fill:var(--danger);color:var(--danger)"' : '')} ${fav ? 'Favoritado' : 'Favoritar'}</button>
             ${g.duel ? `<a class="btn btn-lg btn-accent" href="#/duels?game=${g.id}">${ic('swords')} Duelar</a>` : ''}
+            ${g.playable ? `<a class="btn btn-lg btn-outline" href="#/gshop/${g.id}">${ic('shopping-bag')} Loja do jogo</a>` : ''}
           </div>
           <div class="stat-boxes">
             <div class="stat-box"><small>Seu recorde</small><b>${s.best != null ? fmt(s.best) : '—'}</b></div>
@@ -222,12 +223,14 @@
     const mount = () => {
       el.innerHTML = `<div class="play-wrap">
         <div class="play-head"><a class="icon-btn" href="${duel ? '#/duels' : '#/game/' + g.id}" aria-label="Sair do jogo">${ic('arrow-left')}</a><h1>${esc(g.name)}</h1>
-        ${duel ? `<span class="tag ${online ? 'tag-success' : 'tag-warning'}">${ic(online ? 'wifi' : 'bot')} ${online ? 'Online' : 'CPU'}</span>` : `<button class="icon-btn" data-fav="${g.id}" aria-label="Favoritar">${ic('heart', S.user.favorites.includes(g.id) ? 'style="fill:var(--danger);color:var(--danger)"' : '')}</button>`}</div>
+        ${duel ? `<span class="tag ${online ? 'tag-success' : 'tag-warning'}">${ic(online ? 'wifi' : 'bot')} ${online ? 'Online' : 'CPU'}</span>` : `<a class="icon-btn" href="#/gshop/${g.id}" aria-label="Loja do jogo" title="Loja do jogo">${ic('shopping-bag')}</a><button class="icon-btn" data-fav="${g.id}" aria-label="Favoritar">${ic('heart', S.user.favorites.includes(g.id) ? 'style="fill:var(--danger);color:var(--danger)"' : '')}</button>`}</div>
         ${duel && !online ? `<div class="sim-banner">${ic('bot')} Treino contra a CPU: “${esc(duel.opp.username)}” é controlado pelo computador.</div>` : ''}
         ${race ? '<div class="race-bar" id="race" aria-live="polite"></div>' : ''}
         <div id="engine"></div></div>`;
       U.refreshIcons();
       const host = el.querySelector('#engine');
+      // tema comprado na loja do jogo: variáveis CSS na área da partida
+      Object.entries(S.skin(g.id, 'theme').vars || {}).forEach(([k, v]) => el.querySelector('.play-wrap').style.setProperty(k, v));
       let ended = false;
       const finishDuel = (result, summary, score, extra) => {
         if (ended) return; ended = true;
@@ -378,11 +381,24 @@
   function connectRoom(d) {
     if (d.room) return;
     d.online = true;
+    const pushConfig = () => { if (d.host && d.room) d.room.send('config', { game: d.game, difficulty: d.difficulty }); };
+    d.pushConfig = pushConfig;
     d.room = AH.online.joinRoom(d.code, d.host, room => {
       const p = room.peerPlayer();
-      if (p) { d.opp = { ...(S.player(p.id) || {}), ...p }; d.invited = null; }
-      else if (!d.invited) d.opp = null;
+      if (p) {
+        d.opp = { ...(S.player(p.id) || {}), ...p }; d.invited = null;
+        // alguém novo na sala: o anfitrião manda o jogo escolhido; quem chegou pede, caso tenha perdido
+        if (d.peerSeen !== p.id) { d.peerSeen = p.id; if (d.host) pushConfig(); else room.send('config-request'); }
+      } else if (!d.invited && !room.peer && !room.timers.gone) d.opp = null;
       d.oppReady = room.peerReady;
+      d.onChange?.();
+    });
+    d.room.on('config-request', pushConfig);
+    d.room.on('peer-left', () => {
+      if (!/#\/duels\/lobby/.test(location.hash)) return; // durante a partida quem trata é a tela de jogo
+      d.opp = null; d.oppReady = false; d.peerSeen = null;
+      // no lobby, convidado sem anfitrião não tem o que esperar
+      if (!d.host) { U.toast('O anfitrião saiu da sala', 'info', 'log-out'); leaveRoom(); AH.duel.current = null; go('#/duels'); return; }
       d.onChange?.();
     });
     d.room.on('config', p => { if (!d.host) { d.game = p.game; d.difficulty = p.difficulty; d.onChange?.(); } });
@@ -470,8 +486,9 @@
     const d = newDuel('friend', game, null);
     d.invited = f; d.opp = null; d.host = true;
     connectRoom(d);
-    AH.online.invite(f.id, { code: d.code, game: d.game, difficulty: d.difficulty });
-    U.toast(`Convite enviado para <b>${esc(f.username)}</b>`, 'success', 'send');
+    AH.online.invite(f.id, { code: d.code, game: d.game, difficulty: d.difficulty }).then(ok =>
+      ok ? U.toast(`Convite enviado para <b>${esc(f.username)}</b>`, 'success', 'send')
+        : U.toast(`Não foi possível entregar o convite a <b>${esc(f.username)}</b>. Passe o código da sala para ele.`, 'error'));
     go('#/duels/lobby');
   }
   function friendModal(game) {
@@ -535,6 +552,10 @@
         connectRoom(d);
         U.toast(`Adversário encontrado: <b>${esc(m.peer?.username || 'jogador')}</b>`, 'success', 'user-check');
         go('#/duels/lobby');
+      }, () => {
+        // sem conexão com o servidor de partidas: mostra a saída em vez de ficar procurando para sempre
+        el.querySelector('[data-fallback]').hidden = false;
+        el.querySelector('[data-fallback] p').textContent = 'Não foi possível conectar à busca de partidas.';
       });
     } else {
       found = setTimeout(() => { findCpu(d); go('#/duels/lobby'); }, 1200 + Math.random() * 1200);
@@ -559,11 +580,20 @@
         : d.invited ? `<div class="lobby-player empty">${avatar(d.invited, 'xl')}<h3>${esc(d.invited.username)}</h3><p class="faint">Convite enviado… aguardando aceitar</p></div>`
         : `<div class="lobby-player empty"><div class="avatar av-xl" style="--av:var(--surface-3);color:var(--text-3)">${ic('user-round-plus')}</div><h3>Aguardando jogador…</h3><p class="faint">Compartilhe o código da sala</p></div>`;
       const canEdit = !live || d.host;
+      const rs = live ? d.room.status : 'online', blocked = live && (rs !== 'online' || d.room.full);
+      const roomBanner = () => {
+        if (!live) return `<div class="sim-banner">${ic('bot')} Treino contra a CPU.</div>`;
+        const box = (icon, text, btns = '') => `<div class="notice" style="margin-bottom:14px;flex-wrap:wrap">${ic(icon)} <span style="flex:1;min-width:200px">${text}</span>${btns}</div>`;
+        if (d.room.full) return box('users', '<b>Sala cheia.</b> Já existem dois jogadores nessa sala.', `<a class="btn btn-sm" href="#/duels" data-leave>Sair</a>`);
+        if (rs === 'connecting') return box('loader-2', 'Conectando à sala…');
+        if (rs === 'error') return box('wifi-off', '<b>Sem conexão com a sala.</b> Verifique sua internet e tente de novo.', `<button class="btn btn-sm btn-primary" data-retry>${ic('refresh-cw')} Tentar de novo</button>`);
+        if (rs === 'nohost') return box('search-x', '<b>Sala não encontrada.</b> Confira o código com o anfitrião — ele precisa criar a sala primeiro.', `<a class="btn btn-sm" href="#/duels" data-leave>Voltar</a>`);
+        return box('wifi', `Sala online ${d.host ? '— você é o anfitrião e escolhe o jogo.' : '— o anfitrião escolhe o jogo.'}`);
+      };
       el.innerHTML = `
         <div class="page-head"><div><a class="link-more" href="#/duels" data-leave>${ic('arrow-left')} Sair do lobby</a><h1 style="margin-top:6px">Lobby · ${esc(modeInfo[d.mode].title)}</h1></div>
           <div style="text-align:right"><div class="faint">Código da sala</div><div class="row"><span class="room-code">${d.code}</span><button class="icon-btn" data-copy aria-label="Copiar código">${ic('copy')}</button></div></div></div>
-        ${live ? `<div class="notice" style="margin-bottom:14px">${ic('wifi')} <span>Sala online ${d.host ? '— você é o anfitrião e escolhe o jogo.' : '— o anfitrião escolhe o jogo.'}</span></div>`
-          : `<div class="sim-banner">${ic('bot')} Treino contra a CPU.</div>`}
+        ${roomBanner()}
         <div class="card">
           <div class="lobby">${pCard(S.user, d.meReady, true)}<div class="lobby-vs">VS</div>${pCard(opp, d.oppReady)}</div>
           <div class="section" style="margin-top:22px">
@@ -577,7 +607,7 @@
             <p class="row" style="gap:6px;margin-top:8px;font-weight:600">${ic(g.duelType === 'versus' ? 'swords' : 'timer')} ${esc(AH.duelLabel(g, d.difficulty))}</p>
           </div>
           <div class="row-wrap" style="justify-content:center;margin-top:20px">
-            <button class="btn btn-lg ${d.meReady ? 'btn-outline' : 'btn-success'}" data-ready>${ic(d.meReady ? 'x' : 'check')} ${d.meReady ? 'Cancelar prontidão' : 'Estou pronto'}</button>
+            <button class="btn btn-lg ${d.meReady ? 'btn-outline' : 'btn-success'}" data-ready ${blocked ? 'disabled' : ''}>${ic(d.meReady ? 'x' : 'check')} ${d.meReady ? 'Cancelar prontidão' : 'Estou pronto'}</button>
             ${canEdit ? `<button class="btn btn-lg btn-primary" data-start ${d.meReady && d.oppReady && opp ? '' : 'disabled'}>${ic('play')} Iniciar partida</button>` : ''}
           </div>
           <p class="faint" style="text-align:center;margin-top:10px">${!opp ? (d.invited ? 'Assim que o convite for aceito, o amigo aparece aqui.' : 'Esperando alguém entrar na sala.') : !d.oppReady ? `Aguardando ${esc(opp.username)} ficar pronto…` : !d.meReady ? 'Marque que está pronto para começar.' : canEdit ? 'Tudo certo! Inicie a partida.' : 'Aguardando o anfitrião iniciar…'}</p>
@@ -591,8 +621,9 @@
     draw();
     if (!live && d.opp && !d.oppReady) timers.push(setTimeout(() => { d.oppReady = true; draw(); }, 1200));
     if (!live && !d.opp && d.mode === 'private') timers.push(setTimeout(() => { findCpu(d); U.toast(`${d.opp.username} entrou na sala (simulação)`, 'info', 'log-in'); draw(); }, 2500));
-    const pushConfig = () => { if (live && d.host) d.room.send('config', { game: d.game, difficulty: d.difficulty }); };
+    const pushConfig = () => { if (live && d.host) d.pushConfig?.(); };
     el.addEventListener('click', e => {
+      if (e.target.closest('[data-retry]')) { d.room?.retry(); return; }
       if (e.target.closest('[data-ready]')) { d.meReady = !d.meReady; if (live) d.room.setReady(d.meReady); draw(); }
       const gb = e.target.closest('[data-game]'); if (gb && !gb.disabled) { d.game = gb.dataset.game; d.difficulty = AH.duelDifficulties[d.game]?.def; pushConfig(); draw(); }
       const db = e.target.closest('[data-diff]'); if (db && !db.disabled) { d.difficulty = +db.dataset.diff; pushConfig(); draw(); }
@@ -605,8 +636,8 @@
       if (e.target.closest('[data-leave]')) { leaveRoom(); AH.duel.current = null; }
     });
     // ao entrar, o anfitrião manda a configuração para quem chegar
-    if (live && d.host) { const off = d.room.on('config-request', pushConfig); timers.push(setTimeout(pushConfig, 800)); return () => { timers.forEach(clearTimeout); off(); d.onChange = null; }; }
-    if (live && !d.host) setTimeout(() => d.room?.send('config-request'), 900);
+    if (live && d.host) timers.push(setTimeout(pushConfig, 800));
+    if (live && !d.host) timers.push(setTimeout(() => d.room?.send('config-request'), 900));
     return () => { timers.forEach(clearTimeout); d.onChange = null; };
   };
 
@@ -722,7 +753,7 @@
         if (AH.online?.enabled && !searched) { searched = true; AH.online.search(term).then(() => { if (el.isConnected && tab === 'find') draw(); }); }
         body = `<div class="card"><div class="search" style="max-width:none;margin-bottom:12px">${ic('search')}<input class="input" style="border-radius:999px;padding-left:42px" id="findInput" placeholder="Buscar por username ou ID (ex.: LunaPixel)" value="${esc(term)}" aria-label="Buscar jogadores"></div>
           <p class="faint" style="margin-bottom:6px">${t ? `${res.length} resultado(s)` : 'Sugestões de jogadores'}</p>
-          ${res.length ? `<div class="list">${res.map(f => { const fs = S.friendship(f.id); return `<div class="list-item"><a class="li-link" href="#/user/${f.id}">${avatar(f, 'md', { status: true })}<div class="li-main"><b>${esc(f.username)} ${lvlTag(f)}</b><small>#${f.id.slice(2)} · Prestígio ${f.prestige}</small></div></a>
+          ${res.length ? `<div class="list">${res.map(f => { const fs = S.friendship(f.id); return `<div class="list-item"><a class="li-link" href="#/user/${f.id}">${avatar(f, 'md', { status: true })}<div class="li-main"><b>${esc(f.username)} ${lvlTag(f)}</b><small>Prestígio ${f.prestige}</small></div></a>
             <div class="li-actions">${fs === 'friend' ? '<span class="tag tag-success">Amigo</span>' : fs === 'sent' ? `<button class="btn btn-sm" data-cancel="${f.id}">Pendente</button>` : fs === 'incoming' ? `<button class="btn btn-sm btn-success" data-accept="${f.id}">Aceitar</button>` : fs === 'blocked' ? '<span class="tag tag-danger">Bloqueado</span>' : `<button class="btn btn-sm btn-primary" data-add="${f.id}">${ic('user-plus')}<span class="btn-label">Adicionar</span></button>`}</div></div>`; }).join('')}</div>`
             : U.empty('user-x', 'Ninguém encontrado', 'Confira a grafia do username.')}</div>`;
       }
@@ -765,7 +796,7 @@
   V.achievements = el => {
     let filter = 'all';
     const draw = () => {
-      const u = S.user, ch = S.state.challenges;
+      const u = S.user, ch = S.challenges();
       const list = AH.achievements.map(a => { const [cur, goal] = a.check(S.state); return { a, cur: Math.min(cur, goal), goal, at: u.achievements[a.id] }; })
         .filter(x => filter === 'all' || (filter === 'on' ? x.at : !x.at))
         .sort((x, y) => (!!y.at - !!x.at) || (y.at || '').localeCompare(x.at || '') || (y.cur / y.goal - x.cur / x.goal));
@@ -818,7 +849,7 @@
             <h1>${esc(p.username)} ${emblem(p.prestige)}</h1>
             ${isMe && p.title ? `<span class="tag tag-primary" style="margin-top:4px">${ic('badge')} ${esc(titleName(p.title))}</span>` : ''}
             <div class="row-wrap faint" style="margin-top:4px">
-              <span>ID #${esc(p.id.slice(2))}</span><span>·</span><span>${ic('calendar', 'style="width:14px;height:14px;vertical-align:-2px"')} Desde ${dateBR(p.joined)}</span>
+              <span>${ic('calendar', 'style="width:14px;height:14px;vertical-align:-2px"')} Desde ${dateBR(p.joined)}</span>
               ${!isMe ? `<span>·</span><span>${p.online ? '<b style="color:var(--success)">Online</b>' : 'Visto ' + timeAgo(p.lastSeen)}</span>` : ''}
             </div>
             ${p.bio ? `<p class="muted" style="margin-top:6px">${esc(p.bio)}</p>` : ''}
@@ -1039,6 +1070,55 @@
     draw();
   };
 
+  /* ==================== LOJA DO JOGO ==================== */
+  V.gameShop = (el, [id], q) => {
+    const g = S.game(id);
+    if (!g) return V.notFound(el);
+    const slots = AH.gameShop.slots(id);
+    let slotId = slots.some(x => x.id === q.slot) ? q.slot : slots[0].id;
+    const preview = it => `<div class="gs-prev" style="--c1:${g.c1};--c2:${g.c2}">${it.sw.slice(0, 3).map(c => `<i style="background:${c}"></i>`).join('')}</div>`;
+    const draw = () => {
+      const slot = slots.find(x => x.id === slotId);
+      const eq = S.skin(id, slotId).id;
+      el.innerHTML = `
+        <a class="link-more" href="#/game/${g.id}" style="margin-bottom:12px">${ic('arrow-left')} ${esc(g.name)}</a>
+        <div class="page-head"><div class="row" style="gap:14px"><span class="ch-icon" style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,${g.c1},${g.c2});color:#fff">${ic(g.icon)}</span>
+          <div><h1>Loja · ${esc(g.name)}</h1><p>Cosméticos só para este jogo. Nenhum dá vantagem na partida.</p></div></div>
+          <span class="coin-pill" style="height:46px;font-size:1.1rem"><span class="coin">${ic('star')}</span>${fmt(S.user.coins)} moedas</span></div>
+        <div class="tabs" role="tablist" style="margin-bottom:18px">${slots.map(x => `<button class="tab ${x.id === slotId ? 'active' : ''}" role="tab" aria-selected="${x.id === slotId}" data-slot="${x.id}">${ic(x.icon)} ${esc(x.name)}</button>`).join('')}</div>
+        <div class="shop-grid">${slot.items.map(it => {
+          const own = S.gameOwns(id, slotId, it.id), on = eq === it.id;
+          const action = on ? `<span class="tag tag-success">${ic('check')} Equipado</span>`
+            : own ? `<button class="btn btn-sm" data-equip="${it.id}">Equipar</button>`
+            : `<button class="btn btn-sm btn-primary" data-buy="${it.id}" ${S.user.coins < it.price ? 'disabled title="Moedas insuficientes"' : ''}>${ic('star')} ${fmt(it.price)}</button>`;
+          return `<div class="shop-item ${on ? 'on' : ''}"><div class="shop-prev">${preview(it)}</div><b>${esc(it.name)}</b><small class="faint">${!it.price ? 'Grátis' : own ? 'Na sua coleção' : 'Cosmético'}</small>${action}</div>`;
+        }).join('')}</div>
+        <div class="row-wrap" style="margin-top:18px"><a class="btn btn-primary" href="#/play/${g.id}">${ic('play')} Jogar com os itens</a><a class="btn" href="#/shop">${ic('shopping-bag')} Loja do perfil</a></div>
+        <p class="faint" style="margin-top:14px">${ic('info', 'style="width:14px;height:14px;vertical-align:-2px"')} Ganhe moedas jogando, vencendo duelos e completando desafios. Moedas não têm valor real.</p>`;
+      U.refreshIcons();
+    };
+    el.onclick = e => {
+      const t = e.target.closest('[data-slot]');
+      if (t) { slotId = t.dataset.slot; history.replaceState(null, '', `#/gshop/${id}?slot=${slotId}`); draw(); return; }
+      const eqb = e.target.closest('[data-equip]');
+      if (eqb) { S.gameEquip(id, slotId, eqb.dataset.equip); U.toast('Item equipado!', 'success', 'check'); draw(); return; }
+      const b = e.target.closest('[data-buy]');
+      if (!b) return;
+      const it = AH.gameShop.item(id, slotId, b.dataset.buy);
+      U.confirm({
+        title: 'Confirmar compra', icon: 'shopping-bag',
+        text: `Comprar <b>${esc(it.name)}</b> por <b>${fmt(it.price)} moedas</b>? Você ficará com ${fmt(S.user.coins - it.price)}.`, okLabel: 'Comprar',
+        onOk: () => {
+          const r = S.gameBuy(id, slotId, it.id);
+          if (!r.ok) return U.toast(r.error, 'error');
+          S.gameEquip(id, slotId, it.id);
+          U.toast('Compra feita e item equipado!', 'success', 'shopping-bag'); U.confetti(30); draw();
+        }
+      });
+    };
+    draw();
+  };
+
   V.profile = el => profileLayout(el, S.user, true);
   V.user = (el, [id]) => {
     if (id === S.user.id) return go('#/profile');
@@ -1127,7 +1207,7 @@
         <div class="stack">
           <div class="card"><h3 style="margin-bottom:12px">${ic('user-cog')} Conta</h3>
             <div class="list">
-              <div class="list-item"><div class="li-main"><b>Username</b><small>${esc(u.username)} · ID #${esc(u.id.slice(2))}</small></div><a class="btn btn-sm" href="#/profile">Editar</a></div>
+              <div class="list-item"><div class="li-main"><b>Username</b><small>${esc(u.username)}</small></div><a class="btn btn-sm" href="#/profile">Editar</a></div>
               <div class="list-item"><div class="li-main"><b>Senha</b><small>Gerenciada pelo provedor de autenticação</small></div><button class="btn btn-sm" data-pwd>Alterar</button></div>
             </div>
             <button class="btn btn-block btn-outline" style="margin-top:12px" data-logout>${ic('log-out')} Sair da conta</button>

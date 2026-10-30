@@ -396,6 +396,7 @@
   AH.engines.helix = {
     mount(el, ctx) {
       const best0 = AH.store.user?.stats.helix?.best || 0;
+      const skTower = AH.store.skin('helix', 'tower').fx.theme, skBall = AH.store.skin('helix', 'ball').fx.ball; // cosméticos da loja
       el.innerHTML = `<div class="hx">
         <div class="hx-top" aria-hidden="true"><span class="hx-lv" data-cur>1</span><span class="hx-bar"><i data-bar></i></span><span class="hx-lv next" data-next>2</span></div>
         <div class="hx-score" data-score aria-live="off">0</div>
@@ -444,7 +445,7 @@
       function reset() {
         size();
         rng = K.rng((Date.now() & 0xffffff) + 1);
-        round = 1; theme = HX_THEMES[0]; passedInRound = 0;
+        round = 1; theme = themeOf(1); passedInRound = 0;
         gen = { round: 1, idx: 0, y: 300 };
         rot = 0; ballY = 160; vy = 0; camY = 0; score = 0; combo = 0; squash = 0;
         splats = []; parts = []; trail = []; pops = [];
@@ -457,14 +458,15 @@
         $('[data-score]').textContent = AH.ui.fmt(score);
         $('[data-cur]').textContent = round; $('[data-next]').textContent = round + 1;
         $('[data-bar]').style.width = Math.min(100, passedInRound / roundLen(round) * 100) + '%';
-        const t = HX_THEMES[(round - 1) % HX_THEMES.length];
+        const t = themeOf(round);
         el.querySelector('.hx').style.setProperty('--hx', t.plat);
       }
       function banner(text) {
         const b = $('[data-banner]'); b.textContent = text;
         b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
       }
-      const themeOf = r => HX_THEMES[(r - 1) % HX_THEMES.length];
+      const themeOf = r => skTower || HX_THEMES[(r - 1) % HX_THEMES.length];
+      const ballColor = () => skBall || theme.ball;
       const burst = (x, y, color, n, power = 1) => {
         for (let i = 0; i < n; i++) {
           const a = Math.random() * Math.PI * 2, s = (1 + Math.random() * 3) * power;
@@ -507,8 +509,8 @@
             } else if (s === 2) { return die(bx, p.y - camY + midR() * K3 - BR); }
             else {
               ballY = p.y - BR; vy = -10.6; squash = 1; combo = 0;
-              splats.push({ y: p.y, a: 90 - rot, c: theme.ball, life: 1, s: 0.7 + Math.random() * 0.5 });
-              burst(bx, by - 2, theme.ball, 6, 0.6);
+              splats.push({ y: p.y, a: 90 - rot, c: ballColor(), life: 1, s: 0.7 + Math.random() * 0.5 });
+              burst(bx, by - 2, ballColor(), 6, 0.6);
             }
           }
         }
@@ -527,7 +529,7 @@
       const midR = () => RI + (R - RI) * 0.42;
       function die(x, y) {
         dead = true; running = false;
-        burst(x, y, theme.ball, 40, 1.8);
+        burst(x, y, ballColor(), 40, 1.8);
         if (navigator.vibrate) navigator.vibrate(80);
         const end = performance.now();
         const fx = t => { const dt = Math.min(2.5, (t - (lastT || t)) / 16.67); lastT = t;
@@ -583,8 +585,9 @@
               g.lineTo(cx + ox + c * R, y + oy + sn * R + TH); g.lineTo(cx + ox + c * RI, y + oy + sn * RI + TH);
               g.closePath(); g.fill();
             };
-            if (p.segs[(i + SEG - 1) % SEG] === 1) face(a0);
-            if (p.segs[(i + 1) % SEG] === 1) face(a0 + st);
+            // só as paredes voltadas para a câmera: a do lado de menor ângulo aparece na metade esquerda, a outra na direita
+            if (p.segs[(i + SEG - 1) % SEG] === 1 && Math.cos(rad(a0)) < 0) face(a0);
+            if (p.segs[(i + 1) % SEG] === 1 && Math.cos(rad(a0 + st)) > 0) face(a0 + st);
             g.fillStyle = s === 2 ? '#f87171' : p.finish && i % 2 ? '#facc15' : col;
             ring(cx + ox, y + oy, R, RI, rad(a0), rad(a1)); g.fill();
             // fio claro na beirada do buraco, por cima do topo
@@ -616,7 +619,7 @@
           trail.forEach((t, i) => {
             const f = i / trail.length;
             g.globalAlpha = f * (t.fire ? 0.55 : 0.28);
-            g.fillStyle = t.fire ? (i % 2 ? '#f97316' : '#fde047') : theme.ball;
+            g.fillStyle = t.fire ? (i % 2 ? '#f97316' : '#fde047') : ballColor();
             g.beginPath(); g.arc(bx, t.y - camY + midR() * K3, BR * (0.4 + f * 0.55), 0, Math.PI * 2); g.fill();
           });
           g.globalAlpha = 1;
@@ -631,7 +634,7 @@
           g.save();
           g.translate(bx, by + BR); g.scale(sx, sy); g.translate(0, -BR);
           const body = g.createRadialGradient(-BR * 0.35, -BR * 0.4, BR * 0.15, 0, 0, BR);
-          body.addColorStop(0, shade(combo >= 3 ? '#f97316' : theme.ball, 0.55)); body.addColorStop(1, combo >= 3 ? '#ea580c' : theme.ball);
+          body.addColorStop(0, shade(combo >= 3 ? '#f97316' : ballColor(), 0.55)); body.addColorStop(1, combo >= 3 ? '#ea580c' : ballColor());
           g.fillStyle = body; g.beginPath(); g.arc(0, 0, BR, 0, Math.PI * 2); g.fill();
           g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(-BR * 0.38, -BR * 0.42, BR * 0.28, BR * 0.18, -0.6, 0, Math.PI * 2); g.fill();
           g.restore();

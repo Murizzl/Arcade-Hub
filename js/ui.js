@@ -194,5 +194,57 @@
     if (window.lucide) lucide.createIcons({ attrs: { 'aria-hidden': 'true' }, nameAttr: 'data-lucide' });
   }
 
-  AH.ui = { levelBurst, countUp, esc, ic, fmt, timeAgo, dateBR, avatar, emblem, thumb, gameCard, empty, skeletonGrid, toast, rewardToasts, modal, close, confirm, confetti, refreshIcons };
+  // ---------- Listas roláveis (carrosséis de jogos e chips) ----------
+  // No desktop não há como "deslizar": mostramos setas e deixamos arrastar com o mouse.
+  let drag = null, suppressClick = false;
+  function enhanceScrollers(root = document) {
+    root.querySelectorAll('.game-row:not([data-scroller]), .chips:not([data-scroller])').forEach(el => {
+      el.dataset.scroller = '1';
+      const wrap = document.createElement('div');
+      wrap.className = 'scroller';
+      el.parentNode.insertBefore(wrap, el);
+      wrap.appendChild(el);
+      const btn = dir => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'sc-btn ' + dir; b.tabIndex = -1;
+        b.setAttribute('aria-label', dir === 'prev' ? 'Rolar para a esquerda' : 'Rolar para a direita');
+        b.innerHTML = ic(dir === 'prev' ? 'chevron-left' : 'chevron-right');
+        b.onclick = () => el.scrollBy({ left: (dir === 'prev' ? -1 : 1) * Math.max(200, el.clientWidth * 0.8), behavior: 'smooth' });
+        return b;
+      };
+      wrap.append(btn('prev'), btn('next'));
+      const update = () => {
+        const max = el.scrollWidth - el.clientWidth;
+        wrap.classList.toggle('can-prev', el.scrollLeft > 4);
+        wrap.classList.toggle('can-next', el.scrollLeft < max - 4);
+      };
+      el.addEventListener('scroll', update, { passive: true });
+      if (window.ResizeObserver) new ResizeObserver(update).observe(el); else addEventListener('resize', update);
+      update();
+    });
+    refreshIcons();
+  }
+  const scrollerOf = t => t.closest?.('.scroller > .game-row, .scroller > .chips');
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const el = scrollerOf(e.target);
+    if (el && el.scrollWidth > el.clientWidth) drag = { el, x: e.clientX, left: el.scrollLeft, moved: false };
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; drag.el.classList.add('dragging'); }
+    if (drag.moved) drag.el.scrollLeft = drag.left - dx;
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    if (drag.moved) { suppressClick = true; setTimeout(() => { suppressClick = false; }, 0); }
+    drag.el.classList.remove('dragging'); drag = null;
+  };
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  document.addEventListener('click', e => { if (suppressClick) { e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener('dragstart', e => { if (scrollerOf(e.target)) e.preventDefault(); });
+
+  AH.ui = { enhanceScrollers, levelBurst, countUp, esc, ic, fmt, timeAgo, dateBR, avatar, emblem, thumb, gameCard, empty, skeletonGrid, toast, rewardToasts, modal, close, confirm, confetti, refreshIcons };
 })();

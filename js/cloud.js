@@ -48,10 +48,11 @@
     u.email = user.email;
     if (data?.username) u.username = data.username;
     uid = user.id;
+    const stored = fresh ? '' : JSON.stringify(u); // antes das migrações locais, para elas serem gravadas
     AH.store.setUser(u);
     AH.online?.start();
-    lastSaved = fresh ? '' : JSON.stringify(u);
-    if (fresh) await saveNow();
+    lastSaved = stored;
+    if (fresh) await saveNow(); else queueSave();
   }
 
   async function saveNow() {
@@ -80,6 +81,7 @@
     });
     AH.store.subscribe(() => { if (uid) queueSave(); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && uid) saveNow(); });
+    window.addEventListener('pagehide', () => { if (uid) saveNow(); }); // iOS nem sempre dispara visibilitychange ao fechar
   }
 
   async function signIn(email, password) {
