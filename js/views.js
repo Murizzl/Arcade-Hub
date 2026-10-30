@@ -31,7 +31,7 @@
 
     el.innerHTML = `
       <section class="hero">
-        <div class="card progress-card theme-${u.cardTheme}" style="background:${themeColor(u.cardTheme)}">
+        <div class="card progress-card theme-${u.cardTheme}" style="${cardStyle(u, u.cardTheme)}">
           <span class="deco"></span><span class="deco two"></span>
           <div class="pc-top">
             ${avatar(u, 'lg')}
@@ -842,7 +842,7 @@
 
     el.innerHTML = `
       <div class="card profile-card">
-        <div class="profile-banner" style="background:${themeColor(theme)}"></div>
+        <div class="profile-banner" style="${cardStyle(p, theme)}"></div>
         <div class="profile-body">
           ${avatar(p, 'xl', { status: !isMe })}
           <div class="profile-id">
@@ -923,27 +923,32 @@
   }
 
   // Recorta a imagem em quadrado e reduz para 256px, para caber no armazenamento local.
-  function resizePhoto(file) {
+  // Recorta a imagem (cobrindo w×h) e reduz; vira um data URL pequeno que cabe no perfil salvo
+  function resizeImage(file, w, h, q) {
     return new Promise((resolve, reject) => {
       if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) return reject(new Error('Use uma imagem PNG, JPG, WEBP ou GIF.'));
-      if (file.size > 8 * 1024 * 1024) return reject(new Error('A imagem deve ter no máximo 8 MB.'));
+      if (file.size > 12 * 1024 * 1024) return reject(new Error('A imagem deve ter no máximo 12 MB.'));
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        const side = Math.min(img.width, img.height), size = 256;
-        const cv = document.createElement('canvas'); cv.width = cv.height = size;
-        cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        const k = Math.max(w / img.width, h / img.height), sw = w / k, sh = h / k;
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, w, h);
         URL.revokeObjectURL(url);
-        resolve(cv.toDataURL('image/jpeg', 0.85));
+        resolve(cv.toDataURL('image/jpeg', q));
       };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler essa imagem.')); };
       img.src = url;
     });
   }
+  const resizePhoto = file => resizeImage(file, 256, 256, 0.85);
+  const resizeBg = file => resizeImage(file, 720, 270, 0.78);
+  // fundo do cartão: imagem do jogador (se houver) com um véu para o texto continuar legível
+  const cardStyle = (p, theme) => p.cardImage ? `background:linear-gradient(rgba(0,0,0,.3),rgba(0,0,0,.3)),url('${esc(p.cardImage)}') center/cover` : `background:${themeColor(theme)}`;
 
   function editProfile() {
     const u = S.user;
-    const draft = { username: u.username, bio: u.bio, icon: u.avatar.icon, color: u.avatar.color, frame: u.avatar.frame, theme: u.cardTheme, title: u.title, photo: u.avatar.photo || null };
+    const draft = { username: u.username, bio: u.bio, icon: u.avatar.icon, color: u.avatar.color, frame: u.avatar.frame, theme: u.cardTheme, title: u.title, photo: u.avatar.photo || null, bg: u.cardImage || null };
     const owned = kind => S.catalog(kind).filter(x => S.owns(kind, x.id));
     const draw = m => {
       m.querySelector('.modal-body').innerHTML = `<div class="stack">
@@ -956,6 +961,10 @@
             <span class="err" id="edPhotoErr"></span>
           </div>
         </div>
+        <div class="field"><label>Imagem de fundo do cartão</label>
+          <div class="row" style="gap:10px;flex-wrap:wrap"><label class="btn btn-sm" for="edBg" tabindex="0">${ic('image')} ${draft.bg ? 'Trocar imagem' : 'Enviar imagem'}</label><input type="file" id="edBg" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only">${draft.bg ? `<button class="btn btn-sm btn-ghost" data-nobg>${ic('image-off')} Remover</button>` : ''}</div>
+          ${draft.bg ? `<div class="bg-prev" style="background-image:url('${esc(draft.bg)}')"></div>` : ''}
+          <span class="err" id="edBgErr"></span><span class="hint">Aparece no seu perfil e na tela inicial e fica salva na sua conta. Use só imagens que você tem o direito de usar.</span></div>
         <div class="field"><label for="edName">Username</label><input class="input" id="edName" maxlength="20" value="${esc(draft.username)}"><span class="hint">3–20 caracteres: letras, números, ponto, hífen ou _. Deve ser único.</span><span class="err" id="edErr"></span></div>
         <div class="field"><label for="edBio">Bio</label><input class="input" id="edBio" maxlength="80" value="${esc(draft.bio)}" placeholder="Conte algo sobre você"></div>
         <div class="field"><label for="edTitle">Título</label><select class="input" id="edTitle">${owned('titles').map(t => `<option value="${t.id}" ${t.id === draft.title ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
@@ -970,6 +979,12 @@
       m.querySelector('#edBio').oninput = e => { draft.bio = e.target.value; };
       m.querySelector('#edTitle').onchange = e => { draft.title = e.target.value; };
       m.querySelector('label[for=edPhoto]').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); m.querySelector('#edPhoto').click(); } };
+      m.querySelector('label[for=edBg]').onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); m.querySelector('#edBg').click(); } };
+      m.querySelector('#edBg').onchange = async e => {
+        const f = e.target.files[0]; if (!f) return;
+        try { draft.bg = await resizeBg(f); draw(m); }
+        catch (err) { m.querySelector('#edBgErr').textContent = err.message; }
+      };
       m.querySelector('#edPhoto').onchange = async e => {
         const f = e.target.files[0]; if (!f) return;
         try { draft.photo = await resizePhoto(f); draw(m); }
@@ -984,7 +999,7 @@
           const err = !/^[\w.\-]{3,20}$/.test(n) ? 'Username inválido.' : (n.toLowerCase() !== u.username.toLowerCase() && S.usernameTaken(n)) ? 'Este username já está em uso.' : '';
           if (err) { m.querySelector('#edErr').textContent = err; m.querySelector('#edName').focus(); return false; }
           const apply = photo => {
-            Object.assign(u, { username: n, bio: draft.bio.trim(), cardTheme: draft.theme, title: draft.title });
+            Object.assign(u, { username: n, bio: draft.bio.trim(), cardTheme: draft.theme, title: draft.title, cardImage: draft.bg || null });
             Object.assign(u.avatar, { icon: draft.icon, color: draft.color, frame: draft.frame, photo });
             S.save(); U.toast('Perfil atualizado!', 'success', 'check');
             AH.app.render();
@@ -994,7 +1009,7 @@
             const btn = m.querySelector('.modal-foot .btn-primary'); btn.disabled = true; btn.textContent = 'Enviando foto…';
             AH.cloud.uploadAvatar(draft.photo)
               .then(url => { U.close(); apply(url); })
-              .catch(e2 => { btn.disabled = false; btn.textContent = 'Salvar'; m.querySelector('#edPhotoErr').textContent = 'Falha ao enviar a foto: ' + AH.cloud.msg(e2); });
+              .catch(e2 => { console.warn('Upload da foto falhou; guardando no perfil.', e2); U.close(); apply(draft.photo); });
             return false;
           }
           apply(draft.photo);
@@ -1004,6 +1019,7 @@
         draw(m);
         m.addEventListener('click', e => {
           if (e.target.closest('[data-nophoto]')) { draft.photo = null; draw(m); return; }
+          if (e.target.closest('[data-nobg]')) { draft.bg = null; draw(m); return; }
           const b = e.target.closest('.pick'); if (!b || b.disabled) return;
           if (b.dataset.icon) draft.icon = b.dataset.icon;
           if (b.dataset.color) draft.color = b.dataset.color;

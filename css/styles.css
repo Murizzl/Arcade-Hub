@@ -1439,3 +1439,6 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .gs-themed .ms-c:not(.open), .gs-themed .lo-c:not(.on), .gs-themed .sl-board, .gs-themed .kk-c, .gs-themed .sd-cell:not(.sel):not(.same):not(.peer):not(.wrong) { background-image: linear-gradient(color-mix(in srgb, var(--primary) 14%, transparent), color-mix(in srgb, var(--primary) 14%, transparent)); }
 .gs-themed .ttt button:not(.win), .gs-themed .g2048 .cell { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 14%, transparent); }
 .gs-themed .ck-s.dk, .gs-themed .ch-s.dk { background-image: linear-gradient(color-mix(in srgb, var(--primary) 45%, transparent), color-mix(in srgb, var(--primary) 45%, transparent)); }
+
+.bg-prev { height: 96px; border-radius: 12px; background-size: cover; background-position: center; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--border); }
+.profile-banner { background-size: cover; background-position: center; }
