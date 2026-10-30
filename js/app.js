@@ -29,14 +29,17 @@
   const TITLES = { home: 'Início', games: 'Explorar jogos', game: 'Jogo', play: 'Jogando', duels: 'Duelos', rankings: 'Rankings', friends: 'Amigos', achievements: 'Conquistas', shop: 'Loja', profile: 'Perfil', user: 'Jogador', prestige: 'Prestígio', settings: 'Configurações', login: 'Entrar', register: 'Criar conta', recover: 'Recuperar senha' };
 
   function parse() {
-    const raw = location.hash.replace(/^#\/?/, '') || 'home';
+    let raw = location.hash.replace(/^#\/?/, '') || 'home';
+    if (/access_token=|error_description=|type=recovery/.test(raw)) raw = 'home'; // retorno dos links de e-mail do Supabase
     const [path, qs] = raw.split('?');
     const parts = path.split('/').filter(Boolean);
     return { name: parts[0] || 'home', params: parts.slice(1).map(decodeURIComponent), query: Object.fromEntries(new URLSearchParams(qs || '')) };
   }
 
   let cleanup = null, current = null;
+  let ready = !AH.cloud.enabled;
   function render() {
+    if (!ready) return;
     const { name, params, query } = parse();
     const loggedIn = !!(S.state.session && S.user);
     if (!loggedIn && !PUBLIC.includes(name)) { location.replace('#/login'); return; }
@@ -167,5 +170,11 @@
 
   AH.app = { render, applyTheme };
   applyTheme();
-  render();
+  if (AH.cloud.enabled) {
+    main.innerHTML = `<div class="empty" style="padding-top:20vh"><div class="sd-loading">${ic('loader-2')}</div><p style="margin-top:10px">Conectando…</p></div>`;
+    U.refreshIcons();
+    AH.cloud.init()
+      .catch(err => { console.error(err); S.clearSession(); U.toast('Não foi possível conectar ao servidor: ' + AH.cloud.msg(err), 'error'); })
+      .finally(() => { ready = true; render(); });
+  } else render();
 })();

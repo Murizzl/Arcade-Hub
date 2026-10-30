@@ -792,10 +792,21 @@
           const n = draft.username.trim();
           const err = !/^[\w.\-]{3,20}$/.test(n) ? 'Username inválido.' : (n.toLowerCase() !== u.username.toLowerCase() && S.usernameTaken(n)) ? 'Este username já está em uso.' : '';
           if (err) { m.querySelector('#edErr').textContent = err; m.querySelector('#edName').focus(); return false; }
-          Object.assign(u, { username: n, bio: draft.bio.trim(), cardTheme: draft.theme, title: draft.title });
-          Object.assign(u.avatar, { icon: draft.icon, color: draft.color, frame: draft.frame, photo: draft.photo });
-          S.save(); U.toast('Perfil atualizado!', 'success', 'check');
-          AH.app.render();
+          const apply = photo => {
+            Object.assign(u, { username: n, bio: draft.bio.trim(), cardTheme: draft.theme, title: draft.title });
+            Object.assign(u.avatar, { icon: draft.icon, color: draft.color, frame: draft.frame, photo });
+            S.save(); U.toast('Perfil atualizado!', 'success', 'check');
+            AH.app.render();
+          };
+          // No modo nuvem a foto vai para o Supabase Storage e o perfil guarda só a URL
+          if (AH.cloud.enabled && draft.photo && draft.photo.startsWith('data:')) {
+            const btn = m.querySelector('.modal-foot .btn-primary'); btn.disabled = true; btn.textContent = 'Enviando foto…';
+            AH.cloud.uploadAvatar(draft.photo)
+              .then(url => { U.close(); apply(url); })
+              .catch(e2 => { btn.disabled = false; btn.textContent = 'Salvar'; m.querySelector('#edPhotoErr').textContent = 'Falha ao enviar a foto: ' + AH.cloud.msg(e2); });
+            return false;
+          }
+          apply(draft.photo);
         }
       }],
       onMount: m => {
@@ -966,11 +977,13 @@
           </div>
         </div>
       </div>`;
+    if (AH.cloud.enabled) el.querySelector('[data-demo]')?.closest('.card').remove();
     el.onclick = e => {
       const t = e.target.closest('[data-theme-set]');
       if (t) { st.theme = t.dataset.themeSet; S.save(); AH.app.applyTheme(); V.settings(el); U.refreshIcons(); return; }
+      if (e.target.closest('[data-pwd]') && AH.cloud.enabled) return V.newPasswordModal();
       if (e.target.closest('[data-pwd]')) U.modal({ title: 'Alterar senha', icon: 'key-round', body: `<p class="muted">No protótipo nenhuma senha é armazenada. Com o backend conectado, enviaremos um link seguro de redefinição para o seu e-mail (Supabase Auth).</p>`, actions: [{ label: 'Entendi', cls: 'btn-primary' }] });
-      if (e.target.closest('[data-logout]')) U.confirm({ title: 'Sair da conta?', icon: 'log-out', text: 'Seus dados demonstrativos continuam salvos neste navegador.', okLabel: 'Sair', onOk: () => { S.logout(); go('#/login'); } });
+      if (e.target.closest('[data-logout]')) U.confirm({ title: 'Sair da conta?', icon: 'log-out', text: 'Seus dados demonstrativos continuam salvos neste navegador.', okLabel: 'Sair', onOk: () => { if (AH.cloud.enabled) AH.cloud.signOut(); else { S.logout(); go('#/login'); } } });
       const d = e.target.closest('[data-demo]');
       if (d) {
         if (d.dataset.demo === 'xp') { const ev = S.addXp(500); S.checkAchievements(); S.save(); U.rewardToasts({ xp: 500, coins: 0, levelUps: ev }); }
@@ -991,18 +1004,18 @@
     <div class="brand"><span class="brand-mark">${ic('gamepad-2')}</span><span class="brand-name">Arcade<b>Hub</b></span></div>
     <h1>${title}</h1><p>${sub}</p>${body}<div class="auth-foot">${foot}</div></div></div>`;
   const pwdField = (id, label, auto) => `<div class="field"><label for="${id}">${label}</label><div style="position:relative"><input class="input" type="password" id="${id}" autocomplete="${auto}" required minlength="6" style="padding-right:48px"><button type="button" class="icon-btn" data-peek="${id}" aria-label="Mostrar senha" style="position:absolute;right:4px;top:4px;width:38px;height:38px;box-shadow:none;background:none">${ic('eye')}</button></div></div>`;
-  const simNotice = `<div class="notice">${ic('info')} <span>Protótipo: a sessão é simulada e <b>nenhuma senha é armazenada</b>. A autenticação real será feita pelo backend.</span></div>`;
+  const simNotice = AH.cloud.enabled ? '' : `<div class="notice">${ic('info')} <span>Protótipo: a sessão é simulada e <b>nenhuma senha é armazenada</b>. A autenticação real será feita pelo backend.</span></div>`;
   function bindPeek(el) { el.querySelectorAll('[data-peek]').forEach(b => b.onclick = () => { const i = el.querySelector('#' + b.dataset.peek); i.type = i.type === 'password' ? 'text' : 'password'; b.setAttribute('aria-label', i.type === 'password' ? 'Mostrar senha' : 'Ocultar senha'); }); }
 
   V.login = el => {
     el.innerHTML = authShell('Entrar', 'Bom te ver de novo! Seus jogos estão esperando.', `
       <form class="stack" novalidate>
-        <div class="field"><label for="lgUser">E-mail ou username</label><input class="input" id="lgUser" autocomplete="username" required placeholder="PlayerUm"></div>
+        <div class="field"><label for="lgUser">${AH.cloud.enabled ? 'E-mail' : 'E-mail ou username'}</label><input class="input" id="lgUser" ${AH.cloud.enabled ? 'type="email" autocomplete="email"' : 'autocomplete="username" placeholder="PlayerUm"'} required></div>
         ${pwdField('lgPass', 'Senha', 'current-password')}
         <div class="row" style="justify-content:space-between"><label class="row" style="gap:8px;font-size:.9rem"><input type="checkbox" checked> Manter conectado</label><a class="text-link" href="#/recover" style="font-size:.9rem">Esqueci a senha</a></div>
         <span class="err" id="lgErr" role="alert" style="color:var(--danger);font-size:.85rem"></span>
         <button class="btn btn-primary btn-lg btn-block" type="submit">${ic('log-in')} Entrar</button>
-        <button class="btn btn-block btn-outline" type="button" data-demo>${ic('play')} Entrar com conta demo</button>
+        ${AH.cloud.enabled ? '' : `<button class="btn btn-block btn-outline" type="button" data-demo>${ic('play')} Entrar com conta demo</button>`}
         ${simNotice}
       </form>`, `Novo por aqui? <a href="#/register">Criar conta grátis</a>`);
     bindPeek(el);
@@ -1012,9 +1025,16 @@
       const id = el.querySelector('#lgUser').value.trim(), pw = el.querySelector('#lgPass').value;
       if (!id || pw.length < 6) { el.querySelector('#lgErr').textContent = 'Informe o usuário e uma senha com pelo menos 6 caracteres.'; return; }
       const btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.innerHTML = 'Entrando…';
+      if (AH.cloud.enabled) {
+        AH.cloud.signIn(id, pw)
+          .then(() => { U.toast(`Bem-vindo, ${esc(S.user.username)}!`, 'success', 'party-popper'); go('#/home'); })
+          .catch(err => { el.querySelector('#lgErr').textContent = AH.cloud.msg(err); btn.disabled = false; btn.innerHTML = `${ic('log-in')} Entrar`; U.refreshIcons(); });
+        return;
+      }
       setTimeout(() => { S.login(id); U.toast(`Bem-vindo, ${esc(S.user.username)}!`, 'success', 'party-popper'); go('#/home'); }, 600);
     };
-    el.querySelector('[data-demo]').onclick = () => { S.login(); go('#/home'); };
+    const demoBtn = el.querySelector('[data-demo]');
+    if (demoBtn) demoBtn.onclick = () => { S.login(); go('#/home'); };
   };
 
   V.register = el => {
@@ -1046,6 +1066,19 @@
       const n = userIn.value.trim(), mail = el.querySelector('#rgMail').value.trim(), p1 = el.querySelector('#rgPass').value, p2 = el.querySelector('#rgPass2').value;
       const err = !/^[\w.\-]{3,20}$/.test(n) ? 'Username inválido.' : S.usernameTaken(n) ? 'Este username já está em uso.' : !/^\S+@\S+\.\S+$/.test(mail) ? 'Informe um e-mail válido.' : p1.length < 6 ? 'A senha precisa ter ao menos 6 caracteres.' : p1 !== p2 ? 'As senhas não coincidem.' : !el.querySelector('#rgTerms').checked ? 'Você precisa aceitar os termos.' : '';
       if (err) { el.querySelector('#rgErr').textContent = err; return; }
+      if (AH.cloud.enabled) {
+        const btn = el.querySelector('form [type=submit]'); btn.disabled = true; btn.textContent = 'Criando conta…';
+        AH.cloud.signUp(mail, p1, n, { icon: draft.icon, color: draft.color })
+          .then(r => {
+            if (r.needsConfirm) {
+              el.querySelector('form').outerHTML = `<div class="empty" style="padding:10px 0"><div class="empty-ic" style="background:var(--success-soft);color:var(--success)">${ic('mail-check')}</div><h3>Confirme seu e-mail</h3><p>Enviamos um link para <b>${esc(mail)}</b>. Abra-o para ativar a conta e depois entre normalmente.</p></div>`;
+              U.refreshIcons(); return;
+            }
+            U.confetti(60); U.toast(`Conta criada! Bem-vindo, ${esc(n)}`, 'success', 'party-popper'); go('#/home');
+          })
+          .catch(e2 => { el.querySelector('#rgErr').textContent = AH.cloud.msg(e2); btn.disabled = false; btn.innerHTML = `${ic('user-plus')} Criar conta`; U.refreshIcons(); });
+        return;
+      }
       U.confirm({
         title: 'Criar nova conta local?', icon: 'user-plus',
         text: 'Isso substituirá a conta demonstrativa salva neste navegador por uma conta nova, começando do nível 1.',
@@ -1066,10 +1099,33 @@
       e.preventDefault();
       const m = el.querySelector('#rcMail').value.trim();
       if (!/^\S+@\S+\.\S+$/.test(m)) { el.querySelector('#rcErr').textContent = 'Informe um e-mail válido.'; return; }
-      el.querySelector('form').outerHTML = `<div class="empty" style="padding:10px 0"><div class="empty-ic" style="background:var(--success-soft);color:var(--success)">${ic('mail-check')}</div><h3>Verifique seu e-mail</h3><p>Se existir uma conta para <b>${esc(m)}</b>, você receberá o link em instantes.</p><p class="faint" style="margin-top:8px">(Simulação: nenhum e-mail é enviado no protótipo.)</p></div>`;
+      if (AH.cloud.enabled && !el.querySelector('form').dataset.sent) {
+        const form = el.querySelector('form'), btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Enviando…';
+        AH.cloud.resetPassword(m)
+          .then(() => { form.dataset.sent = '1'; form.requestSubmit(); })
+          .catch(err => { el.querySelector('#rcErr').textContent = AH.cloud.msg(err); btn.disabled = false; btn.innerHTML = `${ic('mail')} Enviar link`; U.refreshIcons(); });
+        return;
+      }
+      el.querySelector('form').outerHTML = `<div class="empty" style="padding:10px 0"><div class="empty-ic" style="background:var(--success-soft);color:var(--success)">${ic('mail-check')}</div><h3>Verifique seu e-mail</h3><p>Se existir uma conta para <b>${esc(m)}</b>, você receberá o link em instantes.</p>${AH.cloud.enabled ? '' : '<p class="faint" style="margin-top:8px">(Simulação: nenhum e-mail é enviado no protótipo.)</p>'}</div>`;
       U.refreshIcons();
     };
   };
+
+  // Definir nova senha (configurações ou link de recuperação do e-mail)
+  V.newPasswordModal = (fromEmail) => U.modal({
+    title: fromEmail ? 'Crie uma nova senha' : 'Alterar senha', icon: 'key-round',
+    body: `<div class="stack">${pwdField('np1', 'Nova senha', 'new-password')}${pwdField('np2', 'Confirmar nova senha', 'new-password')}<span class="err" id="npErr" role="alert"></span></div>`,
+    onMount: m => bindPeek(m),
+    actions: [{ label: 'Cancelar', cls: 'btn-ghost' }, {
+      label: 'Salvar senha', cls: 'btn-primary', icon: 'check', onClick: m => {
+        const a = m.querySelector('#np1').value, b = m.querySelector('#np2').value, err = m.querySelector('#npErr');
+        if (a.length < 6) { err.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return false; }
+        if (a !== b) { err.textContent = 'As senhas não coincidem.'; return false; }
+        AH.cloud.updatePassword(a).then(() => { U.close(); U.toast('Senha alterada!', 'success', 'check'); }).catch(e2 => { err.textContent = AH.cloud.msg(e2); });
+        return false;
+      }
+    }]
+  });
 
   V.notFound = el => {
     el.innerHTML = U.empty('map-pin-off', 'Página não encontrada', 'O endereço que você abriu não existe.', '<a class="btn btn-primary" href="#/home">Voltar ao início</a>');

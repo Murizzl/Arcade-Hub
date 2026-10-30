@@ -379,6 +379,10 @@
     return AH.players.some(p => p.username.toLowerCase() === n);
   }
   function reset() { state = freshState(true); migrate(); save(); }
+  // Usados pelo modo nuvem (js/cloud.js)
+  function newUser(username) { return defaultUser(username); }
+  function setUser(u) { state.user = u; migrate(); state.session = { userId: u.id, since: now() }; save(); }
+  function clearSession() { state.session = null; if (AH.cloud?.enabled) state.user = null; save(); }
 
   load();
 
@@ -388,7 +392,7 @@
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
     levelInfo, addXp, reportMatch, claimChallenge, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
-    catalog, owns, buy, equip, setPhoto,
+    catalog, owns, buy, equip, setPhoto, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,
     prestigeOf: n => C.prestiges[Math.min(n, C.prestiges.length - 1)],
     divisionOf: mmr => [...C.divisions].reverse().find(d => mmr >= d.min),

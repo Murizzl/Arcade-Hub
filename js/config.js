@@ -11,9 +11,10 @@ AH.config = {
   storageKey: 'arcadehub.v1',
   backend: {
     // Preparado para integração futura (somente chave pública/anon).
-    provider: 'local', // 'local' | 'supabase'
-    supabaseUrl: '',
-    supabaseAnonKey: ''
+    provider: 'supabase', // 'local' | 'supabase'
+    supabaseUrl: 'https://bvfrafyblkdpbdwoepuh.supabase.co',
+    // Chave pública "anon": pode ficar no site. A segurança vem das regras RLS do banco.
+    supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2ZnJhZnlibGtkcGJkd29lcHVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNjYzNTYsImV4cCI6MjEwODk0MjM1Nn0.djAgLNxYuUtqfJqAvMVvGsQxiTL_tLT1yQ-fD3fObBY'
   },
   maxLevel: 100,
   // Regras genéricas de XP — cada jogo pode sobrescrever em `xpOverrides`.
