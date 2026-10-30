@@ -82,8 +82,18 @@
       { isNew: true, popularity: 52, players: 4100, desc: 'Cada toque inverte as luzes vizinhas. Apague todas!' }),
     g('mahjong', 'Mahjong Solitário', ['puzzle', 'cartas'], 'flower-2', '#be123c', '#fb7185', 'checks',
       { popularity: 74, players: 15200, desc: 'Remova pares de peças livres até limpar o tabuleiro.' }),
-    g('labirinto', 'Labirinto', ['puzzle', 'arcade'], 'route', '#0f766e', '#2dd4bf', 'grid',
-      { popularity: 58, players: 7300, desc: 'Encontre a saída de labirintos gerados aleatoriamente.', scoreLabel: 'Tempo', scoreDir: 'low' }),
+    g('labirinto', 'Pinte o Labirinto', ['puzzle', 'arcade'], 'route', '#e11d48', '#fb7185', 'grid',
+      { playable: true, isNew: true, popularity: 84, players: 11300, desc: 'Deslize a bolinha: ela só para na parede e pinta tudo por onde passa. Pinte o labirinto inteiro!', scoreLabel: 'Fase' }),
+    g('empilhar', 'Empilhar', ['arcade'], 'layers-3', '#ec4899', '#818cf8', 'stripes',
+      { playable: true, isNew: true, popularity: 90, players: 16800, desc: 'Toque na hora certa para empilhar os blocos. O que sobrar para fora é cortado — acerte em cheio para manter a torre larga!' }),
+    g('prateleiras', 'Prateleiras', ['puzzle'], 'shopping-basket', '#b45309', '#fbbf24', 'grid',
+      { playable: true, isNew: true, popularity: 92, players: 21400, desc: 'Arrume os produtos: junte 3 iguais na mesma prateleira para eles sumirem. Limpe tudo antes do tempo acabar.', scoreLabel: 'Fase' }),
+    g('copinhos', 'Copinhos de Cor', ['puzzle'], 'cup-soda', '#7c3aed', '#f472b6', 'dots',
+      { playable: true, isNew: true, popularity: 88, players: 9600, desc: 'Mande os copinhos para a esteira e eles pintam o desenho em pixel art — de baixo para cima. Planeje a ordem para a esteira não lotar!', scoreLabel: 'Fase' }),
+    g('cores', 'Batalha de Cores', ['arcade', 'estrategia', 'multiplayer'], 'paintbrush', '#2563eb', '#ef4444', 'checks',
+      { playable: true, isNew: true, popularity: 94, players: 18900, desc: 'Pinte o campo com bolas, laser, serra e bomba. Quem tiver mais território quando o tempo acabar vence!', scoreLabel: '% do campo' }),
+    g('territorio', 'Território', ['arcade', 'multiplayer'], 'square-dashed', '#0ea5e9', '#fde047', 'grid',
+      { playable: true, isNew: true, popularity: 93, players: 22700, desc: 'Saia da sua área, desenhe um rastro e volte para conquistar território. Cuidado: se cortarem seu rastro, você perde!' }),
     g('gamao', 'Gamão', ['tabuleiro', 'estrategia', 'multiplayer'], 'dices', '#92400e', '#f59e0b', 'stripes',
       { popularity: 44, players: 3100, desc: 'Um dos jogos de tabuleiro mais antigos do mundo. Corra com suas peças até a saída.' })
   ];
@@ -91,9 +101,11 @@
   // ---------- Modo de duelo de cada jogo ----------
   // versus: confronto direto (turnos/rodadas contra o adversário)
   // race:   cada um joga sua partida; vence quem fizer mais pontos ou terminar mais rápido
-  const VERSUS = ['velha', 'ppt', 'xadrez', 'damas', 'conecta4', 'pong', 'batalha', 'domino', 'gamao', 'blackjack'];
+  const VERSUS = ['cores', 'velha', 'ppt', 'xadrez', 'damas', 'conecta4', 'pong', 'batalha', 'domino', 'gamao', 'blackjack'];
   const RACE = { '2048': { metric: 'score', limit: 120 }, memoria: { metric: 'time', limit: 120 }, pocoes: { metric: 'time', limit: 240 },
-    porcas: { metric: 'time', limit: 240 }, carros: { metric: 'time', limit: 180 }, helix: { metric: 'score', limit: 120 }, sudoku: { metric: 'time', limit: 600 } };
+    porcas: { metric: 'time', limit: 240 }, carros: { metric: 'time', limit: 180 }, helix: { metric: 'score', limit: 120 }, sudoku: { metric: 'time', limit: 600 },
+    labirinto: { metric: 'time', limit: 120 }, empilhar: { metric: 'score', limit: 120 }, prateleiras: { metric: 'time', limit: 180 },
+    copinhos: { metric: 'time', limit: 180 }, territorio: { metric: 'score', limit: 120 } };
   AH.games.forEach(game => {
     game.duel = true;
     game.duelType = VERSUS.includes(game.id) ? 'versus' : 'race';
@@ -109,7 +121,10 @@
     pocoes: { names: FIVE, limits: [120, 180, 240, 300, 360], def: 1 },
     porcas: { names: FIVE, limits: [120, 180, 240, 300, 360], def: 1 },
     carros: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [90, 150, 240, 360], def: 1 },
-    sudoku: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [300, 600, 900, 1200], def: 0 }
+    sudoku: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [300, 600, 900, 1200], def: 0 },
+    labirinto: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [60, 90, 150, 240], def: 1 },
+    prateleiras: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [90, 150, 210, 300], def: 1 },
+    copinhos: { names: ['Fácil', 'Médio', 'Difícil', 'Expert'], limits: [120, 180, 240, 300], def: 1 }
   };
   AH.raceLimit = (game, diff) => AH.duelDifficulties[game.id]?.limits?.[diff] ?? game.race.limit;
   AH.duelLabel = (game, diff) => {

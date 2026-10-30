@@ -457,7 +457,7 @@
             const end = (POTION_TIERS[ti + 1]?.from || upto + 1) - 1;
             const nums = []; for (let n = t.from; n <= Math.min(end, upto); n++) nums.push(n);
             return `<h3 class="pz-sec"><span class="pz-tier" style="background:${t.color}">${t.name.toUpperCase()}</span> <small class="faint">${t.colors} cores</small></h3>
-              <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === level ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
+              <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === level ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max && n !== t.from ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max && n !== t.from ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
           }).join(''),
           onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (b && !b.disabled) { AH.ui.close(); start(+b.dataset.lv); } })
         });

@@ -11,7 +11,8 @@ AH.config = {
   storageKey: 'arcadehub.v1',
   backend: {
     // Preparado para integração futura (somente chave pública/anon).
-    provider: 'supabase', // 'local' | 'supabase'
+    // 'local' | 'supabase'. Para testar offline: localStorage.setItem('arcadehub.forceLocal', '1')
+    provider: (() => { try { return localStorage.getItem('arcadehub.forceLocal') ? 'local' : 'supabase'; } catch (e) { return 'supabase'; } })(),
     supabaseUrl: 'https://bvfrafyblkdpbdwoepuh.supabase.co',
     // Chave pública "anon": pode ficar no site. A segurança vem das regras RLS do banco.
     supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2ZnJhZnlibGtkcGJkd29lcHVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNjYzNTYsImV4cCI6MjEwODk0MjM1Nn0.djAgLNxYuUtqfJqAvMVvGsQxiTL_tLT1yQ-fD3fObBY'
@@ -35,7 +36,13 @@ AH.config = {
     porcas:  { label: 'Dificuldade da fase', calc: (s, x) => [15, 30, 50, 75, 110][x?.tier || 0] },
     carros:  { label: 'Dificuldade da fase', calc: (s, x) => [15, 35, 60, 100][x?.tier || 0] },
     helix:   { label: 'Pontos na partida (1 XP a cada 5)', calc: s => Math.min(400, Math.floor(s / 5)) },
-    sudoku:  { label: 'Dificuldade do Sudoku', calc: (s, x) => [30, 60, 100, 160][x?.tier || 0] }
+    sudoku:  { label: 'Dificuldade do Sudoku', calc: (s, x) => [30, 60, 100, 160][x?.tier || 0] },
+    labirinto:   { label: 'Dificuldade da fase', calc: (s, x) => [15, 30, 50, 80][x?.tier || 0] },
+    prateleiras: { label: 'Dificuldade da fase', calc: (s, x) => [15, 30, 55, 90][x?.tier || 0] },
+    copinhos:    { label: 'Dificuldade da fase', calc: (s, x) => [15, 30, 55, 90][x?.tier || 0] },
+    empilhar:    { label: 'Altura da torre (2 XP por bloco)', calc: s => Math.min(300, s * 2) },
+    cores:       { label: 'Território conquistado', calc: s => Math.min(120, Math.round(s)) },
+    territorio:  { label: 'Área conquistada', calc: s => Math.min(300, Math.round(s / 5)) }
   },
   // XP necessário para subir do nível n para n+1 (crescente).
   xpForLevel(n) { return Math.round(80 + n * 22 + Math.pow(n, 1.45) * 3); },

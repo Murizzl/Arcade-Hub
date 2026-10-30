@@ -36,7 +36,7 @@
         const end = (tiers[ti + 1]?.from || upto + 1) - 1;
         const nums = []; for (let n = t.from; n <= Math.min(end, upto); n++) nums.push(n);
         return `<h3 class="pz-sec"><span class="pz-tier" style="background:${t.color}">${t.name.toUpperCase()}</span> <small class="faint">${sub(t)}</small></h3>
-          <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === current ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
+          <div class="pz-levels">${nums.map(n => `<button class="pz-lv ${n === current ? 'cur' : ''} ${n < max ? 'done' : ''}" data-lv="${n}" ${n > max && n !== t.from ? 'disabled aria-label="Fase ' + n + ' bloqueada"' : ''}>${n > max && n !== t.from ? ic('lock') : n}</button>`).join('')}${end > upto ? '<span class="faint" style="align-self:center">…</span>' : ''}</div>`;
       }).join(''),
       onMount: m => m.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (b && !b.disabled) { AH.ui.close(); onPick(+b.dataset.lv); } })
     });
@@ -564,12 +564,16 @@
           g.globalAlpha = fade;
           p.segs.forEach((s, i) => {
             if (s === 1) return;
-            const a0 = i * st + rot, a1 = a0 + st + 0.4, mid = rad(a0 + st / 2);
+            const a0 = ((i * st + rot) % 360 + 360) % 360, a1 = a0 + st + 0.4, mid = rad(a0 + st / 2);
             if ((Math.sin(mid) > 0) !== front) return;
             const col = s === 2 ? '#ef4444' : base;
             const spread = p.broken ? p.broken * 2 : 0; // pedaços se afastando ao quebrar
             const ox = Math.cos(mid) * spread, oy = Math.sin(mid) * spread * K3;
-            if (front) { g.fillStyle = shade(col, -0.3); ring(cx + ox, y + oy + TH, R, RI, rad(a0), rad(a1)); g.fill(); }
+            if (front) { // espessura só na borda externa (a interna ficava escura perto do poste)
+              g.fillStyle = shade(col, -0.22);
+              g.beginPath(); g.ellipse(cx + ox, y + oy, R, R * K3, 0, rad(a0), rad(a1));
+              g.ellipse(cx + ox, y + oy + TH, R, R * K3, 0, rad(a1), rad(a0), true); g.closePath(); g.fill();
+            }
             g.fillStyle = s === 2 ? '#f87171' : p.finish && i % 2 ? '#facc15' : col;
             ring(cx + ox, y + oy, R, RI, rad(a0), rad(a1)); g.fill();
             if (s === 2) { g.fillStyle = 'rgba(255,255,255,.18)'; ring(cx + ox, y + oy, R * 0.98, R * 0.8, rad(a0 + 2), rad(a1 - 2)); g.fill(); }
@@ -584,7 +588,7 @@
         for (let i = vis.length - 1; i >= 0; i--) drawPlat(vis[i], true);
         // respingos de tinta na plataforma
         splats.forEach(s => {
-          const a = rad(s.a + rot); if (Math.sin(a) <= 0.05) return;
+          const a = rad((((s.a + rot) % 360) + 360) % 360); if (Math.sin(a) <= 0.05) return;
           const r = midR(), x = cx + Math.cos(a) * r, y = s.y - camY + Math.sin(a) * r * K3;
           g.globalAlpha = Math.min(1, s.life * 1.6) * 0.85; g.fillStyle = s.c;
           g.beginPath(); g.ellipse(x, y, BR * 1.5 * s.s, BR * 0.55 * s.s, 0, 0, Math.PI * 2); g.fill();
@@ -841,4 +845,5 @@
       return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
     }
   };
+  AH.levelKit = { levelShell, setTitle, levelPicker, actionBtn, tierIndex, unlockedOf };
 })();
