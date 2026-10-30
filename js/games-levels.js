@@ -493,7 +493,10 @@
         const b = $('[data-banner]'); b.textContent = text;
         b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
       }
-      const themeOf = r => skTower || HX_THEMES[(r - 1) % HX_THEMES.length];
+      const accHx = AH.store.skin('helix', 'theme').fx.accent;
+      const mixW = (h, t) => '#' + [1, 3, 5].map(k => Math.round(parseInt(h.slice(k, k + 2), 16) + (255 - parseInt(h.slice(k, k + 2), 16)) * t).toString(16).padStart(2, '0')).join('');
+      const accTheme = accHx && { bg: [mixW(accHx, 0.55), mixW(accHx, 0.92)], pole: '#f8fafc', plat: accHx, ball: '#f97316' };
+      const themeOf = r => skTower || accTheme || HX_THEMES[(r - 1) % HX_THEMES.length];
       const ballColor = () => skBall || theme.ball;
       const burst = (x, y, color, n, power = 1) => {
         for (let i = 0; i < n; i++) {

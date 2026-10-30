@@ -9,7 +9,7 @@
    ========================================================= */
 (function () {
   const it = (id, name, price, sw, fx, vars) => ({ id, name, price, sw: [].concat(sw), fx: fx || {}, vars: vars || null });
-  const accent = (id, name, price, c) => it(id, name, price, c, {}, { '--primary': c, '--primary-600': c, '--primary-soft': c + '26', '--focus': c });
+  const accent = (id, name, price, c) => it(id, name, price, c, { accent: c }, { '--primary': c, '--primary-600': c, '--primary-soft': c + '26', '--focus': c });
 
   // Tema da partida: recolore botões, abas e destaques da área do jogo
   const THEME = { id: 'theme', name: 'Tema da partida', icon: 'palette', items: [

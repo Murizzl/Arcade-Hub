@@ -10,6 +10,8 @@
   const isModalOpen = () => document.getElementById('modalRoot').classList.contains('open');
   const best0 = id => AH.store.user?.stats[id]?.best || 0;
   const VEC = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
+  const accentOf = id => AH.store.skin(id, 'theme').fx.accent || null;
+  const tint = (g, W, H, acc, a = 0.16) => { if (!acc) return; g.globalAlpha = a; g.fillStyle = acc; g.fillRect(0, 0, W, H); g.globalAlpha = 1; };
   const OPP = { left: 'right', right: 'left', up: 'down', down: 'up' };
   const KEYDIR = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' };
   const rnd = n => (Math.random() * n) | 0;
@@ -73,6 +75,7 @@
       }
       function draw(dead) {
         for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { g.fillStyle = (r + c) % 2 ? '#a7d96c' : '#b5e47a'; g.fillRect(c * cell, r * cell, cell + 0.5, cell + 0.5); }
+        tint(g, W, H, accentOf('snake'), 0.28);
         g.font = `${Math.round(cell * 0.85)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(fd.emoji || '🍎', (food[1] + 0.5) * cell, (food[0] + 0.55) * cell);
         const len = snake.length;
@@ -144,7 +147,7 @@
       }
       function draw() {
         const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, (sky.bg || ['#7dd3fc', '#e0f2fe'])[0]); bg.addColorStop(1, (sky.bg || ['#7dd3fc', '#e0f2fe'])[1]);
-        g.fillStyle = bg; g.fillRect(0, 0, W, H);
+        g.fillStyle = bg; g.fillRect(0, 0, W, H); tint(g, W, H, accentOf('flappy'), 0.22);
         if (sky.night) { g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 24; i++) g.fillRect((i * 97 + 13) % W, (i * 53 + 7) % (H * 0.8), 2, 2); }
         else { g.fillStyle = 'rgba(255,255,255,.7)'; [[0.2, 0.15], [0.65, 0.28], [0.9, 0.1]].forEach(([a, b], i) => { const x = ((a * W - scroll * 0.2 * (i + 1)) % (W + 120) + W + 120) % (W + 120) - 60; g.beginPath(); g.ellipse(x, b * H, 38, 16, 0, 0, 7); g.fill(); }); }
         const pw = W * 0.16;
@@ -238,7 +241,7 @@
         if (kd) px = Math.max(PW() / 2, Math.min(W - PW() / 2, px + kd * W * 0.0105 * dt));
       }
       function draw() {
-        g.fillStyle = '#0f172a'; g.fillRect(0, 0, W, H);
+        g.fillStyle = '#0f172a'; g.fillRect(0, 0, W, H); tint(g, W, H, accentOf('pong'), 0.3);
         g.strokeStyle = 'rgba(255,255,255,.25)'; g.setLineDash([10, 12]); g.lineWidth = 3; g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke(); g.setLineDash([]);
         g.fillStyle = '#ef4565'; g.beginPath(); g.roundRect(cx - PW() / 2, PAD(), PW(), PH(), PH() / 2); g.fill();
         g.fillStyle = pc; g.beginPath(); g.roundRect(px - PW() / 2, H - PAD() - PH(), PW(), PH(), PH() / 2); g.fill();
@@ -317,7 +320,7 @@
         g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(x + 3, y + 3, cs - 6, cs * 0.22); g.globalAlpha = 1;
       }
       function draw(dead) {
-        g.fillStyle = '#0f172a'; g.fillRect(0, 0, W, H);
+        g.fillStyle = '#0f172a'; g.fillRect(0, 0, W, H); tint(g, W, H, accentOf('tetra'), 0.3);
         g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
         for (let i = 1; i < C; i++) { g.beginPath(); g.moveTo(i * cs, 0); g.lineTo(i * cs, H); g.stroke(); }
         for (let i = 1; i < R; i++) { g.beginPath(); g.moveTo(0, i * cs); g.lineTo(W, i * cs); g.stroke(); }

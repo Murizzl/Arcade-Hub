@@ -694,6 +694,7 @@
       const cv = el.querySelector('canvas'), $ = s => el.querySelector(s);
       let g, W, H, raf, timer, running = false, over = false;
       let own, trail, players, time, acc, lastT, kills, lastHud = 0, dirty = true;
+      const accent = AH.store.skin('territorio', 'theme').fx.accent || null;
       let glow = []; // [casa, momento da conquista] das conquistas recentes (brilho rápido)
       // O mapa inteiro vira uma imagem N×N que só é refeita quando algo muda; cada quadro apenas a estica na tela.
       const layer = document.createElement('canvas'); layer.width = layer.height = N;
@@ -825,6 +826,7 @@
         g.fillStyle = '#e2e8f0'; g.fillRect(0, 0, W, H);
         g.imageSmoothingEnabled = false;
         g.drawImage(layer, -camX, -camY, N * cs, N * cs);
+        if (accent) { g.globalAlpha = 0.14; g.fillStyle = accent; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
         const now = performance.now();
         if (glow.length) {
           glow = glow.filter(([, t0]) => now - t0 < 600);

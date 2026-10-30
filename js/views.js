@@ -230,7 +230,7 @@
       U.refreshIcons();
       const host = el.querySelector('#engine');
       // tema comprado na loja do jogo: variáveis CSS na área da partida
-      Object.entries(S.skin(g.id, 'theme').vars || {}).forEach(([k, v]) => el.querySelector('.play-wrap').style.setProperty(k, v));
+      applyGameTheme(el.querySelector('.play-wrap'), g.id);
       let ended = false;
       const finishDuel = (result, summary, score, extra) => {
         if (ended) return; ended = true;
@@ -1073,6 +1073,13 @@
 
   /* ==================== LOJA DO JOGO ==================== */
   // Joga o próprio jogo, de verdade, com o item aplicado — nada é comprado, salvo ou contado.
+  // Tema comprado na loja do jogo: variáveis CSS + classe que tinge superfícies e molduras da partida
+  function applyGameTheme(wrap, gameId) {
+    const vars = S.skin(gameId, 'theme').vars;
+    if (!vars) return;
+    Object.entries(vars).forEach(([k, val]) => wrap.style.setProperty(k, val));
+    wrap.classList.add('gs-themed');
+  }
   function openPreview(g, slotId, it) {
     const root = document.createElement('div');
     root.className = 'gs-preview';
@@ -1081,7 +1088,7 @@
     document.body.appendChild(root);
     document.body.style.overflow = 'hidden';
     S.setPreview({ game: g.id, slot: slotId, id: it.id });
-    Object.entries(S.skin(g.id, 'theme').vars || {}).forEach(([k, val]) => root.querySelector('.play-wrap').style.setProperty(k, val));
+    applyGameTheme(root.querySelector('.play-wrap'), g.id);
     const host = root.querySelector('#pvEngine');
     let cleanup = null, closed = false;
     const run = () => {

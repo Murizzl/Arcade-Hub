@@ -1420,3 +1420,22 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .gs-preview { position: fixed; inset: 0; z-index: 300; background: var(--bg); overflow: auto; padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); }
 .gs-pv-head { max-width: 560px; margin: 0 auto 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .gs-pv-head b { flex: 1; min-width: 140px; }
+
+/* ---------- Molduras de anime ---------- */
+.avatar.frame-plusultra { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #16a34a, 0 0 0 9px #dc2626; }
+.avatar.frame-akame { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #b91c1c, 0 0 0 9px #111827, 0 0 14px 6px rgba(185,28,28,.45); }
+.avatar.frame-curse { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #7c3aed, 0 0 0 9px #0ea5e9, 0 0 18px 7px rgba(124,58,237,.55); }
+.avatar.frame-hashira { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #0f766e, 0 0 0 9px #111827, 0 0 0 11px #14b8a6; }
+.avatar.frame-chakra { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #f97316, 0 0 0 9px #1e3a8a, 0 0 14px 6px rgba(249,115,22,.45); }
+.avatar.frame-sakura { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #f9a8d4, 0 0 0 9px #fb7185, 0 0 12px 4px rgba(249,168,212,.6); }
+.avatar.frame-saiyajin { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px #fde047, 0 0 0 9px #f59e0b, 0 0 20px 8px rgba(253,224,71,.6); }
+.progress-card[class*="theme-"] { color: #fff; }
+
+/* ---------- Tema da loja do jogo: efeito visível em qualquer jogo ---------- */
+.gs-themed .game-surface, .gs-themed .score-box, .gs-themed .tabs, .gs-themed .pz-foot, .gs-themed .pz-head { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 12%, transparent), 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent); }
+.gs-themed .pz, .gs-themed .nb, .gs-themed .ub { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 20%, transparent); }
+.gs-themed .ar, .gs-themed .hx, .gs-themed .st, .gs-themed .tr { box-shadow: 0 0 0 4px var(--primary), 0 10px 30px color-mix(in srgb, var(--primary) 45%, transparent); }
+.gs-themed .mz-cell.open { background: color-mix(in srgb, var(--primary) 30%, #2f2b44); }
+.gs-themed .ms-c:not(.open), .gs-themed .lo-c:not(.on), .gs-themed .sl-board, .gs-themed .kk-c, .gs-themed .sd-cell:not(.sel):not(.same):not(.peer):not(.wrong) { background-image: linear-gradient(color-mix(in srgb, var(--primary) 14%, transparent), color-mix(in srgb, var(--primary) 14%, transparent)); }
+.gs-themed .ttt button:not(.win), .gs-themed .g2048 .cell { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 14%, transparent); }
+.gs-themed .ck-s.dk, .gs-themed .ch-s.dk { background-image: linear-gradient(color-mix(in srgb, var(--primary) 45%, transparent), color-mix(in srgb, var(--primary) 45%, transparent)); }
