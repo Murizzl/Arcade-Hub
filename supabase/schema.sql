@@ -164,14 +164,12 @@ create policy "dono ve os proprios eventos" on public.persistent_events
   for select to authenticated using (auth.uid() = user_id);
 
 -- O servidor decide o XP: confere o dono do evento, descarta repetições
--- e aplica o teto diário. O navegador nunca informa quanto XP ganhou.
+-- e calcula o XP pelas regras abaixo. O navegador nunca informa quanto XP ganhou.
 create or replace function public.report_persistent_event(p_event_id text, p_game_id text, p_event_type text, p_kind text)
 returns int language plpgsql security definer set search_path = public as $$
 declare
   v_uid uuid := auth.uid();
   v_base int;
-  v_today int;
-  v_cap int := 150;
   v_xp int;
 begin
   if v_uid is null then raise exception 'não autenticado'; end if;
@@ -184,13 +182,7 @@ begin
     when 'rail-atlas:cargo_delivered:special' then 12
     when 'rail-atlas:achievement_unlocked:achievement' then 20
     else 0 end;
-  if p_event_type = 'cargo_delivered' then
-    select coalesce(sum(xp), 0) into v_today from persistent_events
-      where user_id = v_uid and game_id = p_game_id and event_type = 'cargo_delivered' and created_at >= date_trunc('day', now());
-    v_xp := greatest(0, least(v_base, v_cap - v_today));
-  else
-    v_xp := v_base;
-  end if;
+  v_xp := v_base;
   insert into persistent_events (id, user_id, game_id, event_type, kind, xp) values (p_event_id, v_uid, p_game_id, p_event_type, p_kind, v_xp);
   return v_xp;
 end $$;

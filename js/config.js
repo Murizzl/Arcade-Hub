@@ -28,13 +28,12 @@ AH.config = {
   },
   coinRules: { complete: 2, win: 5, record: 10, duelWin: 15 },
   // XP de perfil dos jogos persistentes. O jogo só relata o evento (ex.: entrega com ID único);
-  // o valor vem daqui e há teto diário contra farming. PRODUÇÃO: validar no servidor.
+  // o valor vem daqui (cada evento conta uma única vez). PRODUÇÃO: validar no servidor.
   persistentXp: {
     'rail-atlas': {
       cargo_delivered: { common: 2, medium: 4, international: 8, special: 12 },
-      achievement_unlocked: { achievement: 20 }, // conquistas inéditas não entram no teto diário
-      labels: { common: 'Entrega comum', medium: 'Entrega de média distância', international: 'Entrega internacional', special: 'Contrato especial', achievement: 'Conquista inédita' },
-      dailyCap: 150
+      achievement_unlocked: { achievement: 20 },
+      labels: { common: 'Entrega comum', medium: 'Entrega de média distância', international: 'Entrega internacional', special: 'Contrato especial', achievement: 'Conquista inédita' }
     }
   },
   // XP extra proporcional ao desempenho na partida (soma às regras acima).

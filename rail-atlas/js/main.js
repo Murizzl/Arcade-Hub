@@ -288,7 +288,9 @@ on('levelup', lvl => { toast(`<b>Companhia nível ${lvl}!</b><br>Novos desbloque
 function renderAll() { invalidate('map', 'top', 'ticker', 'panel'); }
 
 /* ==================== CABEÇALHO E RODAPÉ ==================== */
+let xpBump = false, lastXp = 0;
 function renderTop() {
+  if (ArcadeIntegration.sessionXp !== lastXp) { xpBump = true; lastXp = ArcadeIntegration.sessionXp; }
   const li = levelInfo(), c = state.company;
   const moving = Object.keys(state.trips).length;
   $('#company').innerHTML = `
@@ -299,7 +301,8 @@ function renderTop() {
     <div class="stat credits" title="Créditos Ferroviários">${ic('coins')}<b>${fmt(state.credits)}</b><small>créditos</small></div>
     <div class="stat" title="Locomotivas">${ic('train-front')}<b>${state.trains.length}</b><small>trens</small></div>
     <div class="stat" title="Entregas em andamento">${ic('package')}<b>${moving}</b><small>em rota</small></div>
-    <div class="stat xp" title="${userId ? 'XP enviado ao seu perfil do Arcade Hub hoje' : 'Entre no Arcade Hub para ganhar XP de perfil'}">${ic('sparkles')}<b>${userId ? fmt(ArcadeIntegration.grantedToday()) : '—'}</b><small>XP Arcade hoje</small></div>`;
+    <div class="stat xp" title="${userId ? 'XP de perfil do Arcade Hub ganho desde que você abriu o jogo' : 'Entre no Arcade Hub para ganhar XP de perfil'}">${ic('sparkles')}<b class="${xpBump ? 'bump' : ''}">${userId ? '+' + fmt(ArcadeIntegration.sessionXp) : '—'}</b><small>XP nesta sessão</small></div>`;
+  xpBump = false;
 }
 
 function renderTicker() {
@@ -604,7 +607,7 @@ function settingsPanel() {
       <p class="muted sm">${CloudSync.enabled ? (CloudSync.status === 'missing' ? 'Você está logado, mas o banco ainda não tem a tabela <code>rail_atlas_saves</code> (rode supabase/schema.sql). O progresso fica salvo neste navegador.' : 'Sua companhia é salva na nuvem do Arcade Social e continua em qualquer aparelho em que você entrar com a mesma conta.') : 'Modo local: o progresso fica salvo neste navegador.'}</p></section>
     <section class="p-sec"><h3>Arcade Social</h3>
       <p class="muted sm">${prof ? `Conectado como <b>${esc(prof.username)}</b>. Cada entrega envia um evento ao Arcade Hub, que calcula e limita o XP do seu perfil (sem repetir entregas).` : 'Você está jogando como convidado: o progresso fica salvo neste navegador, mas sem XP de perfil. Entre no Arcade Hub para vincular a companhia à sua conta.'}</p>
-      <div class="kpis"><div><b>${state.arcade.reported}</b><small>eventos enviados</small></div><div><b>${fmt(ArcadeIntegration.grantedToday())}</b><small>XP concedido hoje</small></div></div></section>
+      <div class="kpis"><div><b>${state.arcade.reported}</b><small>eventos enviados</small></div><div><b>+${fmt(ArcadeIntegration.sessionXp)}</b><small>XP nesta sessão</small></div></div></section>
     <section class="p-sec"><h3>Progresso</h3>
       <div class="unlocks">${UNLOCKS.map(u => `<div class="${state.company.level >= u.level ? 'got' : ''}">${ic(state.company.level >= u.level ? 'check-circle-2' : 'lock')} <b>Nv ${u.level}</b> ${esc(u.text)}</div>`).join('')}</div>
       <div class="kpis"><div><b>${state.stats.deliveries}</b><small>entregas</small></div><div><b>${fmt(state.stats.tons)} t</b><small>transportadas</small></div><div><b>${fmt(state.stats.earned)}</b><small>créditos ganhos</small></div></div></section>

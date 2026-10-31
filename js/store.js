@@ -364,7 +364,7 @@
   /**
    * Caixa de entrada dos jogos persistentes (ex.: Rail Atlas).
    * Os jogos só relatam eventos com ID único; aqui o hub confere a conta, descarta
-   * repetições, calcula o XP pelas regras de config.js e aplica o teto diário.
+   * repetições e calcula o XP pelas regras de config.js.
    * PRODUÇÃO: substituir por uma Edge Function que confere o evento no banco.
    */
   const INBOX_KEY = 'arcadehub.inbox';
@@ -396,11 +396,10 @@
       if (e.eventType === 'playtime') { p.seen.push(e.id); p.seen = p.seen.slice(-400); addPlaytimeRaw(e.gameId, Math.min(120, Math.max(0, e.seconds || 0))); continue; }
       p.seen.push(e.id); p.seen = p.seen.slice(-400); p.events++;
       const base = rules[e.eventType]?.[e.kind] ?? rules[e.eventType]?.common ?? 0;
-      const capped = e.eventType === 'cargo_delivered';
       const remote = await serverXp(e);
-      const xp = remote ?? (capped ? Math.max(0, Math.min(base, rules.dailyCap - p.xpToday)) : base);
+      const xp = remote ?? base;
       if (!xp) continue;
-      if (capped) p.xpToday += xp;
+      p.xpToday += xp; // só estatística (não há limite diário)
       total += xp; byGame[e.gameId] = (byGame[e.gameId] || 0) + xp;
     }
     try { localStorage.setItem(INBOX_KEY, JSON.stringify(inbox.filter(e => e.userId !== u.id))); } catch (e) { /* sem armazenamento */ }

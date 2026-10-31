@@ -118,3 +118,6 @@ svg.lucide { width: 18px; height: 18px; flex: none; }
 @media (max-width: 420px) {
   .stat.xp { display: none; }
 }
+
+.stat b.bump { animation: xpbump .6s var(--ease); }
+@keyframes xpbump { 40% { transform: scale(1.25); color: #e9d5ff; } }

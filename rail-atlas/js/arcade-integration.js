@@ -3,8 +3,8 @@
 
    O jogo NUNCA informa quanto XP o jogador ganha: ele só relata
    eventos com ID único. Hoje os eventos vão para uma caixa de
-   entrada no localStorage, que o hub lê, valida (sem repetição,
-   limite diário) e converte em XP pelas regras dele.
+   entrada no localStorage, que o hub lê, valida (sem repetição)
+   e converte em XP pelas regras dele.
    PRODUÇÃO: trocar `deliver` por um POST autenticado para a API,
    que confere a entrega no banco antes de conceder qualquer XP.
    ========================================================= */
@@ -27,12 +27,12 @@ export const ArcadeIntegration = {
     return { id: s.user.id, username: s.user.username, level: s.user.level, totalXp: s.user.totalXp };
   },
 
-  /** XP já concedida pelo hub a este jogo hoje (somente leitura, para exibir). */
-  grantedToday() {
-    const u = readHub()?.user;
-    const p = u?.persistent?.[GAME_ID];
-    const today = new Date().toDateString();
-    return p && p.day === today ? p.xpToday : 0;
+  // XP desta sessão, só para exibir: usa as mesmas regras do hub (js/config.js).
+  // Quem concede de verdade é o hub/servidor ao receber os eventos.
+  sessionXp: 0,
+  xpFor(evt) {
+    const rules = window.AH?.config?.persistentXp?.[GAME_ID];
+    return rules?.[evt.eventType]?.[evt.kind || 'common'] || 0;
   },
 
   /**
@@ -48,7 +48,9 @@ export const ArcadeIntegration = {
       contractId: evt.contractId, kind: evt.kind || 'common', t: evt.at || Date.now()
     };
     if (evt.seconds) item.seconds = Math.round(evt.seconds); // eventos de tempo de jogo
-    return this.deliver(item);
+    const ok = this.deliver(item);
+    if (ok) this.sessionXp += this.xpFor(evt);
+    return ok;
   },
 
   deliver(item) {

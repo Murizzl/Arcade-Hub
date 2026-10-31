@@ -118,7 +118,7 @@
           <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
           <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
           ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
-          <div class="stat-box"><small>XP hoje</small><b>${fmt(p && p.day === today ? p.xpToday : 0)}/${C.persistentXp[g.id].dailyCap}</b></div></div>` : ''}
+          <div class="stat-box"><small>XP hoje</small><b>${fmt(p && p.day === today ? p.xpToday : 0)}</b></div></div>` : ''}
         <div class="row-wrap" style="margin-top:14px"><a class="btn btn-primary btn-lg" href="${g.href}">${ic(sum ? 'play' : 'flag')} ${sum ? 'Continuar' : 'Começar'}</a></div>
       </div>
     </article>`;
@@ -135,8 +135,8 @@
       <section class="section"><div class="card"><h3 style="margin-bottom:12px">${ic('zap')} Como ganhar XP no Rail Atlas</h3>
         <div class="xp-rules">${Object.entries(rules.cargo_delivered).map(([k, v]) => `<div class="xp-rule"><span>${rules.labels[k]}</span><span>+${v} XP</span></div>`).join('')}
           <div class="xp-rule"><span>${rules.labels.achievement}</span><span>+${rules.achievement_unlocked.achievement} XP</span></div>
-          <div class="xp-rule"><span>Limite diário (entregas)</span><span>${rules.dailyCap} XP</span></div></div>
-        <p class="faint" style="margin-top:10px">Cada entrega conta uma única vez. O XP é calculado pelo Arcade Hub${AH.cloud.enabled ? ' no servidor' : ''}, não pelo jogo. Conquistas não entram no limite diário.</p></div></section>`;
+        </div>
+        <p class="faint" style="margin-top:10px">Cada entrega conta uma única vez. O XP é calculado pelo Arcade Hub${AH.cloud.enabled ? ' no servidor' : ''}, não pelo jogo.</p></div></section>`;
   };
 
   /* ==================== CATÁLOGO ==================== */
@@ -936,7 +936,7 @@
           ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
           <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(time)}</b></div>
           ${ps ? `<div class="stat-box"><small>Eventos relatados</small><b>${fmt(ps.events || 0)}</b></div>` : ''}
-          ${isMe && ps ? `<div class="stat-box"><small>XP hoje</small><b>${fmt(ps.day === today ? ps.xpToday : 0)}/${C.persistentXp[g.id].dailyCap}</b></div>` : ''}
+          ${isMe && ps ? `<div class="stat-box"><small>XP hoje</small><b>${fmt(ps.day === today ? ps.xpToday : 0)}</b></div>` : ''}
         </div></div>`;
     }).join('');
     return `<div class="section">${sectionHead('building-2', 'Jogos de Gerenciamento', isMe ? `<a class="link-more" href="#/persistent">Ver jogos ${ic('chevron-right')}</a>` : '')}${cards}</div>`;
