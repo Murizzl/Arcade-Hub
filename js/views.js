@@ -181,6 +181,7 @@
           <div class="stat-boxes">
             <div class="stat-box"><small>Seu recorde</small><b>${s.best != null ? fmt(s.best) : '—'}</b></div>
             <div class="stat-box"><small>Partidas</small><b>${fmt(s.played || 0)}</b></div>
+            <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(S.user.playtime?.[g.id] || 0)}</b></div>
             ${g.noWins ? '' : `<div class="stat-box"><small>Vitórias</small><b>${fmt(s.wins || 0)}</b></div>`}
             <div class="stat-box"><small>Jogadores</small><b>${fmt(g.players)}</b></div>
           </div>
@@ -923,7 +924,7 @@
 
       ${(() => {
         const pt = Object.entries(p.playtime || {}).filter(([id, t]) => t > 0 && S.game(id)).sort((a, b) => b[1] - a[1]);
-        if (!pt.length) return '';
+        if (!pt.length) return `<div class="card section"><h3 style="margin-bottom:10px">${ic('clock')} Tempo de jogo</h3>${U.empty('clock', 'Ainda sem tempo registrado', isMe ? 'O tempo começa a contar a partir da próxima partida que você jogar.' : 'Este jogador ainda não tem tempo registrado.')}</div>`;
         const total = pt.reduce((n, [, t]) => n + t, 0), top = S.game(pt[0][0]);
         return `<div class="card section"><h3 style="margin-bottom:10px">${ic('clock')} Tempo de jogo</h3>
           <div class="kv" style="margin-bottom:14px">
