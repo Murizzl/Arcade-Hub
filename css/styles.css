@@ -428,9 +428,9 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 /* Memory */
 .mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 460px; margin: 0 auto; }
 .mem-card { aspect-ratio: 1; border: 0; padding: 0; background: transparent; perspective: 600px; }
-.mem-inner { position: relative; width: 100%; height: 100%; transition: transform .35s var(--ease); transform-style: preserve-3d; }
+.mem-inner { position: relative; width: 100%; height: 100%; transition: transform .35s var(--ease); transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
 .mem-card.flip .mem-inner, .mem-card.done .mem-inner { transform: rotateY(180deg); }
-.mem-face { position: absolute; inset: 0; border-radius: 14px; display: grid; place-items: center; backface-visibility: hidden; }
+.mem-face { position: absolute; inset: 0; border-radius: 14px; display: grid; place-items: center; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .mem-back { background: var(--primary); color: rgba(255,255,255,.5); box-shadow: inset 0 -4px 0 rgba(0,0,0,.15); }
 .mem-front { background: var(--surface-2); transform: rotateY(180deg); color: var(--c); }
 .mem-front svg { width: 50%; height: 50%; }
@@ -1159,7 +1159,7 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 @keyframes winSpin { 50% { transform: scale(1.35) rotate(10deg); } }
 
 /* Memória */
-.mem-card:not(.done):not(.flip):hover .mem-inner { transform: translateY(-3px) rotateX(8deg); }
+@media (hover: hover) { .mem-card:not(.done):not(.flip):hover .mem-inner { transform: translateY(-3px) rotateX(8deg); } }
 .mem-card.done .mem-inner { animation: memMatch .5s var(--ease); }
 .mem-card.done .mem-front { box-shadow: 0 0 0 3px var(--success) inset; }
 .mem-card.nope .mem-inner { animation: memNope .4s ease-in-out; }
@@ -1451,3 +1451,10 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 
 .bg-prev { height: 96px; border-radius: 12px; background-size: cover; background-position: center; margin-top: 8px; box-shadow: inset 0 0 0 1px var(--border); }
 .profile-banner { background-size: cover; background-position: center; }
+
+/* Dificuldade escolhida antes de começar */
+.diff-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; color: var(--text-2); font-size: .9rem; }
+.diff-pick { display: grid; gap: 14px; max-width: 460px; margin: 0 auto; }
+.dp-saved { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--primary-soft); }
+.dp-saved small { display: block; }
+.dp-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }

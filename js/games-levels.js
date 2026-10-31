@@ -789,9 +789,8 @@
   AH.engines.sudoku = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let tier = duel ? (ctx.difficulty ?? 0) : 1, puzzle, solution, cells, notes, given, sel, notesMode, mistakes, hints, undo, secs, timer, done;
+      let resume = ctx.saved || null, tier = ctx.difficulty ?? 0, puzzle, solution, cells, notes, given, sel, notesMode, mistakes, hints, undo, secs, timer, done;
       el.innerHTML = `
-        ${duel ? '' : `<div class="tabs" role="tablist" aria-label="Dificuldade" style="margin-bottom:12px">${SUDOKU_TIERS.map((t, i) => `<button class="tab ${i === tier ? 'active' : ''}" data-tier-i="${i}" role="tab" aria-selected="${i === tier}" style="flex:1;justify-content:center">${t.name}</button>`).join('')}</div>`}
         <div class="score-row">
           <div class="score-box"><small>Tempo</small><b data-time>0:00</b></div>
           <div class="score-box"><small>Erros</small><b data-err>0/3</b></div>
@@ -815,15 +814,28 @@
         tier = t; clearInterval(timer);
         grid.innerHTML = `<div class="sd-loading">${ic('loader-2')} Gerando tabuleiro…</div>`; AH.ui.refreshIcons();
         setTimeout(() => {
-          const s = makeSudoku(tier, ctx.seed != null ? K.rng(ctx.seed) : Math.random);
-          puzzle = s.puzzle; solution = s.solution;
-          cells = puzzle.slice(); given = puzzle.map(Boolean); notes = Array.from({ length: 81 }, () => new Set());
-          sel = cells.findIndex(v => !v); notesMode = false; mistakes = 0; hints = 3; undo = []; secs = 0; done = false; timer = null;
+          const sv = resume; resume = null;
+          if (sv) {
+            tier = sv.tier; puzzle = sv.puzzle; solution = sv.solution; cells = sv.cells.slice(); given = sv.given.slice();
+            notes = sv.notes.map(a => new Set(a)); mistakes = sv.mistakes; hints = sv.hints; secs = sv.secs;
+          } else {
+            const s = makeSudoku(tier, ctx.seed != null ? K.rng(ctx.seed) : Math.random);
+            puzzle = s.puzzle; solution = s.solution;
+            cells = puzzle.slice(); given = puzzle.map(Boolean); notes = Array.from({ length: 81 }, () => new Set());
+            mistakes = 0; hints = 3; secs = 0;
+          }
+          sel = cells.findIndex((v, i) => v !== solution[i]); if (sel < 0) sel = 0;
+          notesMode = false; undo = []; done = false; timer = null;
           $('[data-notes]').setAttribute('aria-pressed', 'false');
-          $('[data-time]').textContent = '0:00';
-          timer = setInterval(() => { if (!done) { secs++; $('[data-time]').textContent = fmtT(secs); } }, 1000);
+          $('[data-time]').textContent = fmtT(secs);
+          timer = setInterval(() => { if (!done) { secs++; $('[data-time]').textContent = fmtT(secs); if (secs % 5 === 0) persist(); } }, 1000);
           draw();
         }, 30);
+      }
+      // salva a partida para continuar depois (ao fechar o app, por exemplo)
+      function persist() {
+        if (!ctx.save || !cells || done) return;
+        ctx.save({ tier, puzzle, solution, cells: cells.slice(), given: given.slice(), notes: notes.map(s => [...s]), mistakes, hints, secs });
       }
       function draw() {
         const sv = cells[sel], sr = (sel / 9) | 0, sc = sel % 9, sb = BOX(sel);
@@ -837,6 +849,7 @@
         }).join('');
         $('[data-err]').textContent = `${mistakes}/3`;
         $('[data-hints]').textContent = hints;
+        persist();
         $('[data-hint]').disabled = !hints || done;
         $('[data-undo]').disabled = !undo.length || done;
         for (let n = 1; n <= 9; n++) {
@@ -891,10 +904,6 @@
         draw(); checkWin();
       };
       $('[data-restart]').onclick = () => start(tier);
-      el.querySelectorAll('[data-tier-i]').forEach(t => t.onclick = () => {
-        el.querySelectorAll('[data-tier-i]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); });
-        start(+t.dataset.tierI);
-      });
       const onKey = e => {
         if (done || !cells || document.getElementById('modalRoot').classList.contains('open') || ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
         if (/^[1-9]$/.test(e.key)) { e.preventDefault(); put(+e.key); }
@@ -910,7 +919,7 @@
       };
       document.addEventListener('keydown', onKey);
       start(tier);
-      return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
+      return () => { persist(); clearInterval(timer); document.removeEventListener('keydown', onKey); };
     }
   };
   AH.levelKit = { levelShell, setTitle, tierModal, begin, startLevel, advance, numOf, actionBtn, tierIndex, unlockedOf };

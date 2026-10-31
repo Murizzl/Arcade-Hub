@@ -9,7 +9,7 @@
   const isModalOpen = () => document.getElementById('modalRoot').classList.contains('open');
   const rnd = n => (Math.random() * n) | 0;
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const diffTabs = (names, cur) => `<div class="tabs" role="tablist" aria-label="Dificuldade" style="margin-bottom:14px">${names.map((n, i) => `<button class="tab ${i === cur ? 'active' : ''}" role="tab" aria-selected="${i === cur}" data-diff="${i}">${n}</button>`).join('')}</div>`;
+  const diffTabs = () => "";
   const bindDiff = (el, set) => el.querySelectorAll('[data-diff]').forEach(t => t.onclick = () => {
     el.querySelectorAll('[data-diff]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); });
     set(+t.dataset.diff);
@@ -28,7 +28,7 @@
   AH.engines.minado = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let tier = duel ? (ctx.difficulty ?? 0) : 0, cells, started, over, flagMode = false, press = null;
+      let tier = ctx.difficulty ?? 0, cells, started, over, flagMode = false, press = null;
       const clk = clock(el);
       el.innerHTML = `${duel ? '' : diffTabs(MS.map(x => x.n), tier)}
         <div class="score-row"><div class="score-box"><small>Minas</small><b data-mines>0</b></div><div class="score-box"><small>Tempo</small><b data-time>0</b></div>
@@ -105,7 +105,7 @@
   AH.engines.deslizante = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel', SIZES = [3, 4, 5];
-      let tier = duel ? (ctx.difficulty ?? 1) : 1, n, pos, moves, done;
+      let tier = ctx.difficulty ?? 1, n, pos, moves, done;
       const clk = clock(el);
       el.innerHTML = `${duel ? '' : diffTabs(SIZES.map(s => `${s}×${s}`), tier)}
         <div class="score-row"><div class="score-box"><small>Movimentos</small><b data-moves>0</b></div><div class="score-box"><small>Tempo</small><b data-time>0</b></div><button class="btn" data-restart aria-label="Embaralhar de novo">${ic('shuffle')}</button></div>
@@ -164,7 +164,7 @@
   AH.engines.lights = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel', SIZES = [3, 4, 5];
-      let tier = duel ? (ctx.difficulty ?? 1) : 1, n, L, moves, done;
+      let tier = ctx.difficulty ?? 1, n, L, moves, done;
       const clk = clock(el);
       el.innerHTML = `${duel ? '' : diffTabs(SIZES.map(s => `${s}×${s}`), tier)}
         <div class="score-row"><div class="score-box"><small>Movimentos</small><b data-moves>0</b></div><div class="score-box"><small>Tempo</small><b data-time>0</b></div><button class="btn" data-restart aria-label="Novo tabuleiro">${ic('rotate-ccw')}</button></div>
@@ -198,7 +198,7 @@
       const R = 6, C = 7, opp = ctx.opponent?.username || 'CPU';
       const sk = AH.store.skin('conecta4', 'discs').fx;
       const colA = sk.a || '#dc2626', colB = sk.b || '#f6c23e';
-      let diff = ctx.mode === 'duel' ? (ctx.difficulty ?? 1) : 1, b, turn, done, busy;
+      let diff = ctx.difficulty ?? 1, b, turn, done, busy;
       el.innerHTML = `${ctx.mode === 'solo' ? diffTabs(['Fácil', 'Médio', 'Difícil'], diff) : ''}
         <p data-status style="text-align:center;font-weight:700;margin-bottom:10px" aria-live="polite"></p>
         <div class="game-surface"><div class="c4" style="--a:${colA};--b:${colB}"></div></div>`;
@@ -326,7 +326,7 @@
   AH.engines.damas = {
     mount(el, ctx) {
       const opp = ctx.opponent?.username || 'CPU';
-      let diff = ctx.mode === 'duel' ? (ctx.difficulty ?? 1) : 1, b, turn, sel, moves, done, quiet, lastMove = [];
+      let diff = ctx.difficulty ?? 1, b, turn, sel, moves, done, quiet, lastMove = [];
       el.innerHTML = `${ctx.mode === 'solo' ? diffTabs(['Fácil', 'Médio', 'Difícil'], diff) : ''}
         <p data-status style="text-align:center;font-weight:700;margin-bottom:10px" aria-live="polite"></p>
         <div class="game-surface"><div class="ck" role="grid" aria-label="Tabuleiro de damas"></div></div>
@@ -527,7 +527,7 @@
   AH.engines.kakuro = {
     mount(el, ctx) {
       const duel = ctx.mode === 'duel';
-      let tier = duel ? (ctx.difficulty ?? 0) : 0, S, white, vals, runs, sel, done, notesOn = false;
+      let tier = ctx.difficulty ?? 0, S, white, vals, runs, sel, done, notesOn = false;
       const clk = clock(el);
       el.innerHTML = `${duel ? '' : diffTabs(KK.map(x => x.n), tier)}
         <div class="score-row"><div class="score-box"><small>Tempo</small><b data-time>0</b></div><button class="btn" data-restart aria-label="Novo jogo">${ic('rotate-ccw')}</button></div>

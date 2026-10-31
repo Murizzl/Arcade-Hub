@@ -8,7 +8,7 @@
   const isModalOpen = () => document.getElementById('modalRoot').classList.contains('open');
   const rnd = n => (Math.random() * n) | 0;
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const diffTabs = (names, cur) => `<div class="tabs" role="tablist" aria-label="Dificuldade" style="margin-bottom:14px">${names.map((n, i) => `<button class="tab ${i === cur ? 'active' : ''}" role="tab" aria-selected="${i === cur}" data-diff="${i}">${n}</button>`).join('')}</div>`;
+  const diffTabs = () => "";
   const bindDiff = (el, set) => el.querySelectorAll('[data-diff]').forEach(t => t.onclick = () => {
     el.querySelectorAll('[data-diff]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); });
     set(+t.dataset.diff);
@@ -293,7 +293,7 @@
   AH.engines.xadrez = {
     mount(el, ctx) {
       const opp = ctx.opponent?.username || 'CPU';
-      let diff = ctx.mode === 'duel' ? (ctx.difficulty ?? 1) : 1, st, sel, legalNow, done, last = [], plies = 0;
+      let diff = ctx.difficulty ?? 1, st, sel, legalNow, done, last = [], plies = 0;
       el.innerHTML = `${ctx.mode === 'solo' ? diffTabs(['Fácil', 'Médio', 'Difícil'], diff) : ''}
         <p data-status style="text-align:center;font-weight:700;margin-bottom:10px" aria-live="polite"></p>
         <div class="game-surface"><div class="ch" role="grid" aria-label="Tabuleiro de xadrez"></div></div>

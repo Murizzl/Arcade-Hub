@@ -26,7 +26,8 @@
       favorites: [], stats: {}, recent: [], history: [], achievements: {}, challengesDone: 0, challenges: freshChallenges(),
       privacy: { sharePlaying: true, showOnline: true },
       inventory: { frames: [], themes: [], icons: [], titles: [], colors: [] }, title: 'novato',
-      gear: { owned: {}, equipped: {} } // cosméticos por jogo (veja js/gameshop.js)
+      gear: { owned: {}, equipped: {} }, // cosméticos por jogo (veja js/gameshop.js)
+      saves: {}, playtime: {} // partida salva e segundos jogados, por jogo
     };
   }
 
@@ -108,6 +109,8 @@
     if (!u.title) u.title = 'novato';
     if (!u.appColor || !C.appColors.some(c => c.id === u.appColor)) u.appColor = 'violet';
     u.gear = Object.assign({ owned: {}, equipped: {} }, u.gear);
+    if (!u.saves) u.saves = {};
+    if (!u.playtime) u.playtime = {};
     // Perfis antigos guardavam os desafios só neste aparelho: adota o que já existe para não duplicar resgates.
     if (!u.challenges) u.challenges = JSON.parse(JSON.stringify(state.challenges || freshChallenges()));
     rolloverChallenges(u);
@@ -147,6 +150,21 @@
     if (kind === 'titles') u.title = id;
     if (kind === 'colors') u.appColor = id;
     save(); return true;
+  }
+  // ---------- Partida salva e tempo de jogo ----------
+  // Gravação adiada: os jogos salvam a cada jogada e save() avisa a interface inteira.
+  let saveTimer = null;
+  const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 1500); };
+  function flush() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; save(); } }
+  function gameSave(gameId, data, diff) {
+    const u = state.user; if (!u) return;
+    if (data) u.saves[gameId] = { t: now(), diff, data }; else delete u.saves[gameId];
+    saveSoon();
+  }
+  function addPlaytime(gameId, secs) {
+    const u = state.user; if (!u || !(secs > 0)) return;
+    u.playtime[gameId] = (u.playtime[gameId] || 0) + Math.round(secs);
+    saveSoon();
   }
   // ---------- Loja por jogo ----------
   // PRODUÇÃO: compra via RPC no servidor (debita moedas e grava o item numa só transação).
@@ -451,7 +469,7 @@
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
     levelInfo, addXp, reportMatch, claimChallenge, challenges, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
-    catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, setPreview: p => { preview = p; }, isPreview: () => !!preview, newUser, setUser, clearSession,
+    gameSave, addPlaytime, flush, catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, setPreview: p => { preview = p; }, isPreview: () => !!preview, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,
     prestigeOf: n => C.prestiges[Math.min(n, C.prestiges.length - 1)],
     divisionOf: mmr => [...C.divisions].reverse().find(d => mmr >= d.min),

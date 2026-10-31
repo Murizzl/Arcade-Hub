@@ -203,6 +203,8 @@
   };
 
   /* ==================== JOGAR ==================== */
+  const fmtDur = sec => { const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h}h ${String(m).padStart(2, '0')}min` : m ? `${m}min` : `${sec}s`; };
+  const SOLO_DIFF = ['velha', 'sudoku', 'minado', 'deslizante', 'lights', 'kakuro', 'xadrez', 'damas', 'conecta4'];
   V.play = (el, [id], q) => {
     const g = S.game(id);
     if (!g) return V.notFound(el);
@@ -220,6 +222,15 @@
     const offs = []; // handlers da sala para remover ao sair
     let cleanup = () => {};
     const shared = {}; // sobrevive a cada "próxima fase" (o ctx abaixo é recriado)
+    // Jogos com dificuldade: escolhida antes de começar (e não no meio da partida); a partida é salva para continuar depois
+    const soloDiff = !duel && SOLO_DIFF.includes(g.id) ? AH.duelDifficulties[g.id] : null;
+    let diffIdx = soloDiff ? soloDiff.def : undefined, resume = null;
+    // tempo de jogo: conta só com a partida aberta e a aba visível
+    let playing = false, pending = 0;
+    const commitTime = () => { if (pending) { S.addPlaytime(g.id, pending); pending = 0; } S.flush(); };
+    const clockT = setInterval(() => { if (playing && document.visibilityState === 'visible') { pending++; if (pending >= 30) commitTime(); } }, 1000);
+    const onHide = () => { if (document.visibilityState === 'hidden') commitTime(); };
+    document.addEventListener('visibilitychange', onHide); addEventListener('pagehide', commitTime);
     AH.online?.enabled && AH.online.setPlaying(g.id);
     const mount = () => {
       el.innerHTML = `<div class="play-wrap">
@@ -227,8 +238,10 @@
         ${duel ? `<span class="tag ${online ? 'tag-success' : 'tag-warning'}">${ic(online ? 'wifi' : 'bot')} ${online ? 'Online' : 'CPU'}</span>` : `<a class="icon-btn" href="#/gshop/${g.id}" aria-label="Loja do jogo" title="Loja do jogo">${ic('shopping-bag')}</a><button class="icon-btn" data-fav="${g.id}" aria-label="Favoritar">${ic('heart', S.user.favorites.includes(g.id) ? 'style="fill:var(--danger);color:var(--danger)"' : '')}</button>`}</div>
         ${duel && !online ? `<div class="sim-banner">${ic('bot')} Treino contra a CPU: “${esc(duel.opp.username)}” é controlado pelo computador.</div>` : ''}
         ${race ? '<div class="race-bar" id="race" aria-live="polite"></div>' : ''}
+        ${soloDiff ? `<div class="diff-bar"><span>Dificuldade: <b>${esc(soloDiff.names[diffIdx])}</b></span><button class="btn btn-sm" data-chdiff>${ic('sliders-horizontal')} Trocar</button></div>` : ''}
         <div id="engine"></div></div>`;
       U.refreshIcons();
+      el.querySelector('[data-chdiff]')?.addEventListener('click', () => { cleanup(); cleanup = () => {}; playing = false; pickDiff(); });
       const host = el.querySelector('#engine');
       // tema comprado na loja do jogo: variáveis CSS na área da partida
       applyGameTheme(el.querySelector('.play-wrap'), g.id);
@@ -241,7 +254,8 @@
       };
       const ctx = {
         shared,
-        mode: duel ? 'duel' : 'solo', opponent: duel ? duel.opp : null, difficulty: duel ? duel.difficulty : undefined, seed: duel?.seed,
+        mode: duel ? 'duel' : 'solo', opponent: duel ? duel.opp : null, difficulty: duel ? duel.difficulty : diffIdx, seed: duel?.seed,
+        saved: resume, save: duel ? null : data => S.gameSave(g.id, data, diffIdx),
         // jogos de confronto direto online recebem um canal para trocar jogadas
         net: online && g.duelType === 'versus' ? {
           host: duel.host,
@@ -251,11 +265,13 @@
         end: ({ result, score, extra, summary, next }) => {
           if (race) return raceEnd(score, extra, result);
           if (duel) return finishDuel(result, summary, score, extra);
+          S.gameSave(g.id, null);
           const r = S.reportMatch({ gameId: g.id, result, score, extra });
           showResult(result, summary, r, score, g, next);
         }
       };
       if (online) offs.push(duel.room.on('peer-left', () => { if (!ended) { U.toast(`${esc(duel.opp.username)} saiu da partida`, 'info', 'log-out'); finishDuel('win', `${duel.opp.username} desconectou`); } }));
+      resume = null; playing = true;
       cleanup = AH.engines[g.id].mount(host, ctx) || (() => {});
       if (duel) host.querySelectorAll('[data-restart]').forEach(b => b.hidden = true);
       if (race) startRace();
@@ -354,8 +370,26 @@
       });
       U.rewardToasts(r);
     }
-    mount();
-    return () => { stopRace(); cleanup(); offs.forEach(f => f()); AH.online?.enabled && AH.online.setPlaying(null); };
+    // Escolha de dificuldade (e continuar a partida salva) antes de começar
+    function pickDiff() {
+      const sv = S.user.saves?.[g.id];
+      el.innerHTML = `<div class="play-wrap">
+        <div class="play-head"><a class="icon-btn" href="#/game/${g.id}" aria-label="Sair do jogo">${ic('arrow-left')}</a><h1>${esc(g.name)}</h1></div>
+        <div class="card diff-pick">
+          ${sv ? `<div class="dp-saved"><div><b>Partida salva</b><small class="faint">${esc(soloDiff.names[sv.diff] ?? '')} · ${U.timeAgo(sv.t)}</small></div><button class="btn btn-primary" data-continue>${ic('play')} Continuar</button></div>` : ''}
+          <h3>${sv ? 'Ou comece uma nova partida' : 'Escolha a dificuldade'}</h3>
+          <div class="dp-options">${soloDiff.names.map((n, i) => `<button class="btn ${i === diffIdx ? 'btn-primary' : ''}" data-pick="${i}">${esc(n)}</button>`).join('')}</div>
+        </div></div>`;
+      U.refreshIcons();
+      el.querySelector('[data-continue]')?.addEventListener('click', () => { diffIdx = sv.diff; resume = sv.data; mount(); });
+      el.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.pick;
+        if (!sv) { diffIdx = i; return mount(); }
+        U.confirm({ title: 'Começar nova partida?', icon: 'rotate-ccw', text: 'A partida salva será substituída.', okLabel: 'Começar', onOk: () => { S.gameSave(g.id, null); diffIdx = i; mount(); } });
+      }));
+    }
+    soloDiff ? pickDiff() : mount();
+    return () => { clearInterval(clockT); document.removeEventListener('visibilitychange', onHide); removeEventListener('pagehide', commitTime); commitTime(); stopRace(); cleanup(); offs.forEach(f => f()); AH.online?.enabled && AH.online.setPlaying(null); };
   };
 
   /* ==================== DUELOS ==================== */
@@ -887,6 +921,17 @@
         </div>
       </div>
 
+      ${(() => {
+        const pt = Object.entries(p.playtime || {}).filter(([id, t]) => t > 0 && S.game(id)).sort((a, b) => b[1] - a[1]);
+        if (!pt.length) return '';
+        const total = pt.reduce((n, [, t]) => n + t, 0), top = S.game(pt[0][0]);
+        return `<div class="card section"><h3 style="margin-bottom:10px">${ic('clock')} Tempo de jogo</h3>
+          <div class="kv" style="margin-bottom:14px">
+            <div class="stat-box"><small>Tempo total</small><b>${fmtDur(total)}</b></div>
+            <div class="stat-box"><small>Jogo mais jogado</small><b style="font-size:1.05rem">${esc(top.name)}</b></div>
+          </div>
+          <div class="list">${pt.map(([id, t]) => { const g = S.game(id); return `<a class="list-item" href="#/game/${id}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><div class="progress" style="margin-top:6px"><span style="width:${Math.max(3, Math.round(t / pt[0][1] * 100))}%"></span></div></div><b>${fmtDur(t)}</b></a>`; }).join('')}</div></div>`;
+      })()}
       <div class="card section"><h3 style="margin-bottom:10px">${ic('bar-chart-3')} Estatísticas por jogo</h3>
         ${Object.keys(stats).length ? `<div class="table-scroll"><table class="stat-table"><thead><tr><th>Jogo</th><th>Partidas</th><th>Vitórias</th><th>Recorde</th></tr></thead><tbody>
           ${Object.entries(stats).map(([id, s]) => { const g = S.game(id); return `<tr><td><a href="#/game/${id}" class="row" style="gap:8px"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span>${esc(g.name)}</a></td><td>${fmt(s.played)}</td><td>${g.noWins ? '<span class="faint">—</span>' : fmt(s.wins)}</td><td>${s.best != null ? fmt(s.best) + ' <span class="faint">' + esc(g.scoreLabel.toLowerCase()) + '</span>' : '—'}</td></tr>`; }).join('')}

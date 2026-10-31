@@ -152,15 +152,12 @@
   AH.engines.velha = {
     mount(el, ctx) {
       const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
-      let b, turn, done, diff = ctx.mode === 'duel' ? ['facil', 'medio', 'dificil'][ctx.difficulty ?? 1] : 'medio';
+      let b, turn, done, diff = ['facil', 'medio', 'dificil'][ctx.difficulty ?? 1];
       const opp = ctx.opponent?.username || 'CPU';
       // online: o anfitrião é o X e começa; o convidado é o O
       const net = ctx.net, ME = net && !net.host ? 'O' : 'X', OP = ME === 'X' ? 'O' : 'X';
       const tally = { you: 0, opp: 0, draw: 0 };
       el.innerHTML = `
-        ${ctx.mode === 'solo' ? `<div class="tabs" role="tablist" aria-label="Dificuldade" style="margin-bottom:14px">
-          ${[['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']].map(([k, l]) => `<button class="tab ${k === diff ? 'active' : ''}" data-diff="${k}" role="tab" aria-selected="${k === diff}">${l}</button>`).join('')}
-        </div>` : ''}
         <div class="score-row">
           <div class="score-box"><small>Você (${ME})</small><b data-t="you">0</b></div>
           <div class="score-box"><small>Empates</small><b data-t="draw">0</b></div>
@@ -222,11 +219,6 @@
         play(i, ME);
       };
       if (net) net.on('move', ({ i }) => { if (!done && turn === OP && !b[i]) play(i, OP); });
-      el.querySelectorAll('[data-diff]').forEach(t => t.onclick = () => {
-        diff = t.dataset.diff;
-        el.querySelectorAll('[data-diff]').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', x === t); });
-        start();
-      });
       ctx.restart = start;
       start();
       return () => {};
@@ -237,7 +229,8 @@
   AH.engines.memoria = {
     mount(el, ctx) {
       const ICONS = [['cat', '#ef4565'], ['rocket', '#2a8bd8'], ['star', '#f2a516'], ['ghost', '#a24cf5'], ['fish', '#0ea5a4'], ['leaf', '#14a37f'], ['crown', '#e0a100'], ['heart', '#d9468f']];
-      let deck, open, moves, found, lock, timer, secs;
+      let deck, open, moves, found, lock, timer, secs, pend = [];
+      const later = (fn, ms) => { const t = setTimeout(fn, ms); pend.push(t); };
       el.innerHTML = `
         <div class="score-row">
           <div class="score-box"><small>Jogadas</small><b data-moves>0</b></div>
@@ -249,8 +242,9 @@
       const grid = el.querySelector('.mem');
       const $ = s => el.querySelector(s);
       function start() {
-        clearInterval(timer);
-        deck = [...ICONS, ...ICONS].map((x, i) => ({ k: x[0], c: x[1], i })).sort(() => Math.random() - .5);
+        clearInterval(timer); pend.forEach(clearTimeout); pend = [];
+        deck = [...ICONS, ...ICONS].map((x, i) => ({ k: x[0], c: x[1], i }));
+        for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
         open = []; moves = 0; found = 0; lock = false; secs = 0; timer = null;
         $('[data-time]').textContent = '0:00';
         grid.innerHTML = deck.map((d, i) => `<button class="mem-card" data-i="${i}" aria-label="Carta ${i + 1}, virada para baixo">
@@ -270,21 +264,21 @@
           moves++; lock = true;
           const [a, b2] = open.map(x => deck[x.dataset.i]);
           if (a.k === b2.k) {
-            setTimeout(() => {
+            later(() => {
               open.forEach(x => { x.classList.add('done'); x.classList.remove('flip'); });
               open = []; lock = false; found++; upd();
               if (found === 8) { clearInterval(timer); ctx.end({ result: 'win', score: moves, summary: `${moves} jogadas em ${secs}s` }); }
             }, 300);
           } else {
-            setTimeout(() => open.forEach(x => x.classList.add('nope')), 420);
-            setTimeout(() => { open.forEach(x => { x.classList.remove('flip', 'nope'); x.setAttribute('aria-label', 'Carta virada para baixo'); }); open = []; lock = false; }, 850);
+            later(() => open.forEach(x => x.classList.add('nope')), 420);
+            later(() => { open.forEach(x => { x.classList.remove('flip', 'nope'); x.setAttribute('aria-label', 'Carta virada para baixo'); }); open = []; lock = false; }, 850);
           }
           upd();
         }
       };
       $('[data-restart]').onclick = start;
       start();
-      return () => clearInterval(timer);
+      return () => { clearInterval(timer); pend.forEach(clearTimeout); };
     }
   };
 
