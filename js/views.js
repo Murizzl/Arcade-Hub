@@ -931,7 +931,7 @@
             <div class="stat-box"><small>Tempo total</small><b>${fmtDur(total)}</b></div>
             <div class="stat-box"><small>Jogo mais jogado</small><b style="font-size:1.05rem">${esc(top.name)}</b></div>
           </div>
-          <div class="list">${pt.map(([id, t]) => { const g = S.game(id); return `<a class="list-item" href="#/game/${id}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><div class="progress" style="margin-top:6px"><span style="width:${Math.max(3, Math.round(t / pt[0][1] * 100))}%"></span></div></div><b>${fmtDur(t)}</b></a>`; }).join('')}</div></div>`;
+          <div class="list">${pt.map(([id, t]) => { const g = S.game(id); return `<a class="list-item" href="#/game/${id}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><small>${fmtDur(t)} jogados${p.stats?.[id]?.last ? ` · última vez ${timeAgo(p.stats[id].last)}` : ''}</small></div></a>`; }).join('')}</div></div>`;
       })()}
       <div class="card section"><h3 style="margin-bottom:10px">${ic('bar-chart-3')} Estatísticas por jogo</h3>
         ${Object.keys(stats).length ? `<div class="table-scroll"><table class="stat-table"><thead><tr><th>Jogo</th><th>Partidas</th><th>Vitórias</th><th>Recorde</th></tr></thead><tbody>
