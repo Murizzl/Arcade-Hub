@@ -459,7 +459,8 @@
         if (!isFinish) {
           const gap = 2 + (rng() < 0.35 ? 1 : 0), s0 = Math.floor(rng() * SEG);
           for (let k = 0; k < gap; k++) segs[(s0 + k) % SEG] = 1;
-          const danger = gen.idx < 1 && r === 1 ? 0 : Math.min(5, Math.floor(r / 2) + 1 + (rng() < 0.4 ? 1 : 0));
+          const danger = gen.idx < 1 ? 0 : // primeiro andar depois do dourado (e da largada) é seguro
+             Math.min(5, Math.floor(r / 2) + 1 + (rng() < 0.4 ? 1 : 0));
           for (let d = 0, tries = 0; d < danger && tries < 60; tries++) {
             const k = Math.floor(rng() * SEG);
             if (segs[k] === 0 && segs[(k + 1) % SEG] !== 1 && segs[(k + SEG - 1) % SEG] !== 1) { segs[k] = 2; d++; }
