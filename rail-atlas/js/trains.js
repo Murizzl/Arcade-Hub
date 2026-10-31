@@ -20,6 +20,8 @@ const DRIVER_NAMES = ['Bia Ferreira', 'Caio Trilho', 'Duda Santos', 'Edu Moreira
 export const modelOf = t => DB.modelById[t.model];
 export const trainById = id => state.trains.find(t => t.id === id);
 export const driverOf = t => state.drivers.find(d => d.id === t.driverId);
+// Cargas que continuam no trem depois de uma viagem (destino ainda não visitado)
+export const aboardOf = t => Object.values(state.contracts).filter(c => c.status === 'aboard' && c.trainId === t.id);
 
 export function addTrain(modelId, at, { name, driverId } = {}) {
   const m = DB.modelById[modelId];
@@ -139,9 +141,11 @@ export function planTrip(trainId, contractIds = [], waypoints = [], { storeRest 
   const m = modelOf(t);
   if (t.status !== 'idle') return { ok: false, reason: 'Locomotiva em viagem.' };
   if (!driverOf(t)) return { ok: false, reason: 'Locomotiva sem maquinista. Escale alguém em Maquinistas.' };
-  const cs = contractIds.map(id => state.contracts[id]);
-  if (cs.some(c => !c || c.status !== 'open')) return { ok: false, reason: 'Alguma carga não está mais disponível.' };
-  if (cs.some(c => (c.at || c.origin) !== t.at)) return { ok: false, reason: 'Só dá para carregar cargas da estação onde o trem está.' };
+  const aboard = aboardOf(t), aboardIds = new Set(aboard.map(c => c.id));
+  const loading = contractIds.filter(id => !aboardIds.has(id)).map(id => state.contracts[id]);
+  if (loading.some(c => !c || c.status !== 'open')) return { ok: false, reason: 'Alguma carga não está mais disponível.' };
+  if (loading.some(c => (c.at || c.origin) !== t.at)) return { ok: false, reason: 'Só dá para carregar cargas da estação onde o trem está.' };
+  const cs = [...aboard, ...loading]; // o que já está no trem sempre viaja junto
   const used = cs.reduce((s, c) => s + c.slots, 0);
   if (used > m.slots) return { ok: false, reason: `Cargas ocupam ${used} vagas; o trem tem ${m.slots}.`, used };
   const speed = effectiveSpeed(t);
@@ -157,14 +161,14 @@ export function planTrip(trainId, contractIds = [], waypoints = [], { storeRest 
     path.push(...r.path.slice(1)); links.push(...r.links);
     hours += r.hours; km += r.km; cur = wp;
   }
-  // cada carga sai na primeira passagem pelo destino; as demais podem ir para o armazém da última parada
-  const deliverAt = {}, store = [];
+  // cada carga sai na primeira passagem pelo destino; as demais seguem a bordo
+  // (ou, se pedido, ficam no armazém da última parada para outro trem levar)
+  const deliverAt = {}, store = [], keep = [];
   const last = path[path.length - 1];
   for (const c of cs) {
     const i = path.indexOf(c.dest, 1);
     if (i >= 0) { deliverAt[c.id] = i; continue; }
-    if (!storeRest) return { ok: false, reason: `A rota não passa por ${city(c.dest).name} (${itemOf(c).name}).`, used, missing: c.id };
-    store.push(c);
+    (storeRest ? store : keep).push(c);
   }
   if (store.length) {
     const info = stationInfo(last);
@@ -176,11 +180,11 @@ export function planTrip(trainId, contractIds = [], waypoints = [], { storeRest 
   if (store.length) stopsWithDrop.add(path.length - 1);
   const jam = links.reduce((s, id) => s + Math.max(0, trafficOn(id) + 1 - linkCap(DB.linkById[id])), 0);
   const slow = 1 + jam * 0.15;
-  const secs = hours * ECONOMY.secondsPerGameHour * slow + (cs.length ? dwellAt(t.at) : 0) + [...stopsWithDrop].reduce((a, i) => a + dwellAt(path[i]), 0);
+  const secs = hours * ECONOMY.secondsPerGameHour * slow + (loading.length ? dwellAt(t.at) : 0) + [...stopsWithDrop].reduce((a, i) => a + dwellAt(path[i]), 0);
   const discount = stationInfo(t.at)?.fuelDiscount || 0;
   const cost = Math.round(tripCost(m, km) * (1 - discount) * (1 - driverBonus(t) * 0.01));
   const revenue = cs.filter(c => deliverAt[c.id] != null).reduce((s, c) => s + c.reward, 0);
-  return { ok: true, train: t, model: m, speed, contracts: cs, store, waypoints: wps, path, links, km, secs, cost, discount, revenue, profit: revenue - cost, used, jam, slow, deliverAt };
+  return { ok: true, train: t, model: m, speed, contracts: cs, loading, aboard, keep, store, waypoints: wps, path, links, km, secs, cost, discount, revenue, profit: revenue - cost, used, jam, slow, deliverAt };
 }
 
 export function dispatch(trainId, contractIds, waypoints, now = Date.now(), opts = {}) {
@@ -197,7 +201,7 @@ export function dispatch(trainId, contractIds, waypoints, now = Date.now(), opts
   const lastI = path.length - 1;
   let clock = now;
   const stops = [{ city: path[0], t: clock }];
-  if (cs.length) { clock += dwell(path[0]); stops.push({ city: path[0], t: clock, loading: true }); }
+  if (p.loading.length) { clock += dwell(path[0]); stops.push({ city: path[0], t: clock, loading: true }); }
   for (let i = 1; i < path.length; i++) {
     clock += edgeHours(DB.linkById[p.links[i - 1]], p.speed) * sph;
     const store = i === lastI && p.store.length ? p.store.map(c => c.id) : null;
@@ -211,7 +215,7 @@ export function dispatch(trainId, contractIds, waypoints, now = Date.now(), opts
   };
   state.trips[trip.id] = trip;
   t.status = 'moving'; t.tripId = trip.id;
-  cs.forEach(c => { c.status = 'in_transit'; c.trainId = t.id; c.tripId = trip.id; });
+  cs.forEach(c => { c.status = 'in_transit'; c.trainId = t.id; c.tripId = trip.id; c.at = null; });
   log('train-front', cs.length
     ? `${t.name} partiu de ${city(path[0]).name} com ${cs.length} carga(s) (${p.used}/${m.slots} vagas) rumo a ${city(trip.dest).name}.`
     : `${t.name} seguiu vazio para ${city(trip.dest).name}.`);
@@ -266,6 +270,8 @@ export function processArrivals(now = Date.now()) {
       delete state.trips[trip.id];
       if (t) {
         t.status = 'idle'; t.tripId = null; t.at = trip.dest;
+        // o que não foi entregue nem guardado continua no trem
+        trip.contractIds.forEach(id => { const c = state.contracts[id]; if (c?.status === 'in_transit') Object.assign(c, { status: 'aboard', tripId: null, at: null }); });
         t.condition = Math.max(25, t.condition - 0.6 - trip.km / 100);
         t.stats.trips++; t.stats.km += trip.km; t.stats.earned -= trip.cost;
         const d = driverOf(t);

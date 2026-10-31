@@ -9,7 +9,7 @@
    base sem carga e revisão automática na oficina.
    ========================================================= */
 import { state, emit, log } from './game-state.js';
-import { planTrip, dispatch, modelOf, repairQuote, repairTrain, trainById } from './trains.js';
+import { planTrip, dispatch, modelOf, repairQuote, repairTrain, trainById, aboardOf } from './trains.js';
 import { contractsAt, routable } from './cargo.js';
 import { lineCities } from './railways.js';
 import { findRoute } from './railways.js';
@@ -33,7 +33,7 @@ export function setMode(trainId, mode, cfg = {}) {
 
 /** Escolhe cargas por valor/vaga até encher o trem (opcionalmente só para certos destinos). */
 export function bestLoadFor(train, allow) {
-  const cap = modelOf(train).slots;
+  const cap = modelOf(train).slots - aboardOf(train).reduce((s, c) => s + c.slots, 0);
   const pool = contractsAt(train.at).filter(c => routable(c) && (!allow || allow(c))).sort((a, b) => b.reward / b.slots - a.reward / a.slots);
   const ids = []; let used = 0;
   for (const c of pool) if (used + c.slots <= cap) { ids.push(c.id); used += c.slots; }
@@ -57,14 +57,14 @@ function runOne(t, now) {
     const base = wps.length && planTrip(t.id, [], wps);
     if (!base?.ok) return false;
     const ids = bestLoadFor(t, c => base.path.indexOf(c.dest, 1) >= 0);
-    if (!ids.length) return false; // espera aparecer carga para o trecho
+    if (!ids.length && !aboardOf(t).length) return false; // espera aparecer carga para o trecho
     const p = planTrip(t.id, ids, wps);
     return p.ok && p.profit >= a.minProfit && dispatch(t.id, ids, wps, now).ok;
   }
   // automático
   const allowed = a.lineId ? new Set(lineCities(a.lineId)) : null;
   const ids = bestLoadFor(t, allowed ? c => allowed.has(c.dest) : null);
-  if (ids.length) {
+  if (ids.length || aboardOf(t).length) {
     const p = planTrip(t.id, ids, []);
     if (p.ok && p.profit >= a.minProfit) return dispatch(t.id, ids, [], now).ok;
   }

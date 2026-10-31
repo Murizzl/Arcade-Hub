@@ -377,3 +377,4 @@ body.panel-open .toasts { right: 424px; }
 
 .portrait.photo { object-fit: cover; border-radius: 12px; background: #1e293b; display: block; }
 .driver-stage .portrait.photo { border-radius: 20px; }
+.plan-item.static { cursor: default; }

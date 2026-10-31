@@ -7,7 +7,7 @@ import { createMap } from './map.js';
 import { city, cityStatus, hasStation, openStation, stationInfo, stationIds, trainsAt, upgradeLevel, canUpgrade, buyUpgrade } from './cities.js';
 import { canBuy, buySegment, editLine, moveSegment, isOwned, lineOf, lineSegments, lineCities, LINE_COLORS, ownedLinks, findRoute, trafficOn } from './railways.js';
 import { contractsAt, makeContract, refreshContracts, activeContracts, openContracts, routable, cargoOf, itemOf } from './cargo.js';
-import { addTrain, buyTrain, customizeTrain, planTrip, dispatch, processArrivals, trainById, modelOf, driverOf, tripProgress, trainPosition, autoWaypoints, repairQuote, repairTrain, effectiveSpeed, hireDriver, editDriver, assignDriver, driverBonus } from './trains.js';
+import { addTrain, buyTrain, customizeTrain, planTrip, dispatch, processArrivals, trainById, modelOf, driverOf, tripProgress, trainPosition, autoWaypoints, aboardOf, repairQuote, repairTrain, effectiveSpeed, hireDriver, editDriver, assignDriver, driverBonus } from './trains.js';
 import { levelInfo, maxLines, maxTrains, UNLOCKS, checkAchievements, achievementMetrics } from './progression.js';
 import { runAutomation, bestLoadFor, setMode, MODES, MODE_LEVEL, defaultAuto } from './automation.js';
 import { loadSave, writeSave, deleteSave, migrateSave, CloudSync } from './save-system.js';
@@ -497,7 +497,7 @@ function trainPanel(id) {
   const t = trainById(id); if (!t) return '<p class="muted">Locomotiva não encontrada.</p>';
   const m = modelOf(t), d = driverOf(t), tr = t.tripId && state.trips[t.tripId];
   const pos = trainPosition(t);
-  const aboard = tr ? tr.contractIds.map(cid => state.contracts[cid]).filter(c => c?.status === 'in_transit') : [];
+  const aboard = tr ? tr.contractIds.map(cid => state.contracts[cid]).filter(c => c?.status === 'in_transit') : aboardOf(t);
   const here = t.status === 'idle' ? contractsAt(t.at).filter(routable).length : 0;
   return `<header class="p-head"><div class="p-kicker">${ic('train-front')} ${esc(m.name)} · ${esc({ vapor: 'Vapor', diesel: 'Diesel', eletrica: 'Elétrica', pesada: 'Carga pesada', rapida: 'Rápida', premium: 'Premium' }[m.category])} · ${m.era}</div>
       <h2>${esc(t.name)}</h2></header>
@@ -512,6 +512,7 @@ function trainPanel(id) {
           <div class="bar"><span></span></div><small>Chega em <span class="eta"></span></small></div>
           ${aboard.length ? `<h4>A bordo</h4>${aboard.map(c => `<div class="row-btn static">${cargoChip(c)}<span><b>${esc(itemOf(c).name)}</b><small>${c.slots} vaga(s) → ${esc(city(c.dest).name)}</small></span><span class="rb-end">${fmt(c.reward)}</span></div>`).join('')}` : ''}`
       : `<p>Parada em <button class="link" data-open-city="${t.at}">${esc(city(t.at).name)}</button>, pronta para partir. ${here ? `${here} carga(s) com rota aqui.` : ''}</p>
+        ${aboard.length ? `<h4>A bordo (${aboard.length})</h4>${aboard.map(c => `<div class="row-btn static">${cargoChip(c)}<span><b>${esc(itemOf(c).name)}</b><small>${c.slots} vaga(s) → ${esc(city(c.dest).name)}</small></span><span class="rb-end">${fmt(c.reward)}</span></div>`).join('')}` : ''}
         <button class="btn primary big" data-plan="${t.id}">${ic('route')} Planejar viagem</button>`}
     </section>
     ${automationSection(t)}
@@ -755,16 +756,13 @@ function planPanel(trainId) {
   const t = trainById(trainId), m = modelOf(t), plan = planning;
   if (!plan || t.status !== 'idle') return trainPanel(trainId);
   const cargo = contractsAt(t.at).sort((a, b) => b.tutorial - a.tutorial || routable(b) - routable(a) || b.reward / b.slots - a.reward / a.slots);
-  const picked = [...plan.picked].map(id => state.contracts[id]).filter(c => c?.status === 'open');
+  const onboard = aboardOf(t);
+  const picked = [...onboard, ...[...plan.picked].map(id => state.contracts[id]).filter(c => c?.status === 'open')];
   const used = picked.reduce((s, c) => s + c.slots, 0), free = m.slots - used;
-  // com paradas escolhidas, cargas cujo destino fica fora da rota permanecem na estação
-  const base = plan.wps.length ? planTrip(t.id, [], plan.wps) : null;
-  const go = base?.ok ? picked.filter(c => base.path.indexOf(c.dest, 1) >= 0) : picked;
-  const left = picked.length - go.length;
-  // baldeação: levar as cargas fora da rota até o armazém da última parada
-  const storing = plan.storeRest && left > 0;
-  const sendIds = (storing ? picked : go).map(c => c.id);
-  const p = planTrip(t.id, sendIds, plan.wps, { storeRest: storing });
+  // cargas cujo destino fica fora da rota seguem a bordo (ou vão para o armazém, se marcado)
+  const sendIds = picked.filter(c => c.status === 'open').map(c => c.id);
+  const p = planTrip(t.id, sendIds, plan.wps, { storeRest: !!plan.storeRest });
+  const left = p.ok ? p.keep.length + p.store.length : 0;
   plan.go = p.ok ? sendIds : null;
   const dests = [...new Set(picked.map(c => c.dest))];
   map.setHighlight(p.ok ? { links: p.links, cities: [t.at, ...p.waypoints] } : { cities: [t.at, ...dests] });
@@ -776,7 +774,8 @@ function planPanel(trainId) {
   return `<header class="p-head"><div class="p-kicker">${ic('route')} Planejar viagem</div><h2>${esc(t.name)}</h2>
       <div class="p-sub muted">Saindo de ${esc(city(t.at).name)}</div></header>
     <div class="plan-cap"><div class="cap-pips">${pips}</div><b>${used}/${m.slots}</b><small>vagas</small></div>
-    <section class="p-sec"><h3>${ic('package')} 1 · Carregar</h3>
+    ${onboard.length ? `<section class="p-sec"><h3>${ic('train-front')} A bordo</h3><div class="plan-list">${onboard.map(c => `<div class="plan-item on static">${cargoChip(c)}<span class="pi-main"><b>${esc(itemOf(c).name)}</b><small>→ ${esc(city(c.dest).name)} · ${fmt(c.km)} km</small></span>${slotPips(c.slots, cargoOf(c).color)}<span class="pi-rw">${fmt(c.reward)}</span><span class="pi-check">${ic('lock')}</span></div>`).join('')}</div></section>` : ''}
+    <section class="p-sec"><h3>${ic('package')} ${onboard.length ? '2 · Carregar mais' : '1 · Carregar'}</h3>
       <div class="plan-list">${cargo.length ? cargo.map(c => {
         const on = plan.picked.has(c.id), can = on || (c.slots <= free && routable(c));
         return `<button class="plan-item ${on ? 'on' : ''}" data-toggle="${c.id}" ${can ? '' : 'disabled'}>
@@ -798,7 +797,7 @@ function planPanel(trainId) {
           ${p.discount ? `<p class="muted sm">${ic('fuel')} Posto de ${esc(city(t.at).name)}: −${Math.round(p.discount * 100)}% no combustível.</p>` : ''}
           ${p.jam ? `<p class="warn">${ic('traffic-cone')} Trechos congestionados: viagem ${Math.round((p.slow - 1) * 100)}% mais lenta.</p>` : ''}</div>`
         : `<div class="warn">${ic('alert-triangle')} ${esc(p.reason)}</div>`}
-      ${left ? `<label class="store-opt"><input type="checkbox" data-store-rest ${plan.storeRest ? 'checked' : ''}><span><b>Guardar no armazém de ${esc(city((p.ok ? p.path : [t.at, ...plan.wps]).slice(-1)[0]).name)}</b><small>${left} carga(s) não passam pelo destino nesta rota. ${plan.storeRest ? 'Elas serão deixadas no armazém para outro trem levar.' : `Sem marcar, ficam em ${esc(city(t.at).name)}.`}</small></span></label>` : ''}
+      ${left ? `<label class="store-opt"><input type="checkbox" data-store-rest ${plan.storeRest ? 'checked' : ''}><span><b>Deixar no armazém de ${esc(city(p.path.slice(-1)[0]).name)}</b><small>${left} carga(s) não passam pelo destino nesta rota. ${plan.storeRest ? 'Ficarão no armazém para qualquer trem levar depois.' : 'Sem marcar, continuam a bordo e são entregues numa próxima viagem deste trem.'}</small></span></label>` : ''}
     </section>
     <div class="plan-foot"><button class="btn ghost" data-plan-cancel>Cancelar</button><button class="btn primary" id="planGo" ${p.ok ? '' : 'disabled'}>${ic('play')} Fazer rota</button></div>`;
 }
