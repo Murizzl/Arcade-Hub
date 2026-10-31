@@ -102,8 +102,7 @@
     <g fill="none" stroke-linecap="round" stroke-width="7"><path d="M-10 170 C80 160 110 90 190 96 S300 40 350 30" stroke="#ef4444"/><path d="M-10 60 C70 70 120 140 200 140 S300 190 350 200" stroke="#3b82f6"/><path d="M60 -10 C80 60 150 110 190 96 S240 150 250 230" stroke="#22c55e"/></g>
     <g fill="#f8fafc" stroke="#0b1424" stroke-width="3"><circle cx="190" cy="96" r="9"/><circle cx="99" cy="118" r="7"/><circle cx="262" cy="56" r="7"/><circle cx="236" cy="152" r="7"/><circle cx="40" cy="165" r="7"/></g></svg>`;
   function persistentCard(g) {
-    const sum = persistentSummary(g.id), p = S.user.persistent?.[g.id];
-    const today = new Date().toDateString();
+    const sum = persistentSummary(g.id);
     return `<article class="card persist-card">
       <a class="persist-thumb" href="${g.href}" style="--c1:${g.c1};--c2:${g.c2}" aria-label="Abrir ${esc(g.name)}">
         ${RAIL_ART}<span class="thumb-art" aria-hidden="true">${ic(g.icon)}</span>${g.isNew ? '<span class="thumb-label tag tag-warning">Novo</span>' : ''}</a>
@@ -117,8 +116,7 @@
           <div class="stat-box"><small>Nível</small><b>${fmt(sum.level)}</b></div>
           <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
           <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
-          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
-          <div class="stat-box"><small>XP hoje</small><b>${fmt(p && p.day === today ? p.xpToday : 0)}</b></div></div>` : ''}
+          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}</div>` : ''}
         <div class="row-wrap" style="margin-top:14px"><a class="btn btn-primary btn-lg" href="${g.href}">${ic(sum ? 'play' : 'flag')} ${sum ? 'Continuar' : 'Começar'}</a></div>
       </div>
     </article>`;
@@ -914,7 +912,6 @@
 
   function persistentProfile(p, isMe) {
     if (isMe) S.syncPersistentSummaries();
-    const today = new Date().toDateString();
     const cards = AH.persistentGames.map(g => {
       const ps = p.persistent?.[g.id], sum = ps?.summary;
       const time = p.playtime?.[g.id] || 0;
@@ -936,7 +933,6 @@
           ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
           <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(time)}</b></div>
           ${ps ? `<div class="stat-box"><small>Eventos relatados</small><b>${fmt(ps.events || 0)}</b></div>` : ''}
-          ${isMe && ps ? `<div class="stat-box"><small>XP hoje</small><b>${fmt(ps.day === today ? ps.xpToday : 0)}</b></div>` : ''}
         </div></div>`;
     }).join('');
     return `<div class="section">${sectionHead('building-2', 'Jogos de Gerenciamento', isMe ? `<a class="link-more" href="#/persistent">Ver jogos ${ic('chevron-right')}</a>` : '')}${cards}</div>`;
