@@ -908,6 +908,41 @@
   };
 
   /* ==================== PERFIL ==================== */
+  // Jogos do catálogo e jogos persistentes juntos (tempo de jogo agrupado)
+  const anyGame = id => S.game(id) || (AH.persistentGames || []).find(g => g.id === id);
+  const gameHref = id => S.game(id) ? `#/game/${id}` : '#/persistent';
+
+  function persistentProfile(p, isMe) {
+    if (isMe) S.syncPersistentSummaries();
+    const today = new Date().toDateString();
+    const cards = AH.persistentGames.map(g => {
+      const ps = p.persistent?.[g.id], sum = ps?.summary;
+      const time = p.playtime?.[g.id] || 0;
+      if (!sum) return `<div class="card persist-prof"><div class="row" style="gap:12px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span><div style="flex:1"><h3>${esc(g.name)}</h3><p class="faint">${isMe ? 'Você ainda não fundou uma companhia.' : 'Este jogador ainda não joga.'}</p></div>${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('flag')} Começar</a>` : ''}</div></div>`;
+      return `<div class="card persist-prof">
+        <div class="row" style="gap:12px;margin-bottom:14px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span>
+          <div style="flex:1;min-width:0"><small class="faint">${esc(g.name)}</small><h3 style="display:flex;align-items:center;gap:8px"><span class="co-dot" style="background:${sum.color || 'var(--primary)'}"></span>${esc(sum.company)}</h3>
+            <small class="faint">${sum.home ? `Sede em ${esc(sum.home)}` : ''}${sum.since ? ` · desde ${dateBR(sum.since)}` : ''}</small></div>
+          ${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('play')} Continuar</a>` : ''}</div>
+        <div class="kv">
+          <div class="stat-box"><small>Nível da companhia</small><b>${fmt(sum.level)}</b></div>
+          <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
+          <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
+          ${sum.trains != null ? `<div class="stat-box"><small>Locomotivas</small><b>${fmt(sum.trains)}</b></div>` : ''}
+          ${sum.lines != null ? `<div class="stat-box"><small>Linhas</small><b>${fmt(sum.lines)}</b></div>` : ''}
+          ${sum.km != null ? `<div class="stat-box"><small>Km rodados</small><b>${fmt(sum.km)}</b></div>` : ''}
+          ${sum.slots != null ? `<div class="stat-box"><small>Vagas transportadas</small><b>${fmt(sum.slots)}</b></div>` : ''}
+          ${sum.earned != null ? `<div class="stat-box"><small>Créditos ganhos</small><b>${fmt(sum.earned)}</b></div>` : ''}
+          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
+          <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(time)}</b></div>
+          ${ps ? `<div class="stat-box"><small>Eventos relatados</small><b>${fmt(ps.events || 0)}</b></div>` : ''}
+          ${isMe && ps ? `<div class="stat-box"><small>XP hoje</small><b>${fmt(ps.day === today ? ps.xpToday : 0)}/${C.persistentXp[g.id].dailyCap}</b></div>` : ''}
+        </div></div>`;
+    }).join('');
+    return `<div class="section">${sectionHead('building-2', 'Jogos de Gerenciamento', isMe ? `<a class="link-more" href="#/persistent">Ver jogos ${ic('chevron-right')}</a>` : '')}${cards}</div>`;
+  }
+
+  let ptab = 'geral';
   function profileLayout(el, p, isMe) {
     const pr = S.prestigeOf(p.prestige);
     const theme = isMe || p.cardTheme ? p.cardTheme || 'violet' : ['violet', 'sunset', 'ocean', 'mint', 'night'][hash(p.id) % 5];
@@ -949,6 +984,11 @@
         </div>
       </div>
 
+      <div class="chips profile-tabs" role="tablist" aria-label="Seções do perfil">
+        <button class="chip ${ptab === 'geral' ? 'active' : ''}" role="tab" aria-selected="${ptab === 'geral'}" data-ptab="geral">${ic('layout-grid')} Geral</button>
+        <button class="chip ${ptab === 'persistentes' ? 'active' : ''}" role="tab" aria-selected="${ptab === 'persistentes'}" data-ptab="persistentes">${ic('infinity')} Jogos persistentes</button>
+      </div>
+      ${ptab === 'persistentes' ? persistentProfile(p, isMe) : `
       <div class="grid-2 section">
         <div class="card stack">
           <div class="row"><h3 style="flex:1">${ic('trending-up')} Progressão</h3>${isMe && S.canPrestige() ? `<a class="btn btn-sm btn-accent" href="#/prestige">Ativar prestígio</a>` : ''}</div>
@@ -969,15 +1009,15 @@
       </div>
 
       ${(() => {
-        const pt = Object.entries(p.playtime || {}).filter(([id, t]) => t > 0 && S.game(id)).sort((a, b) => b[1] - a[1]);
+        const pt = Object.entries(p.playtime || {}).filter(([id, t]) => t > 0 && anyGame(id)).sort((a, b) => b[1] - a[1]);
         if (!pt.length) return `<div class="card section"><h3 style="margin-bottom:10px">${ic('clock')} Tempo de jogo</h3>${U.empty('clock', 'Ainda sem tempo registrado', isMe ? 'O tempo começa a contar a partir da próxima partida que você jogar.' : 'Este jogador ainda não tem tempo registrado.')}</div>`;
-        const total = pt.reduce((n, [, t]) => n + t, 0), top = S.game(pt[0][0]);
+        const total = pt.reduce((n, [, t]) => n + t, 0), top = anyGame(pt[0][0]);
         return `<div class="card section"><h3 style="margin-bottom:10px">${ic('clock')} Tempo de jogo</h3>
           <div class="kv" style="margin-bottom:14px">
             <div class="stat-box"><small>Tempo total</small><b>${fmtDur(total)}</b></div>
             <div class="stat-box"><small>Jogo mais jogado</small><b style="font-size:1.05rem">${esc(top.name)}</b></div>
           </div>
-          <div class="list">${pt.map(([id, t]) => { const g = S.game(id); return `<a class="list-item" href="#/game/${id}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><small>${fmtDur(t)} jogados${p.stats?.[id]?.last ? ` · última vez ${timeAgo(p.stats[id].last)}` : ''}</small></div></a>`; }).join('')}</div></div>`;
+          <div class="list">${pt.map(([id, t]) => { const g = anyGame(id); return `<a class="list-item" href="${gameHref(id)}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><small>${fmtDur(t)} jogados${p.stats?.[id]?.last ? ` · última vez ${timeAgo(p.stats[id].last)}` : ''}</small></div></a>`; }).join('')}</div></div>`;
       })()}
       <div class="card section"><h3 style="margin-bottom:10px">${ic('bar-chart-3')} Estatísticas por jogo</h3>
         ${Object.keys(stats).length ? `<div class="table-scroll"><table class="stat-table"><thead><tr><th>Jogo</th><th>Partidas</th><th>Vitórias</th><th>Recorde</th></tr></thead><tbody>
@@ -988,9 +1028,11 @@
       <div class="section">${sectionHead('heart', 'Jogos favoritos')}
         ${favs.length ? `<div class="game-row">${favs.map(S.game).filter(Boolean).map(gameCard).join('')}</div>` : U.empty('heart', 'Nenhum favorito', isMe ? 'Toque no coração dos jogos que você mais gosta.' : 'Este jogador ainda não favoritou jogos.')}
       </div>
-      ${isMe && p.prestigeHistory.length ? `<div class="card section"><h3 style="margin-bottom:10px">${ic('sparkles')} Histórico de prestígios</h3><div class="list">${p.prestigeHistory.map(h => `<div class="list-item">${emblem(h.from + 1)}<div class="li-main"><b>Prestígio ${h.from + 1}</b><small>${dateBR(h.t)} · ${fmt(h.totalXp)} XP acumulados</small></div></div>`).join('')}</div></div>` : ''}`;
+      ${isMe && p.prestigeHistory.length ? `<div class="card section"><h3 style="margin-bottom:10px">${ic('sparkles')} Histórico de prestígios</h3><div class="list">${p.prestigeHistory.map(h => `<div class="list-item">${emblem(h.from + 1)}<div class="li-main"><b>Prestígio ${h.from + 1}</b><small>${dateBR(h.t)} · ${fmt(h.totalXp)} XP acumulados</small></div></div>`).join('')}</div></div>` : ''}`}`;
 
     el.onclick = e => {
+      const tb = e.target.closest('[data-ptab]');
+      if (tb) { ptab = tb.dataset.ptab; profileLayout(el, p, isMe); U.refreshIcons(); return; }
       if (isMe && e.target.closest('[data-edit]')) return editProfile();
       if (isMe) return;
       const t = e.target.closest('button'); if (!t) return;

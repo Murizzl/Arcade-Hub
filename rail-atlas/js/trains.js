@@ -87,6 +87,7 @@ export function hireDriver(name) {
 export function editDriver(id, data) {
   const d = state.drivers.find(x => x.id === id); if (!d) return false;
   ['skin', 'hair', 'hairColor', 'hat', 'uniformColor', 'accessory'].forEach(k => { if (data[k] != null) d[k] = data[k]; });
+  if ('photo' in data) d.photo = data.photo || null; // foto enviada pelo jogador (já reduzida)
   if (data.name && data.name.trim()) d.name = data.name.trim().slice(0, 22);
   emit('drivers', d);
   return true;

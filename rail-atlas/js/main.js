@@ -217,13 +217,27 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+// Tempo de jogo: conta com a aba visível e envia ao Arcade Hub em blocos de até 1 min
+let playSince = Date.now();
+function flushPlaytime() {
+  if (!state || document.hidden) { playSince = Date.now(); return; }
+  const secs = (Date.now() - playSince) / 1000;
+  playSince = Date.now();
+  if (secs >= 5) ArcadeIntegration.reportEvent({ eventType: 'playtime', gameId: 'rail-atlas', contractId: 'pt' + Date.now().toString(36), seconds: Math.min(secs, 120) });
+}
+setInterval(flushPlaytime, 60e3);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushPlaytime(); else playSince = Date.now(); });
+addEventListener('pagehide', flushPlaytime);
+
 let saveTimer = null;
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     writeSave(userId, state);
     const summary = { company: state.company.name, level: state.company.level, stations: stationIds().length, deliveries: state.stats.deliveries,
-      achievements: Object.keys(state.achievements).length, achievementsTotal: DB.achievements.length, username: ArcadeIntegration.profile()?.username };
+      achievements: Object.keys(state.achievements).length, achievementsTotal: DB.achievements.length, username: ArcadeIntegration.profile()?.username,
+      color: state.company.color, home: city(state.company.home).name, trains: state.trains.length, lines: state.lines.length,
+      km: Math.round(state.stats.km), earned: Math.round(state.stats.earned), slots: state.stats.tons, credits: Math.round(state.credits), since: state.createdAt };
     ArcadeIntegration.publishSummary(summary);
     queueCloud(summary);
   }, 400);
@@ -632,6 +646,7 @@ function bindChrome() {
     if ((b = q('[data-open-driver]'))) return openPanel('driver', b.dataset.openDriver);
     if (q('[data-hire]')) { if (!spend(hireCost(), 'driver')) return toast('Créditos insuficientes.', 'warn', 'coins'); const d = hireDriver(); log('user-plus', `${d.name} entrou para a equipe.`, 'success'); return openPanel('driver', d.id); }
     if ((b = q('[data-dv]'))) { const [k, v] = b.dataset.dv.split('|'); editDriver(panel.id, { [k]: v }); return renderPanel(); }
+    if ((b = q('[data-dv-nophoto]'))) { editDriver(b.dataset.dvNophoto, { photo: null }); return renderPanel(); }
     if ((b = q('[data-dv-name]'))) { editDriver(b.dataset.dvName, { name: $('#dvName').value }); document.activeElement.blur(); toast('Nome salvo.', 'success', 'check'); return; }
     if (planning) {
       if ((b = q('[data-toggle]'))) { const id = b.dataset.toggle; planning.picked.has(id) ? planning.picked.delete(id) : planning.picked.add(id); return renderPanel(); }
@@ -676,6 +691,12 @@ function bindChrome() {
       const [tid, key] = t.dataset.auto.split('|'), tr = trainById(tid);
       const val = t.type === 'checkbox' ? t.checked : key === 'minProfit' ? Math.max(0, +t.value || 0) : t.value || null;
       tr.auto = { ...defaultAuto(), ...tr.auto, [key]: val }; t.blur(); save(); return renderPanel();
+    }
+    if (t.dataset.dvPhoto && t.files?.[0]) {
+      const id = t.dataset.dvPhoto;
+      squarePhoto(t.files[0], 160).then(url => { editDriver(id, { photo: url }); toast('Foto do maquinista atualizada.', 'success', 'image'); renderPanel(); })
+        .catch(() => toast('Não foi possível ler essa imagem.', 'warn', 'image-off'));
+      return;
     }
     if (t.dataset.assign && t.value) { const r = assignDriver(t.dataset.assign, t.value); t.blur(); if (!r.ok) toast(esc(r.reason), 'warn', 'alert-triangle'); return renderPanel(); }
     if (t.dataset.moveSeg) { moveSegment(t.dataset.moveSeg, t.value); t.blur(); }
@@ -917,6 +938,10 @@ function driverPanel(id) {
   return `<header class="p-head"><div class="p-kicker">${ic('user-round')} Maquinista · nível ${d.level}</div><h2>${esc(d.name)}</h2></header>
     <div class="driver-stage">${driverSVG(d, 120)}</div>
     <section class="p-sec">
+      <div class="field"><span>Foto</span><div class="row-actions" style="justify-content:flex-start">
+        <label class="btn ghost sm">${ic('upload')} ${d.photo ? 'Trocar foto' : 'Enviar foto'}<input type="file" accept="image/*" data-dv-photo="${d.id}" hidden></label>
+        ${d.photo ? `<button class="btn ghost sm" data-dv-nophoto="${d.id}">${ic('trash-2')} Usar desenho</button>` : ''}</div>
+        <small class="muted">Com foto, o retrato substitui o desenho em todo o jogo.</small></div>
       <label class="field"><span>Nome</span><input id="dvName" maxlength="22" value="${esc(d.name)}"></label>
       <div class="field"><span>Tom de pele</span>${sw('skin', O.skin)}</div>
       <div class="field"><span>Penteado</span>${chips('hair', O.hair)}</div>
@@ -927,6 +952,22 @@ function driverPanel(id) {
       <button class="btn ghost sm" data-dv-name="${d.id}">${ic('check')} Salvar nome</button></section>
     <section class="p-sec"><h3>${ic('train-front')} Escala</h3>
       <select class="input" data-assign="${d.id}"><option value="">${t ? 'Conduzindo ' + esc(t.name) : 'Sem locomotiva'}</option>${state.trains.filter(x => x !== t && x.status === 'idle').map(x => `<option value="${x.id}">Passar para ${esc(x.name)}${x.driverId ? ' (troca)' : ''}</option>`).join('')}</select></section>`;
+}
+
+// Recorta a imagem no centro, em quadrado, e reduz (o save fica leve)
+function squarePhoto(file, size) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = size;
+      const s = Math.min(img.width, img.height);
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+    img.src = url;
+  });
 }
 
 /* ==================== CONQUISTAS ==================== */

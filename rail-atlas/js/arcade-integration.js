@@ -47,6 +47,7 @@ export const ArcadeIntegration = {
       gameId: GAME_ID, userId: prof.id, eventType: evt.eventType,
       contractId: evt.contractId, kind: evt.kind || 'common', t: evt.at || Date.now()
     };
+    if (evt.seconds) item.seconds = Math.round(evt.seconds); // eventos de tempo de jogo
     return this.deliver(item);
   },
 

@@ -80,6 +80,7 @@ export const DRIVER_OPTIONS = {
 };
 
 export function driverSVG(d, size = 64) {
+  if (d.photo) return `<img class="portrait photo" src="${d.photo}" width="${size}" height="${size}" alt="">`;
   const sk = d.skin, hc = d.hairColor, uc = d.uniformColor;
   const hair = {
     curto: `<path d="M18 26 Q18 12 32 12 Q46 12 46 26 Q42 18 32 18 Q22 18 18 26Z" fill="${hc}"/>`,

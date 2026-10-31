@@ -374,3 +374,6 @@ body.panel-open .toasts { right: 424px; }
   .nav { overflow-x: auto; justify-content: flex-start; }
   .nav-btn { flex: 0 0 64px; }
 }
+
+.portrait.photo { object-fit: cover; border-radius: 12px; background: #1e293b; display: block; }
+.driver-stage .portrait.photo { border-radius: 20px; }

@@ -383,7 +383,7 @@
     let inbox;
     try { inbox = JSON.parse(localStorage.getItem(INBOX_KEY) || '[]'); } catch (e) { return null; }
     const mine = inbox.filter(e => e.userId === u.id);
-    if (!mine.length) return null;
+    if (!mine.length) { if (syncPersistentSummaries()) save(); return null; }
     u.persistent ||= {};
     const today = new Date().toDateString();
     let total = 0; const byGame = {};
@@ -392,6 +392,8 @@
       const p = u.persistent[e.gameId] ||= { day: today, xpToday: 0, events: 0, seen: [] };
       if (p.day !== today) { p.day = today; p.xpToday = 0; }
       if (p.seen.includes(e.id)) continue;
+      // tempo de jogo entra junto com o dos outros jogos (sem XP); blocos limitados a 2 min
+      if (e.eventType === 'playtime') { p.seen.push(e.id); p.seen = p.seen.slice(-400); addPlaytimeRaw(e.gameId, Math.min(120, Math.max(0, e.seconds || 0))); continue; }
       p.seen.push(e.id); p.seen = p.seen.slice(-400); p.events++;
       const base = rules[e.eventType]?.[e.kind] ?? rules[e.eventType]?.common ?? 0;
       const capped = e.eventType === 'cargo_delivered';
@@ -402,9 +404,25 @@
       total += xp; byGame[e.gameId] = (byGame[e.gameId] || 0) + xp;
     }
     try { localStorage.setItem(INBOX_KEY, JSON.stringify(inbox.filter(e => e.userId !== u.id))); } catch (e) { /* sem armazenamento */ }
+    syncPersistentSummaries();
     const levelUps = total ? addXp(total) : [];
     save();
     return total ? { xp: total, byGame, levelUps } : null;
+  }
+
+  function addPlaytimeRaw(gameId, secs) { if (secs > 0) u_().playtime[gameId] = (u_().playtime[gameId] || 0) + Math.round(secs); }
+  const u_ = () => state.user;
+  // Copia o resumo público de cada jogo persistente para o perfil (vai junto para a nuvem e para os amigos)
+  function syncPersistentSummaries() {
+    const u = state.user; if (!u) return false;
+    let changed = false;
+    (AH.persistentGames || []).forEach(g => {
+      let sum; try { sum = JSON.parse(localStorage.getItem(`arcadehub.persistent.${g.id}.summary`) || 'null'); } catch (e) { sum = null; }
+      if (!sum) return;
+      const p = (u.persistent ||= {})[g.id] ||= { day: new Date().toDateString(), xpToday: 0, events: 0, seen: [] };
+      if (!p.summary || sum.t > p.summary.t) { p.summary = sum; changed = true; }
+    });
+    return changed;
   }
 
   function canPrestige() { return state.user && state.user.level >= C.maxLevel; }
@@ -513,7 +531,7 @@
     get state() { return state; },
     get user() { return state.user; },
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
-    levelInfo, addXp, reportMatch, ingestInbox, claimChallenge, challenges, canPrestige, doPrestige,
+    levelInfo, addXp, reportMatch, ingestInbox, syncPersistentSummaries, claimChallenge, challenges, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
     gameSave, addPlaytime, flush, catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, setPreview: p => { preview = p; }, isPreview: () => !!preview, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,
