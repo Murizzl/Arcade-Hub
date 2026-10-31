@@ -98,6 +98,18 @@
       { popularity: 44, players: 3100, desc: 'Um dos jogos de tabuleiro mais antigos do mundo. Corra com suas peças até a saída.' })
   ];
 
+  // ---------- Jogos persistentes (módulos independentes, progresso contínuo) ----------
+  AH.persistentCategories = [
+    { id: 'gerenciamento', name: 'Jogos de Gerenciamento', icon: 'building-2', desc: 'Experiências maiores que continuam evoluindo mesmo com o jogo fechado.' }
+  ];
+  AH.persistentGames = [
+    { id: 'rail-atlas', name: 'Rail Atlas', cat: 'gerenciamento', icon: 'train-front', c1: '#0f2340', c2: '#f59e0b',
+      href: 'rail-atlas/index.html', isNew: true,
+      tagline: 'Gerenciamento ferroviário global',
+      desc: 'Funde sua companhia ferroviária, compre trechos entre cidades reais, aceite contratos de carga e veja seus trens cruzarem o mapa-múndi sozinhos. As viagens continuam mesmo com o navegador fechado.',
+      features: [['map', 'Mapa-múndi com 70+ cidades reais'], ['route', 'Monte linhas com nome e cor'], ['package', 'Contratos de 11 tipos de carga'], ['moon', 'Progresso com o jogo fechado']] }
+  ];
+
   // ---------- Jogos implementados em games-arcade.js e games-board.js ----------
   const byId = id => AH.games.find(g => g.id === id);
   ['snake', 'minado', 'xadrez', 'damas', 'conecta4', 'pong', 'deslizante', 'paciencia', 'blackjack', 'tetra', 'calculo', 'kakuro', 'batalha', 'flappy', 'domino', 'lights', 'mahjong', 'gamao']

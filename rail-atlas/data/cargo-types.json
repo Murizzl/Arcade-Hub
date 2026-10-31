@@ -1,0 +1,309 @@
+[
+  {
+    "id": "alimentos",
+    "name": "Alimentos",
+    "icon": "wheat",
+    "color": "#84cc16",
+    "value": 1.0,
+    "items": [
+      {
+        "id": "alimentos:graos",
+        "name": "Sacas de grãos",
+        "slots": 1
+      },
+      {
+        "id": "alimentos:frutas",
+        "name": "Caixas de frutas",
+        "slots": 1
+      },
+      {
+        "id": "alimentos:laticinios",
+        "name": "Laticínios refrigerados",
+        "slots": 2
+      },
+      {
+        "id": "alimentos:cafe",
+        "name": "Café em grão",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "madeira",
+    "name": "Madeira",
+    "icon": "trees",
+    "color": "#a16207",
+    "value": 0.9,
+    "items": [
+      {
+        "id": "madeira:toras",
+        "name": "Toras",
+        "slots": 2
+      },
+      {
+        "id": "madeira:tabuas",
+        "name": "Tábuas serradas",
+        "slots": 1
+      },
+      {
+        "id": "madeira:celulose",
+        "name": "Fardos de celulose",
+        "slots": 2
+      }
+    ]
+  },
+  {
+    "id": "minerio",
+    "name": "Minérios",
+    "icon": "mountain",
+    "color": "#b45309",
+    "value": 1.1,
+    "items": [
+      {
+        "id": "minerio:ferro",
+        "name": "Minério de ferro",
+        "slots": 2
+      },
+      {
+        "id": "minerio:bauxita",
+        "name": "Bauxita",
+        "slots": 2
+      },
+      {
+        "id": "minerio:calcario",
+        "name": "Calcário",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "carvao",
+    "name": "Carvão",
+    "icon": "flame",
+    "color": "#57534e",
+    "value": 0.95,
+    "items": [
+      {
+        "id": "carvao:carvao-mineral",
+        "name": "Carvão mineral",
+        "slots": 2
+      },
+      {
+        "id": "carvao:coque",
+        "name": "Coque",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "petroleo",
+    "name": "Petróleo",
+    "icon": "droplet",
+    "color": "#1f2937",
+    "value": 1.3,
+    "items": [
+      {
+        "id": "petroleo:cru",
+        "name": "Petróleo bruto",
+        "slots": 3
+      },
+      {
+        "id": "petroleo:tambores",
+        "name": "Tambores de óleo",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "combustivel",
+    "name": "Combustível",
+    "icon": "fuel",
+    "color": "#f97316",
+    "value": 1.35,
+    "items": [
+      {
+        "id": "combustivel:diesel",
+        "name": "Tanque de diesel",
+        "slots": 2
+      },
+      {
+        "id": "combustivel:gasolina",
+        "name": "Tanque de gasolina",
+        "slots": 2
+      },
+      {
+        "id": "combustivel:etanol",
+        "name": "Etanol",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "aco",
+    "name": "Aço",
+    "icon": "construction",
+    "color": "#64748b",
+    "value": 1.25,
+    "items": [
+      {
+        "id": "aco:bobinas",
+        "name": "Bobinas de aço",
+        "slots": 3
+      },
+      {
+        "id": "aco:vigas",
+        "name": "Vigas",
+        "slots": 2
+      },
+      {
+        "id": "aco:chapas",
+        "name": "Chapas",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "maquinas",
+    "name": "Máquinas",
+    "icon": "cog",
+    "color": "#0ea5e9",
+    "value": 1.5,
+    "items": [
+      {
+        "id": "maquinas:tratores",
+        "name": "Tratores",
+        "slots": 4
+      },
+      {
+        "id": "maquinas:motores",
+        "name": "Motores",
+        "slots": 2
+      },
+      {
+        "id": "maquinas:pecas",
+        "name": "Peças industriais",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "eletronicos",
+    "name": "Eletrônicos",
+    "icon": "cpu",
+    "color": "#8b5cf6",
+    "value": 1.8,
+    "items": [
+      {
+        "id": "eletronicos:gpu",
+        "name": "Placas de vídeo",
+        "slots": 3
+      },
+      {
+        "id": "eletronicos:celulares",
+        "name": "Celulares",
+        "slots": 1
+      },
+      {
+        "id": "eletronicos:tvs",
+        "name": "Televisores",
+        "slots": 2
+      },
+      {
+        "id": "eletronicos:chips",
+        "name": "Chips",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "medicamentos",
+    "name": "Medicamentos",
+    "icon": "pill",
+    "color": "#ef4444",
+    "value": 1.9,
+    "items": [
+      {
+        "id": "medicamentos:vacinas",
+        "name": "Vacinas refrigeradas",
+        "slots": 2
+      },
+      {
+        "id": "medicamentos:remedios",
+        "name": "Caixas de remédios",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "especiais",
+    "name": "Mercadorias especiais",
+    "icon": "gem",
+    "color": "#eab308",
+    "value": 2.4,
+    "items": [
+      {
+        "id": "especiais:obras",
+        "name": "Obras de arte",
+        "slots": 3
+      },
+      {
+        "id": "especiais:joias",
+        "name": "Joias",
+        "slots": 1
+      },
+      {
+        "id": "especiais:instrumentos",
+        "name": "Instrumentos musicais",
+        "slots": 2
+      }
+    ]
+  },
+  {
+    "id": "automoveis",
+    "name": "Automóveis",
+    "icon": "car",
+    "color": "#06b6d4",
+    "value": 1.7,
+    "items": [
+      {
+        "id": "automoveis:carros",
+        "name": "Carros novos",
+        "slots": 2
+      },
+      {
+        "id": "automoveis:caminhoes",
+        "name": "Caminhões",
+        "slots": 4
+      },
+      {
+        "id": "automoveis:pecas",
+        "name": "Peças automotivas",
+        "slots": 1
+      }
+    ]
+  },
+  {
+    "id": "quimicos",
+    "name": "Químicos",
+    "icon": "flask-conical",
+    "color": "#d946ef",
+    "value": 1.45,
+    "items": [
+      {
+        "id": "quimicos:fertilizantes",
+        "name": "Fertilizantes",
+        "slots": 1
+      },
+      {
+        "id": "quimicos:produtos",
+        "name": "Produtos químicos",
+        "slots": 2
+      },
+      {
+        "id": "quimicos:gas",
+        "name": "Gás industrial",
+        "slots": 3
+      }
+    ]
+  }
+]

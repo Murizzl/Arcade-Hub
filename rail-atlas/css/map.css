@@ -1,0 +1,95 @@
+/* =========================================================
+   Mapa — países, trilhos, cidades e trens
+   ========================================================= */
+.map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+.map.dragging { cursor: grabbing; }
+
+.country { fill: #1a2b45; stroke: #2a4066; stroke-width: .6; vector-effect: non-scaling-stroke; transition: fill .2s; }
+.country:hover { fill: #1e3252; }
+
+/* Trilhos */
+.rail path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.rail .hit { stroke: transparent; stroke-width: 14px; cursor: pointer; }
+.rail.possible .line { stroke: #5b6f95; stroke-width: 1.2px; stroke-dasharray: 2 4; opacity: .55; }
+.rail.frontier .line { stroke: #cbd5e1; stroke-width: 2px; stroke-dasharray: 5 5; opacity: .85; animation: march 1.2s linear infinite; }
+.rail.frontier:hover .line, .rail.possible:hover .line { stroke: var(--accent); opacity: 1; }
+.rail.owned .casing { stroke: #050a14; stroke-width: 7px; }
+.rail.owned .line { stroke-width: 4px; }
+.rail.owned .ties { stroke: rgba(255, 255, 255, .35); stroke-width: 1px; stroke-dasharray: 1 6; }
+.rail.owned:hover .line { stroke-width: 5.5px; }
+.rail.selected .line { stroke: var(--accent) !important; stroke-width: 5px; opacity: 1; stroke-dasharray: none; animation: none; }
+.rail.route .line { stroke: var(--accent-2) !important; stroke-width: 4px; opacity: 1; animation: march .8s linear infinite; stroke-dasharray: 8 5; }
+.rail.type-tunnel.possible .line, .rail.type-tunnel.frontier .line { stroke: #7dd3fc; }
+@keyframes march { to { stroke-dashoffset: -20; } }
+
+/* Cidades */
+.city { cursor: pointer; }
+.city .halo { fill: transparent; }
+.city .dot { fill: #3b4b69; stroke: #0b1424; stroke-width: 1.4; transition: r .15s; }
+.city .label { font: 600 11px var(--font); fill: #93a3c0; paint-order: stroke; stroke: #081322; stroke-width: 3.5px; stroke-linejoin: round; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.city.frontier .dot { fill: #94a3b8; }
+.city.frontier .label { fill: #cbd5e1; }
+.city.station .dot, .city.starter .dot { fill: #f8fafc; stroke: #0b1424; stroke-width: 2.4; }
+.city.starter .dot { fill: var(--accent); }
+.city.station .label, .city.starter .label { opacity: 1; fill: #f1f5f9; font-size: 12px; font-weight: 700; }
+.map.zoom-mid .city.frontier .label { opacity: 1; }
+.map.zoom-near .city .label { opacity: 1; }
+.city.home .dot { fill: var(--accent); r: 7.5; }
+.city .star { fill: #0b1424; }
+.city:hover .halo, .city.selected .halo { fill: rgba(245, 179, 36, .18); stroke: var(--accent); stroke-width: 1.5; }
+.city.hl .halo { fill: rgba(56, 189, 248, .2); stroke: var(--accent-2); stroke-width: 1.5; }
+.city.locked { opacity: .7; }
+.city .badge circle { fill: var(--accent-2); stroke: #0b1424; stroke-width: 1.4; }
+.city .badge text { font: 700 7.5px var(--font); fill: #062033; text-anchor: middle; pointer-events: none; }
+
+/* Trens */
+.train { cursor: pointer; }
+.train .halo { fill: transparent; }
+.train .body { stroke: #050a14; stroke-width: 1.2; }
+.train .cab { fill: #bae6fd; opacity: .9; }
+.train .lamp { fill: #fde68a; opacity: 0; }
+.train.moving .lamp { opacity: 1; filter: url(#glow); }
+.train.loaded .body { stroke: var(--accent); }
+.train:hover .halo, .train.selected .halo { fill: rgba(56, 189, 248, .22); stroke: var(--accent-2); stroke-width: 1.4; }
+.train.moving .halo { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { fill: rgba(56, 189, 248, .14); } }
+
+/* Controles sobre o mapa */
+.zoom { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+.zoom .icon-btn { background: var(--surface); border: 1px solid var(--line); width: 38px; height: 38px; box-shadow: var(--shadow); }
+.legend { position: absolute; left: 14px; bottom: 12px; display: flex; gap: 12px; padding: 6px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-size: 11px; color: var(--text-2); z-index: 2; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.lg { width: 18px; height: 0; border-top: 3px solid; display: inline-block; }
+.lg.owned { border-color: var(--accent-2); }
+.lg.frontier { border-top: 2px dashed #cbd5e1; }
+.lg.possible { border-top: 2px dotted #5b6f95; }
+.map.no-land + .zoom::after { content: 'Mapa base offline'; position: absolute; top: 0; left: 46px; white-space: nowrap; font-size: 11px; color: var(--text-3); }
+body.in-setup .zoom, body.in-setup .legend { display: none; }
+
+.tip { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; padding: 7px 10px; border-radius: 9px; background: #050b16f2; border: 1px solid var(--line); box-shadow: var(--shadow); max-width: 260px; }
+.tip b { display: block; font-size: 13px; }
+.tip small { color: var(--text-2); font-size: 11.5px; }
+
+@media (max-width: 900px) {
+  .legend { display: none; }
+  .zoom { top: 10px; left: 10px; }
+  .zoom .icon-btn { width: 34px; height: 34px; }
+}
+
+/* Camadas por tamanho da cidade (1 = município, 2 = média, 3 = grande) */
+.city.s1 .dot { r: 2.6; }
+.city.s1.frontier .dot { r: 3.6; }
+.city.s1.station .dot { r: 5; }
+.city .label { opacity: 0; }
+.city.s3 .label { opacity: 1; }
+.map.zoom-far .city.s3:not(.station):not(.starter) .label { opacity: 0; }
+.map.zoom-mid .city.s2 .label, .map.zoom-mid .city.frontier .label { opacity: 1; }
+.map.zoom-near .city .label { opacity: 1; }
+.city.station .label, .city.starter .label { opacity: 1; }
+.city.s1 .label { font-size: 10px; }
+.city.s1.station .label { font-size: 11px; }
+.rail.type-maritimo .line { stroke: #38bdf8 !important; stroke-dasharray: 2 6 !important; opacity: .7; }
+.rail.type-maritimo.owned .casing { stroke: #082f49; stroke-dasharray: 2 6; }
+.fx { pointer-events: none; }
+.puff { fill: #e2e8f0; opacity: .55; animation: puff 1.4s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes puff { to { opacity: 0; transform: scale(3) translateY(-6px); } }

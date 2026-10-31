@@ -70,6 +70,8 @@
       </section>` : ''}
 
       ${recent.length ? `<section class="section">${sectionHead('history', 'Continue jogando')}${row(recent)}</section>` : ''}
+      <section class="section">${sectionHead('infinity', 'Jogos persistentes', `<a class="link-more" href="#/persistent">Ver todos ${ic('chevron-right')}</a>`)}
+        <div class="persist-strip">${AH.persistentGames.map(g => `<a class="persist-mini" href="#/persistent" style="--c1:${g.c1};--c2:${g.c2}"><span class="pm-ic">${ic(g.icon)}</span><div><b>${esc(g.name)}</b><small>${esc(g.tagline)}</small></div>${ic('chevron-right')}</a>`).join('')}</div></section>
       <section class="section">${sectionHead('flame', 'Jogos populares', `<a class="link-more" href="#/games?sort=pop">Ver todos ${ic('chevron-right')}</a>`)}${row(popular)}</section>
       <section class="section">${sectionHead('wand-2', 'Recomendados para você')}${row(recommended)}</section>
       <section class="section">${sectionHead('sparkles', 'Novos jogos', `<a class="link-more" href="#/games?sort=new">Ver novos ${ic('chevron-right')}</a>`)}${row(fresh)}</section>
@@ -92,6 +94,50 @@
     </div>`;
   }
   V.challengeRow = challengeRow;
+
+  /* ==================== JOGOS PERSISTENTES ==================== */
+  const persistentSummary = id => { try { return JSON.parse(localStorage.getItem(`arcadehub.persistent.${id}.summary`) || 'null'); } catch (e) { return null; } };
+  // Ilustração do cartão: trilhos coloridos ligando estações
+  const RAIL_ART = `<svg class="persist-art" viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke-linecap="round" stroke-width="7"><path d="M-10 170 C80 160 110 90 190 96 S300 40 350 30" stroke="#ef4444"/><path d="M-10 60 C70 70 120 140 200 140 S300 190 350 200" stroke="#3b82f6"/><path d="M60 -10 C80 60 150 110 190 96 S240 150 250 230" stroke="#22c55e"/></g>
+    <g fill="#f8fafc" stroke="#0b1424" stroke-width="3"><circle cx="190" cy="96" r="9"/><circle cx="99" cy="118" r="7"/><circle cx="262" cy="56" r="7"/><circle cx="236" cy="152" r="7"/><circle cx="40" cy="165" r="7"/></g></svg>`;
+  function persistentCard(g) {
+    const sum = persistentSummary(g.id), p = S.user.persistent?.[g.id];
+    const today = new Date().toDateString();
+    return `<article class="card persist-card">
+      <a class="persist-thumb" href="${g.href}" style="--c1:${g.c1};--c2:${g.c2}" aria-label="Abrir ${esc(g.name)}">
+        ${RAIL_ART}<span class="thumb-art" aria-hidden="true">${ic(g.icon)}</span>${g.isNew ? '<span class="thumb-label tag tag-warning">Novo</span>' : ''}</a>
+      <div class="persist-body">
+        <div class="row-wrap"><span class="tag tag-primary">${ic('infinity')} Persistente</span><span class="tag">${esc(g.tagline)}</span></div>
+        <h2>${esc(g.name)}</h2>
+        <p class="muted">${esc(g.desc)}</p>
+        <div class="persist-feats">${g.features.map(([i, t]) => `<span>${ic(i)} ${esc(t)}</span>`).join('')}</div>
+        ${sum ? `<div class="stat-boxes">
+          <div class="stat-box"><small>Companhia</small><b>${esc(sum.company)}</b></div>
+          <div class="stat-box"><small>Nível</small><b>${fmt(sum.level)}</b></div>
+          <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
+          <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
+          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
+          <div class="stat-box"><small>XP hoje</small><b>${fmt(p && p.day === today ? p.xpToday : 0)}/${C.persistentXp[g.id].dailyCap}</b></div></div>` : ''}
+        <div class="row-wrap" style="margin-top:14px"><a class="btn btn-primary btn-lg" href="${g.href}">${ic(sum ? 'play' : 'flag')} ${sum ? 'Continuar' : 'Começar'}</a></div>
+      </div>
+    </article>`;
+  }
+  V.persistent = el => {
+    S.ingestInbox().then(got => { if (got) { U.toast(`+${fmt(got.xp)} XP dos jogos persistentes`, 'success', 'sparkles'); if (location.hash.startsWith('#/persistent')) AH.app.render(); } });
+    const rules = C.persistentXp['rail-atlas'];
+    el.innerHTML = `
+      <div class="page-head"><div><h1>Jogos persistentes</h1><p>Mundos que continuam rodando entre uma visita e outra. Seu progresso fica salvo e rende XP para o perfil.</p></div></div>
+      ${AH.persistentCategories.map(cat => {
+        const games = AH.persistentGames.filter(g => g.cat === cat.id);
+        return `<section class="section">${sectionHead(cat.icon, cat.name)}<p class="muted" style="margin:-6px 0 14px">${esc(cat.desc)}</p>${games.map(persistentCard).join('')}</section>`;
+      }).join('')}
+      <section class="section"><div class="card"><h3 style="margin-bottom:12px">${ic('zap')} Como ganhar XP no Rail Atlas</h3>
+        <div class="xp-rules">${Object.entries(rules.cargo_delivered).map(([k, v]) => `<div class="xp-rule"><span>${rules.labels[k]}</span><span>+${v} XP</span></div>`).join('')}
+          <div class="xp-rule"><span>${rules.labels.achievement}</span><span>+${rules.achievement_unlocked.achievement} XP</span></div>
+          <div class="xp-rule"><span>Limite diário (entregas)</span><span>${rules.dailyCap} XP</span></div></div>
+        <p class="faint" style="margin-top:10px">Cada entrega conta uma única vez. O XP é calculado pelo Arcade Hub${AH.cloud.enabled ? ' no servidor' : ''}, não pelo jogo. Conquistas não entram no limite diário.</p></div></section>`;
+  };
 
   /* ==================== CATÁLOGO ==================== */
   let catalogLoaded = false;

@@ -1,0 +1,182 @@
+[
+ {
+  "id": "primeira-entrega",
+  "name": "Primeira entrega",
+  "desc": "Entregue sua primeira carga.",
+  "icon": "package-check",
+  "metric": "deliveries",
+  "goal": 1,
+  "reward": 100
+ },
+ {
+  "id": "entregas-25",
+  "name": "Ritmo de trabalho",
+  "desc": "Faça 25 entregas.",
+  "icon": "package",
+  "metric": "deliveries",
+  "goal": 25,
+  "reward": 400
+ },
+ {
+  "id": "entregas-100",
+  "name": "Logística afiada",
+  "desc": "Faça 100 entregas.",
+  "icon": "boxes",
+  "metric": "deliveries",
+  "goal": 100,
+  "reward": 1500
+ },
+ {
+  "id": "entregas-500",
+  "name": "Gigante do frete",
+  "desc": "Faça 500 entregas.",
+  "icon": "warehouse",
+  "metric": "deliveries",
+  "goal": 500,
+  "reward": 6000
+ },
+ {
+  "id": "estacoes-5",
+  "name": "Malha regional",
+  "desc": "Tenha 5 estações.",
+  "icon": "map-pin",
+  "metric": "stations",
+  "goal": 5,
+  "reward": 300
+ },
+ {
+  "id": "estacoes-15",
+  "name": "Rede estadual",
+  "desc": "Tenha 15 estações.",
+  "icon": "map",
+  "metric": "stations",
+  "goal": 15,
+  "reward": 1200
+ },
+ {
+  "id": "estacoes-40",
+  "name": "Império sobre trilhos",
+  "desc": "Tenha 40 estações.",
+  "icon": "globe-2",
+  "metric": "stations",
+  "goal": 40,
+  "reward": 5000
+ },
+ {
+  "id": "vagas-100",
+  "name": "Cem vagas",
+  "desc": "Transporte 100 vagas de carga.",
+  "icon": "container",
+  "metric": "slots",
+  "goal": 100,
+  "reward": 500
+ },
+ {
+  "id": "vagas-1000",
+  "name": "Mil vagas",
+  "desc": "Transporte 1.000 vagas de carga.",
+  "icon": "train-track",
+  "metric": "slots",
+  "goal": 1000,
+  "reward": 3000
+ },
+ {
+  "id": "linhas-3",
+  "name": "Três cores",
+  "desc": "Opere 3 linhas.",
+  "icon": "palette",
+  "metric": "lines",
+  "goal": 3,
+  "reward": 400
+ },
+ {
+  "id": "especial",
+  "name": "Carga preciosa",
+  "desc": "Entregue uma carga especial.",
+  "icon": "gem",
+  "metric": "special",
+  "goal": 1,
+  "reward": 600
+ },
+ {
+  "id": "internacional",
+  "name": "Além da fronteira",
+  "desc": "Complete uma entrega internacional.",
+  "icon": "globe",
+  "metric": "international",
+  "goal": 1,
+  "reward": 800
+ },
+ {
+  "id": "baldeacao",
+  "name": "Baldeação",
+  "desc": "Deixe uma carga no armazém para outro trem levar.",
+  "icon": "arrow-left-right",
+  "metric": "transfers",
+  "goal": 1,
+  "reward": 300
+ },
+ {
+  "id": "frota-3",
+  "name": "Pequena frota",
+  "desc": "Tenha 3 locomotivas.",
+  "icon": "train-front",
+  "metric": "trains",
+  "goal": 3,
+  "reward": 600
+ },
+ {
+  "id": "frota-6",
+  "name": "Frota respeitável",
+  "desc": "Tenha 6 locomotivas.",
+  "icon": "train-front-tunnel",
+  "metric": "trains",
+  "goal": 6,
+  "reward": 2500
+ },
+ {
+  "id": "melhorias-10",
+  "name": "Obras em andamento",
+  "desc": "Compre 10 melhorias de estação.",
+  "icon": "hammer",
+  "metric": "upgrades",
+  "goal": 10,
+  "reward": 1500
+ },
+ {
+  "id": "nivel-5",
+  "name": "Companhia em ascensão",
+  "desc": "Chegue ao nível 5.",
+  "icon": "trending-up",
+  "metric": "level",
+  "goal": 5,
+  "reward": 1000
+ },
+ {
+  "id": "nivel-10",
+  "name": "Magnata ferroviário",
+  "desc": "Chegue ao nível 10.",
+  "icon": "crown",
+  "metric": "level",
+  "goal": 10,
+  "reward": 5000
+ },
+ {
+  "id": "automacao",
+  "name": "Piloto automático",
+  "desc": "Coloque uma locomotiva no modo automático.",
+  "icon": "bot",
+  "metric": "automated",
+  "goal": 1,
+  "reward": 500
+ },
+ {
+  "id": "prazo",
+  "name": "Na hora certa",
+  "desc": "Entregue um contrato de evento dentro do prazo.",
+  "icon": "timer",
+  "metric": "onTime",
+  "goal": 1,
+  "reward": 800
+ }
+]

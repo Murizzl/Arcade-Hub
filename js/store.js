@@ -361,6 +361,52 @@
     return { xp: t.xp, coins: t.coins, levelUps: ev };
   }
 
+  /**
+   * Caixa de entrada dos jogos persistentes (ex.: Rail Atlas).
+   * Os jogos só relatam eventos com ID único; aqui o hub confere a conta, descarta
+   * repetições, calcula o XP pelas regras de config.js e aplica o teto diário.
+   * PRODUÇÃO: substituir por uma Edge Function que confere o evento no banco.
+   */
+  const INBOX_KEY = 'arcadehub.inbox';
+  // Com a nuvem ligada, quem decide o XP é o servidor (RPC report_persistent_event em supabase/schema.sql).
+  // Se a função ainda não existir no banco, usa as mesmas regras localmente.
+  async function serverXp(e) {
+    if (!AH.cloud?.enabled || serverXp.off) return null;
+    const { data, error } = await AH.cloud.client.rpc('report_persistent_event', { p_event_id: e.id, p_game_id: e.gameId, p_event_type: e.eventType, p_kind: e.kind });
+    if (error) { if (/function|schema cache|not find/i.test(error.message)) serverXp.off = true; return null; }
+    return data ?? 0;
+  }
+  let ingesting = null;
+  function ingestInbox() { return ingesting ||= ingestNow().finally(() => { ingesting = null; }); }
+  async function ingestNow() {
+    const u = state.user; if (!u || !state.session || preview) return null;
+    let inbox;
+    try { inbox = JSON.parse(localStorage.getItem(INBOX_KEY) || '[]'); } catch (e) { return null; }
+    const mine = inbox.filter(e => e.userId === u.id);
+    if (!mine.length) return null;
+    u.persistent ||= {};
+    const today = new Date().toDateString();
+    let total = 0; const byGame = {};
+    for (const e of mine) {
+      const rules = C.persistentXp[e.gameId]; if (!rules) continue;
+      const p = u.persistent[e.gameId] ||= { day: today, xpToday: 0, events: 0, seen: [] };
+      if (p.day !== today) { p.day = today; p.xpToday = 0; }
+      if (p.seen.includes(e.id)) continue;
+      p.seen.push(e.id); p.seen = p.seen.slice(-400); p.events++;
+      const base = rules[e.eventType]?.[e.kind] ?? rules[e.eventType]?.common ?? 0;
+      const capped = e.eventType === 'cargo_delivered';
+      const remote = await serverXp(e);
+      const xp = remote ?? (capped ? Math.max(0, Math.min(base, rules.dailyCap - p.xpToday)) : base);
+      if (!xp) continue;
+      if (capped) p.xpToday += xp;
+      total += xp; byGame[e.gameId] = (byGame[e.gameId] || 0) + xp;
+    }
+    try { localStorage.setItem(INBOX_KEY, JSON.stringify(inbox.filter(e => e.userId !== u.id))); } catch (e) { /* sem armazenamento */ }
+    const levelUps = total ? addXp(total) : [];
+    save();
+    return total ? { xp: total, byGame, levelUps } : null;
+  }
+
   function canPrestige() { return state.user && state.user.level >= C.maxLevel; }
   function doPrestige() {
     const u = state.user; if (!canPrestige()) return false;
@@ -467,7 +513,7 @@
     get state() { return state; },
     get user() { return state.user; },
     save, subscribe: fn => (listeners.add(fn), () => listeners.delete(fn)),
-    levelInfo, addXp, reportMatch, claimChallenge, challenges, canPrestige, doPrestige,
+    levelInfo, addXp, reportMatch, ingestInbox, claimChallenge, challenges, canPrestige, doPrestige,
     player, friendship, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend, block, unblock,
     gameSave, addPlaytime, flush, catalog, owns, buy, equip, setPhoto, gameOwns, gameBuy, gameEquip, skin, setPreview: p => { preview = p; }, isPreview: () => !!preview, newUser, setUser, clearSession,
     toggleFavorite, login, register, logout, usernameTaken, reset, notify, checkAchievements,

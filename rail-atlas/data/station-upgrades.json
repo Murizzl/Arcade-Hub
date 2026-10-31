@@ -1,0 +1,35 @@
+{
+  "_info": "Melhorias de estação. levels[0] é o estado inicial (gratuito). Cada nível N exige companhia no nível N. value é o efeito do nível.",
+  "upgrades": {
+    "armazem": {
+      "name": "Armazém", "icon": "warehouse", "unit": "vagas",
+      "desc": "Guarda cargas em trânsito para outro trem levar depois (baldeação).",
+      "levels": [{ "cost": 0, "value": 4 }, { "cost": 400, "value": 8 }, { "cost": 1400, "value": 14 }, { "cost": 3600, "value": 22 }, { "cost": 8000, "value": 32 }]
+    },
+    "plataforma": {
+      "name": "Plataformas de carga", "icon": "forklift", "unit": "tempo de carga",
+      "desc": "Carrega e descarrega mais rápido nesta estação.",
+      "levels": [{ "cost": 0, "value": 1 }, { "cost": 350, "value": 0.8 }, { "cost": 1200, "value": 0.65 }, { "cost": 3200, "value": 0.5 }, { "cost": 7500, "value": 0.35 }]
+    },
+    "escritorio": {
+      "name": "Escritório de cargas", "icon": "clipboard-list", "unit": "cargas ofertadas",
+      "desc": "Mais cargas disponíveis e reposição mais rápida.",
+      "levels": [{ "cost": 0, "value": 6 }, { "cost": 500, "value": 7 }, { "cost": 1600, "value": 9 }, { "cost": 4200, "value": 11 }, { "cost": 9000, "value": 14 }]
+    },
+    "posto": {
+      "name": "Posto de abastecimento", "icon": "fuel", "unit": "desconto no combustível",
+      "desc": "Viagens que partem daqui gastam menos combustível.",
+      "levels": [{ "cost": 0, "value": 0 }, { "cost": 450, "value": 0.1 }, { "cost": 1500, "value": 0.18 }, { "cost": 4000, "value": 0.26 }, { "cost": 8500, "value": 0.35 }]
+    },
+    "oficina": {
+      "name": "Oficina", "icon": "wrench", "unit": "desconto no reparo",
+      "desc": "Permite consertar locomotivas paradas aqui. Níveis maiores barateiam o reparo.",
+      "levels": [{ "cost": 0, "value": null }, { "cost": 600, "value": 0 }, { "cost": 1800, "value": 0.2 }, { "cost": 4500, "value": 0.35 }, { "cost": 9500, "value": 0.5 }]
+    },
+    "patio": {
+      "name": "Pátio de manobras", "icon": "git-merge", "unit": "trens extras por trecho",
+      "desc": "Aumenta a capacidade dos trechos que saem desta estação (menos congestionamento).",
+      "levels": [{ "cost": 0, "value": 0 }, { "cost": 700, "value": 1 }, { "cost": 2200, "value": 2 }, { "cost": 5200, "value": 3 }, { "cost": 11000, "value": 4 }]
+    }
+  }
+}

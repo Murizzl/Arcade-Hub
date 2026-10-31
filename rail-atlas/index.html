@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rail Atlas · Arcade Hub</title>
+  <meta name="description" content="Rail Atlas — gerencie sua companhia ferroviária pelo mundo. Um jogo persistente do Arcade Hub.">
+  <meta name="theme-color" content="#0b1424">
+  <link rel="icon" type="image/svg+xml" href="../icons/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js"></script>
+  <!-- mesma configuração e mesma sessão do Arcade Hub (nuvem do Arcade Social) -->
+  <script src="../js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+  <div id="boot" class="boot"><div class="boot-card"><div class="spinner"></div><p>Preparando os trilhos…</p></div></div>
+
+  <header class="topbar">
+    <a class="back" href="../index.html#/persistent" title="Voltar ao Arcade Hub"><i data-lucide="chevron-left"></i><span>Arcade Hub</span></a>
+    <div class="company" id="company"></div>
+    <div class="stats" id="stats"></div>
+    <span class="hub-user" id="hubUser"></span>
+  </header>
+
+  <nav class="nav" id="nav" aria-label="Menu do jogo">
+    <button class="nav-btn on" data-view="map"><i data-lucide="map"></i><span>Mapa</span></button>
+    <button class="nav-btn" data-view="network"><i data-lucide="route"></i><span>Ferrovias</span></button>
+    <button class="nav-btn" data-view="trains"><i data-lucide="train-front"></i><span>Locomotivas</span></button>
+    <button class="nav-btn" data-view="contracts"><i data-lucide="package"></i><span>Cargas</span></button>
+    <button class="nav-btn" data-view="stations"><i data-lucide="warehouse"></i><span>Estações</span></button>
+    <button class="nav-btn" data-view="reports"><i data-lucide="bar-chart-3"></i><span>Relatórios</span></button>
+    <button class="nav-btn" data-view="drivers"><i data-lucide="user-round"></i><span>Maquinistas</span></button>
+    <button class="nav-btn" data-view="achievements"><i data-lucide="award"></i><span>Conquistas</span></button>
+    <button class="nav-btn" data-view="social"><i data-lucide="users"></i><span>Social</span></button>
+    <button class="nav-btn" data-view="settings"><i data-lucide="settings"></i><span>Ajustes</span></button>
+  </nav>
+
+  <main class="stage">
+    <svg id="map" class="map" role="application" aria-label="Mapa-múndi ferroviário"></svg>
+    <div class="zoom">
+      <button class="icon-btn" id="zoomIn" aria-label="Aproximar"><i data-lucide="plus"></i></button>
+      <button class="icon-btn" id="zoomOut" aria-label="Afastar"><i data-lucide="minus"></i></button>
+      <button class="icon-btn" id="zoomHome" aria-label="Ir para a sede"><i data-lucide="home"></i></button>
+      <button class="icon-btn" id="zoomWorld" aria-label="Ver o mundo"><i data-lucide="globe-2"></i></button>
+    </div>
+    <div class="tutorial" id="tutorial" hidden></div>
+    <div class="legend"><span><i class="lg owned"></i>Sua ferrovia</span><span><i class="lg frontier"></i>À venda</span><span><i class="lg possible"></i>Futura</span></div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+    <div class="setup" id="setup" hidden></div>
+  </main>
+
+  <footer class="ticker" id="ticker"></footer>
+
+  <div class="tip" id="tip" hidden></div>
+  <div class="modal" id="modal"></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

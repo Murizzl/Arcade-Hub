@@ -1,0 +1,120 @@
+/* =========================================================
+   Rail Atlas — base e layout
+   ========================================================= */
+:root {
+  --bg: #0b1424;
+  --bg-2: #0f1b2f;
+  --surface: rgba(17, 28, 47, .92);
+  --surface-solid: #111c2f;
+  --surface-2: #17253d;
+  --surface-3: #1f3050;
+  --line: #24365a;
+  --text: #e8eef9;
+  --text-2: #a3b1c9;
+  --text-3: #6f80a0;
+  --accent: #f5b324;
+  --accent-2: #38bdf8;
+  --pos: #34d399;
+  --neg: #f87171;
+  --warn: #fbbf24;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 2px 6px rgba(0, 0, 0, .25);
+  --font: "Inter", system-ui, sans-serif;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --top-h: 60px;
+  --nav-w: 78px;
+  --tick-h: 52px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--text); font: 14px/1.45 var(--font);
+  display: grid; overflow: hidden;
+  grid-template: "top top" var(--top-h) "nav stage" 1fr "nav tick" var(--tick-h) / var(--nav-w) 1fr;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, h4 { font-family: var(--display); margin: 0; letter-spacing: -.01em; }
+svg.lucide { width: 18px; height: 18px; flex: none; }
+[hidden] { display: none !important; }
+
+/* ---------- Barra superior ---------- */
+.topbar {
+  grid-area: top; display: flex; align-items: center; gap: 18px; padding: 0 16px;
+  background: linear-gradient(180deg, #101c31, #0c1628); border-bottom: 1px solid var(--line); z-index: 5;
+}
+.back { display: flex; align-items: center; gap: 4px; color: var(--text-2); text-decoration: none; font-weight: 600; font-size: 13px; padding: 6px 10px 6px 4px; border-radius: 8px; }
+.back:hover { background: var(--surface-2); color: var(--text); }
+.company { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.co-mark { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 22%, transparent); color: var(--c); border: 1.5px solid color-mix(in srgb, var(--c) 60%, transparent); }
+.co-info { min-width: 0; }
+.co-info b { font-family: var(--display); font-size: 16px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.co-lvl { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-2); }
+.co-lvl > span { font-weight: 700; color: var(--accent); }
+.co-lvl .bar { width: 90px; }
+.stats { display: flex; gap: 6px; margin-left: auto; }
+.stat { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.stat svg { color: var(--text-2); width: 16px; height: 16px; }
+.stat b { font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums; }
+.stat small { color: var(--text-3); font-size: 11px; }
+.stat.credits svg, .stat.credits b { color: var(--accent); }
+.stat.xp svg { color: #c084fc; }
+.hub-user { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.hub-user svg { width: 15px; height: 15px; }
+
+/* ---------- Menu lateral ---------- */
+.nav { grid-area: nav; display: flex; flex-direction: column; gap: 4px; padding: 10px 8px; background: #0c1628; border-right: 1px solid var(--line); z-index: 4; }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 2px; border: 0; border-radius: 12px; background: transparent; color: var(--text-3); font-size: 10.5px; font-weight: 600; transition: background .15s, color .15s; }
+.nav-btn svg { width: 21px; height: 21px; }
+.nav-btn:hover { background: var(--surface-2); color: var(--text); }
+.nav-btn.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+
+/* ---------- Palco do mapa ---------- */
+.stage { grid-area: stage; position: relative; overflow: hidden; }
+
+/* ---------- Rodapé ---------- */
+.ticker { grid-area: tick; display: flex; align-items: center; gap: 16px; padding: 0 14px; background: #0c1628; border-top: 1px solid var(--line); overflow: hidden; z-index: 4; }
+.tk-trips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 0 1 auto; }
+.tk-trip { display: grid; grid-template-columns: auto auto 70px auto; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; font-size: 12px; color: var(--text-2); }
+.tk-trip:hover { border-color: var(--accent-2); }
+.tk-trip b { color: var(--text); }
+.tk-trip .eta { font-variant-numeric: tabular-nums; color: var(--accent-2); font-weight: 600; min-width: 44px; text-align: right; }
+.tk-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, .15); }
+.tk-empty { color: var(--text-3); font-size: 12px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.tk-log { display: flex; gap: 14px; overflow: hidden; margin-left: auto; min-width: 0; mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.tk-log-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.tk-log-item svg { width: 14px; height: 14px; }
+.tk-log-item.success svg { color: var(--pos); }
+.tk-log-item:first-child { color: var(--text-2); }
+
+/* ---------- Carregamento ---------- */
+.boot { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50; }
+.boot-card { text-align: center; color: var(--text-2); max-width: 420px; padding: 20px; }
+.boot-card code { background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+.spinner { width: 42px; height: 42px; margin: 0 auto 12px; border-radius: 50%; border: 3px solid var(--surface-3); border-top-color: var(--accent); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Telas pequenas ---------- */
+@media (max-width: 900px) {
+  :root { --top-h: 54px; --tick-h: 44px; }
+  body { grid-template: "top" var(--top-h) "stage" 1fr "tick" var(--tick-h) "nav" auto / 1fr; }
+  .nav { flex-direction: row; justify-content: space-around; padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
+  .nav-btn { flex: 1; padding: 6px 0; font-size: 9.5px; }
+  .nav-btn svg { width: 19px; height: 19px; }
+  .topbar { gap: 10px; padding: 0 10px; }
+  .back span, .hub-user, .stat small, .co-lvl small { display: none; }
+  .co-info b { max-width: 120px; font-size: 14px; }
+  .co-lvl .bar { width: 50px; }
+  .co-mark { width: 32px; height: 32px; }
+  .stat { padding: 5px 8px; }
+  .stat:nth-child(2) { display: none; }
+  .tk-log { display: none; }
+}
+@media (max-width: 420px) {
+  .stat.xp { display: none; }
+}

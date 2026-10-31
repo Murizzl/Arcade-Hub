@@ -1458,3 +1458,24 @@ textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
 .dp-saved { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--primary-soft); }
 .dp-saved small { display: block; }
 .dp-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+
+/* ---------- Jogos persistentes ---------- */
+.persist-card { display: grid; grid-template-columns: minmax(220px, 340px) 1fr; gap: 22px; padding: 18px; }
+.persist-thumb { position: relative; border-radius: var(--radius); align-self: start; aspect-ratio: 34 / 22; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--c2) 35%, transparent), transparent 60%), linear-gradient(160deg, var(--c1), #070e1b); }
+.persist-art { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .85; }
+.persist-thumb .thumb-art { position: relative; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 26px; background: linear-gradient(135deg, #fbbf24, #f97316); box-shadow: 0 12px 30px rgba(0,0,0,.45); }
+.persist-thumb .thumb-art svg { width: 54px; height: 54px; color: #1c1302; }
+.persist-thumb .thumb-label { position: absolute; top: 12px; left: 12px; }
+.persist-body h2 { font-family: var(--font-display); font-size: 1.8rem; margin: 10px 0 6px; }
+.persist-feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 14px 0; }
+.persist-feats span { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .9rem; color: var(--text-2); }
+.persist-feats svg { width: 18px; height: 18px; color: var(--primary); }
+.persist-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.persist-mini { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); text-decoration: none; color: var(--text); transition: transform .15s var(--ease); }
+.persist-mini:hover { transform: translateY(-2px); }
+.persist-mini > div { flex: 1; }
+.persist-mini b { display: block; font-family: var(--font-display); font-size: 1.05rem; }
+.persist-mini small { color: var(--text-2); }
+.pm-ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); }
+@media (max-width: 760px) { .persist-card { grid-template-columns: 1fr; } .persist-thumb { aspect-ratio: 2 / 1; } }

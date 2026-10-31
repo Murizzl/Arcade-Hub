@@ -10,6 +10,7 @@
   const NAV = [
     { r: 'home', label: 'Início', icon: 'house', mobile: 'Início' },
     { r: 'games', label: 'Explorar Jogos', icon: 'layout-grid', mobile: 'Jogos' },
+    { r: 'persistent', label: 'Persistentes', icon: 'infinity' },
     { r: 'duels', label: 'Duelos', icon: 'swords', mobile: 'Duelos' },
     { r: 'rankings', label: 'Rankings', icon: 'trophy' },
     { r: 'friends', label: 'Amigos', icon: 'users', mobile: 'Amigos' },
@@ -19,14 +20,14 @@
   ];
 
   const ROUTES = {
-    home: V.home, games: V.games, game: V.game, play: V.play,
+    home: V.home, games: V.games, persistent: V.persistent, game: V.game, play: V.play,
     duels: (el, p, q) => ({ search: V.duelSearch, lobby: V.duelLobby, result: V.duelResult }[p[0]] || V.duels)(el, p, q),
     rankings: V.rankings, friends: V.friends, achievements: V.achievements,
     shop: V.shop, gshop: V.gameShop, profile: V.profile, user: V.user, prestige: V.prestige, settings: V.settings,
     login: V.login, register: V.register, recover: V.recover
   };
   const PUBLIC = ['login', 'register', 'recover'];
-  const TITLES = { home: 'Início', games: 'Explorar jogos', game: 'Jogo', play: 'Jogando', duels: 'Duelos', rankings: 'Rankings', friends: 'Amigos', achievements: 'Conquistas', shop: 'Loja', gshop: 'Loja do jogo', profile: 'Perfil', user: 'Jogador', prestige: 'Prestígio', settings: 'Configurações', login: 'Entrar', register: 'Criar conta', recover: 'Recuperar senha' };
+  const TITLES = { home: 'Início', games: 'Explorar jogos', persistent: 'Jogos persistentes', game: 'Jogo', play: 'Jogando', duels: 'Duelos', rankings: 'Rankings', friends: 'Amigos', achievements: 'Conquistas', shop: 'Loja', gshop: 'Loja do jogo', profile: 'Perfil', user: 'Jogador', prestige: 'Prestígio', settings: 'Configurações', login: 'Entrar', register: 'Criar conta', recover: 'Recuperar senha' };
 
   function parse() {
     let raw = location.hash.replace(/^#\/?/, '') || 'home';
@@ -184,6 +185,14 @@
   window.addEventListener('scroll', () => document.getElementById('topbar').classList.toggle('scrolled', scrollY > 4), { passive: true });
   window.addEventListener('hashchange', render);
 
+  // XP relatado pelos jogos persistentes (outra aba ou ao voltar para o hub)
+  function pullPersistentXp() {
+    if (!S.state.session || parse().name === 'persistent') return;
+    S.ingestInbox().then(got => { if (got) { U.toast(`+${fmt(got.xp)} XP do Rail Atlas`, 'success', 'train-front'); got.levelUps.forEach(e => U.toast(`Nível ${e.level}!`, 'success', 'trending-up')); } });
+  }
+  window.addEventListener('storage', e => { if (e.key === 'arcadehub.inbox') pullPersistentXp(); });
+  window.addEventListener('focus', pullPersistentXp);
+
   // Carrosséis e chips ganham setas/arrastar assim que aparecem (inclusive os redesenhados depois)
   let scrollPending = false;
   new MutationObserver(() => {
@@ -202,6 +211,6 @@
     U.refreshIcons();
     AH.cloud.init()
       .catch(err => { console.error(err); S.clearSession(); U.toast('Não foi possível conectar ao servidor: ' + AH.cloud.msg(err), 'error'); })
-      .finally(() => { ready = true; render(); });
-  } else render();
+      .finally(() => { ready = true; render(); pullPersistentXp(); });
+  } else { render(); pullPersistentXp(); }
 })();

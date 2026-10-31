@@ -118,3 +118,80 @@ create policy "aceita pedido recebido" on public.friendships
 drop policy if exists "desfaz amizade" on public.friendships;
 create policy "desfaz amizade" on public.friendships
   for delete to authenticated using (auth.uid() = user_id or (auth.uid() = friend_id and status <> 'blocked'));
+
+-- =========================================================
+-- Jogos persistentes (Rail Atlas)
+-- =========================================================
+
+-- Save da companhia na nuvem + colunas públicas para o ranking
+create table if not exists public.rail_atlas_saves (
+  id          uuid primary key references auth.users on delete cascade,
+  username    text,
+  company     text,
+  level       int not null default 1,
+  deliveries  int not null default 0,
+  stations    int not null default 0,
+  data        jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+create index if not exists rail_atlas_saves_rank on public.rail_atlas_saves (deliveries desc);
+alter table public.rail_atlas_saves enable row level security;
+
+drop policy if exists "ranking visivel para logados" on public.rail_atlas_saves;
+create policy "ranking visivel para logados" on public.rail_atlas_saves
+  for select to authenticated using (true);
+drop policy if exists "dono grava o proprio save" on public.rail_atlas_saves;
+create policy "dono grava o proprio save" on public.rail_atlas_saves
+  for insert to authenticated with check (auth.uid() = id);
+drop policy if exists "dono atualiza o proprio save" on public.rail_atlas_saves;
+create policy "dono atualiza o proprio save" on public.rail_atlas_saves
+  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
+-- Eventos relatados pelos jogos (cada ID conta uma única vez)
+create table if not exists public.persistent_events (
+  id          text primary key,
+  user_id     uuid not null references auth.users on delete cascade,
+  game_id     text not null,
+  event_type  text not null,
+  kind        text,
+  xp          int not null default 0,
+  created_at  timestamptz not null default now()
+);
+create index if not exists persistent_events_day on public.persistent_events (user_id, game_id, event_type, created_at);
+alter table public.persistent_events enable row level security;
+drop policy if exists "dono ve os proprios eventos" on public.persistent_events;
+create policy "dono ve os proprios eventos" on public.persistent_events
+  for select to authenticated using (auth.uid() = user_id);
+
+-- O servidor decide o XP: confere o dono do evento, descarta repetições
+-- e aplica o teto diário. O navegador nunca informa quanto XP ganhou.
+create or replace function public.report_persistent_event(p_event_id text, p_game_id text, p_event_type text, p_kind text)
+returns int language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+  v_base int;
+  v_today int;
+  v_cap int := 150;
+  v_xp int;
+begin
+  if v_uid is null then raise exception 'não autenticado'; end if;
+  if p_event_id not like p_game_id || ':u_' || v_uid::text || ':%' then raise exception 'evento de outra conta'; end if;
+  if exists (select 1 from persistent_events where id = p_event_id) then return 0; end if;
+  v_base := case p_game_id || ':' || p_event_type || ':' || coalesce(p_kind, 'common')
+    when 'rail-atlas:cargo_delivered:common' then 2
+    when 'rail-atlas:cargo_delivered:medium' then 4
+    when 'rail-atlas:cargo_delivered:international' then 8
+    when 'rail-atlas:cargo_delivered:special' then 12
+    when 'rail-atlas:achievement_unlocked:achievement' then 20
+    else 0 end;
+  if p_event_type = 'cargo_delivered' then
+    select coalesce(sum(xp), 0) into v_today from persistent_events
+      where user_id = v_uid and game_id = p_game_id and event_type = 'cargo_delivered' and created_at >= date_trunc('day', now());
+    v_xp := greatest(0, least(v_base, v_cap - v_today));
+  else
+    v_xp := v_base;
+  end if;
+  insert into persistent_events (id, user_id, game_id, event_type, kind, xp) values (p_event_id, v_uid, p_game_id, p_event_type, p_kind, v_xp);
+  return v_xp;
+end $$;
+grant execute on function public.report_persistent_event(text, text, text, text) to authenticated;
