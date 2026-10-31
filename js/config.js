@@ -107,6 +107,24 @@ AH.config = {
   avatarIcons: ['cat', 'dog', 'rabbit', 'bird', 'fish', 'ghost', 'rocket', 'crown', 'gamepad-2', 'star', 'zap', 'flame', 'leaf', 'skull', 'bot', 'snail', 'sword', 'shield', 'heart', 'moon', 'sun', 'cloud', 'gem', 'trophy', 'music', 'pizza', 'coffee', 'smile', 'flower-2', 'anchor', 'car', 'plane', 'bug', 'cookie', 'candy', 'dumbbell', 'apple', 'cherry', 'carrot', 'orbit', 'sparkles', 'wand-2', 'palette', 'turtle', 'squirrel', 'origami', 'swords', 'eye', 'wind', 'droplets', 'snowflake', 'axe', 'crosshair', 'flame-kindling', 'heart-handshake', 'drama', 'ghost', 'venetian-mask', 'wand-sparkles', 'hand-metal', 'crown'],
   freeIcons: 6, iconPrice: 80,
   avatarColors: ['#6c4cf5', '#ff7a45', '#2a8bd8', '#14a37f', '#ef4565', '#f2a516', '#a24cf5', '#232035', '#0ea5a4', '#d9468f'],
+  // Cores do aplicativo (loja): `color` no tema claro, `dark` no escuro, `on` = texto sobre botões da cor
+  appColors: [
+    { id: 'violet',     name: 'Violeta',      color: '#6c4cf5', dark: '#8b70ff', on: '#ffffff', price: 0 },
+    { id: 'green-dark', name: 'Verde escuro', color: '#166534', dark: '#2fa35e', on: '#ffffff', price: 150 },
+    { id: 'green-light', name: 'Verde claro', color: '#3fb950', dark: '#5ee08a', on: '#06240f', price: 150 },
+    { id: 'mint',       name: 'Verde menta',  color: '#2fcf9f', dark: '#5eead4', on: '#06302a', price: 150 },
+    { id: 'lime',       name: 'Limão',        color: '#84cc16', dark: '#a3e635', on: '#1a2e05', price: 150 },
+    { id: 'ocean',      name: 'Azul oceano',  color: '#2563eb', dark: '#60a5fa', on: '#ffffff', price: 150 },
+    { id: 'sky',        name: 'Azul céu',     color: '#0ea5e9', dark: '#38bdf8', on: '#04283d', price: 150 },
+    { id: 'teal',       name: 'Turquesa',     color: '#0d9488', dark: '#2dd4bf', on: '#ffffff', price: 150 },
+    { id: 'rose',       name: 'Rosa',         color: '#ec4899', dark: '#f472b6', on: '#ffffff', price: 200 },
+    { id: 'red',        name: 'Vermelho',     color: '#e11d48', dark: '#fb7185', on: '#ffffff', price: 200 },
+    { id: 'orange',     name: 'Laranja',      color: '#f97316', dark: '#fb923c', on: '#2b1103', price: 200 },
+    { id: 'amber',      name: 'Âmbar',        color: '#d4a017', dark: '#facc15', on: '#2b2002', price: 200 },
+    { id: 'purple',     name: 'Roxo escuro',  color: '#5b21b6', dark: '#a78bfa', on: '#ffffff', price: 250 },
+    { id: 'lilac',      name: 'Lilás',        color: '#a855f7', dark: '#c084fc', on: '#ffffff', price: 250 },
+    { id: 'slate',      name: 'Grafite',      color: '#475569', dark: '#94a3b8', on: '#ffffff', price: 250 }
+  ],
   cardThemes: [
     { id: 'violet', name: 'Violeta',    color: '#6c4cf5', price: 0 },
     { id: 'sunset', name: 'Pôr do sol', color: '#ff7a45', price: 120 },

@@ -20,12 +20,12 @@
   function defaultUser(username) {
     return {
       id: uid(), username: username || 'Jogador', avatar: { icon: 'gamepad-2', color: '#6c4cf5', frame: 'basic' },
-      cardTheme: 'violet', bio: '', joined: new Date().toISOString(),
+      cardTheme: 'violet', appColor: 'violet', bio: '', joined: new Date().toISOString(),
       level: 1, xp: 0, totalXp: 0, prestige: 0, prestigeHistory: [],
       coins: 150, matches: 0, wins: 0, losses: 0, draws: 0, duelWins: 0, duelLosses: 0, mmr: 1000,
       favorites: [], stats: {}, recent: [], history: [], achievements: {}, challengesDone: 0, challenges: freshChallenges(),
       privacy: { sharePlaying: true, showOnline: true },
-      inventory: { frames: [], themes: [], icons: [], titles: [] }, title: 'novato',
+      inventory: { frames: [], themes: [], icons: [], titles: [], colors: [] }, title: 'novato',
       gear: { owned: {}, equipped: {} } // cosméticos por jogo (veja js/gameshop.js)
     };
   }
@@ -104,8 +104,9 @@
   // e mantém como "possuídos" os itens que já estavam equipados.
   function migrate() {
     const u = state.user; if (!u) return;
-    u.inventory = Object.assign({ frames: [], themes: [], icons: [], titles: [] }, u.inventory);
+    u.inventory = Object.assign({ frames: [], themes: [], icons: [], titles: [], colors: [] }, u.inventory);
     if (!u.title) u.title = 'novato';
+    if (!u.appColor || !C.appColors.some(c => c.id === u.appColor)) u.appColor = 'violet';
     u.gear = Object.assign({ owned: {}, equipped: {} }, u.gear);
     // Perfis antigos guardavam os desafios só neste aparelho: adota o que já existe para não duplicar resgates.
     if (!u.challenges) u.challenges = JSON.parse(JSON.stringify(state.challenges || freshChallenges()));
@@ -119,7 +120,7 @@
   // PRODUÇÃO: compra via RPC `buy_item` que debita moedas no servidor (transação).
   function catalog(kind) {
     if (kind === 'icons') return C.avatarIcons.map((id, i) => ({ id, name: id, price: i < C.freeIcons ? 0 : C.iconPrice }));
-    return { frames: C.frames, themes: C.cardThemes, titles: C.titles }[kind];
+    return { frames: C.frames, themes: C.cardThemes, titles: C.titles, colors: C.appColors }[kind];
   }
   function owns(kind, id) {
     const item = catalog(kind).find(x => x.id === id);
@@ -144,6 +145,7 @@
     if (kind === 'themes') u.cardTheme = id;
     if (kind === 'icons') u.avatar.icon = id;
     if (kind === 'titles') u.title = id;
+    if (kind === 'colors') u.appColor = id;
     save(); return true;
   }
   // ---------- Loja por jogo ----------

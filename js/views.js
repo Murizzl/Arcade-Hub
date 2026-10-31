@@ -1038,13 +1038,14 @@
   /* ==================== LOJA ==================== */
   V.shop = (el, p, q) => {
     let tab = q.tab || 'frames';
-    const tabs = [['frames', 'Molduras', 'circle-dashed'], ['themes', 'Temas do cartão', 'palette'], ['icons', 'Ícones', 'smile'], ['titles', 'Títulos', 'badge']];
-    const equipped = kind => ({ frames: S.user.avatar.frame, themes: S.user.cardTheme, icons: S.user.avatar.icon, titles: S.user.title }[kind]);
+    const tabs = [['frames', 'Molduras', 'circle-dashed'], ['themes', 'Temas do cartão', 'palette'], ['colors', 'Cores do app', 'paintbrush'], ['icons', 'Ícones', 'smile'], ['titles', 'Títulos', 'badge']];
+    const equipped = kind => ({ frames: S.user.avatar.frame, themes: S.user.cardTheme, icons: S.user.avatar.icon, titles: S.user.title, colors: S.user.appColor }[kind]);
     const itemName = (kind, it) => kind === 'icons' ? 'Ícone ' + it.id.replace(/-\d+$/, '').replace(/-/g, ' ') : it.name;
     const preview = (kind, it) => {
       const u = S.user;
       if (kind === 'frames') return avatar({ username: u.username, avatar: { ...u.avatar, frame: it.id } }, 'lg');
       if (kind === 'themes') return `<div class="shop-theme" style="background:${it.color}">${avatar(u, 'sm')}<span>${esc(u.username)}</span></div>`;
+      if (kind === 'colors') return `<div class="shop-color" style="--c:${it.color};--d:${it.dark};--on:${it.on}"><span class="sc-btn">Botão</span><span class="sc-dot"></span><span class="sc-dot sc-dot-d"></span></div>`;
       if (kind === 'icons') return `<span class="avatar av-lg" style="--av:${u.avatar.color}">${ic(it.id)}</span>`;
       return `<span class="tag tag-primary" style="font-size:.9rem;padding:6px 12px">${ic('badge')} ${esc(it.name)}</span>`;
     };
@@ -1070,7 +1071,7 @@
       const t = e.target.closest('[data-tab]');
       if (t) { tab = t.dataset.tab; history.replaceState(null, '', '#/shop?tab=' + tab); draw(); return; }
       const eq = e.target.closest('[data-equip]');
-      if (eq) { S.equip(tab, eq.dataset.equip); U.toast('Item equipado!', 'success', 'check'); draw(); return; }
+      if (eq) { S.equip(tab, eq.dataset.equip); AH.app.applyTheme(); U.toast('Item equipado!', 'success', 'check'); draw(); return; }
       const b = e.target.closest('[data-buy]');
       if (!b) return;
       const it = S.catalog(tab).find(x => x.id === b.dataset.buy);
@@ -1081,7 +1082,7 @@
         onOk: () => {
           const r = S.buy(tab, it.id);
           if (!r.ok) return U.toast(r.error, 'error');
-          S.equip(tab, it.id);
+          S.equip(tab, it.id); AH.app.applyTheme();
           U.toast('Compra feita e item equipado!', 'success', 'shopping-bag'); U.confetti(30); draw();
         }
       });

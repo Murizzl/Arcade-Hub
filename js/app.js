@@ -87,7 +87,22 @@
     const t = S.state.settings.theme;
     if (t === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
+    applyAccent();
   }
+
+  // Cor do app comprada na loja: sobrescreve só o roxo do tema (claro/escuro)
+  function applyAccent() {
+    const st = document.documentElement.style, id = S.state.user?.appColor;
+    const c = AH.config.appColors.find(x => x.id === id);
+    if (!c || c.id === 'violet') { ['--primary', '--primary-600', '--primary-soft', '--on-primary'].forEach(k => st.removeProperty(k)); return; }
+    const t = S.state.settings.theme;
+    const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    st.setProperty('--primary', dark ? c.dark : c.color);
+    st.setProperty('--primary-600', 'color-mix(in srgb, var(--primary) 85%, black)');
+    st.setProperty('--primary-soft', `color-mix(in srgb, var(--primary) ${dark ? 22 : 15}%, var(--surface))`);
+    st.setProperty('--on-primary', c.on);
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyAccent());
 
   function openNotifications() {
     const list = () => S.state.notifications.length
@@ -178,7 +193,7 @@
   }).observe(main, { childList: true, subtree: true });
 
   // Atualiza o cabeçalho quando o estado muda (moedas, nível, notificações)
-  S.subscribe(() => { if (S.state.session) { renderShell(parse().name); U.refreshIcons(); } });
+  S.subscribe(() => { applyAccent(); if (S.state.session) { renderShell(parse().name); U.refreshIcons(); } });
 
   AH.app = { render, applyTheme };
   applyTheme();

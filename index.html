@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Arcade Hub</title>
   <meta name="description" content="Arcade Hub — minijogos sociais gratuitos com níveis, prestígio, amigos e duelos.">
   <meta name="theme-color" content="#6c4cf5">
@@ -61,6 +61,21 @@
   <div class="modal-root" id="modalRoot"></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
+  <script>
+    // iOS: sem seleção de texto, menu de segurar nem zoom por duplo toque (exceto em campos de texto)
+    (function () {
+      const campo = (e) => e.target && e.target.closest && e.target.closest('input, textarea, [contenteditable="true"]');
+      document.addEventListener('selectstart', (e) => { if (!campo(e)) e.preventDefault(); });
+      document.addEventListener('contextmenu', (e) => { if (!campo(e)) e.preventDefault(); });
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach((n) => document.addEventListener(n, (e) => e.preventDefault()));
+      let ultimo = 0;
+      document.addEventListener('touchend', (e) => {
+        const t = Date.now();
+        if (t - ultimo < 350 && !campo(e)) e.preventDefault();
+        ultimo = t;
+      }, { passive: false });
+    })();
+  </script>
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/gameshop.js"></script>
