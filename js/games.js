@@ -438,12 +438,14 @@
           // 1) sobe e inclina
           await src.animate([{ transform: 'translateY(-14px) rotate(0deg)' }, { transform: tr }], { duration: 380, easing: EASE, fill: 'forwards' }).finished;
           // 2) fio de líquido + dose por dose: o fio vai da boca do frasco até a superfície do destino
-          const unit = dR.height * 0.86 / PCAP, bottom = dR.top - bR.top + dR.height;
-          const lip = dR.top - bR.top - sR.height * 0.12, lvl = n => bottom - n * unit - lip;
+          // o fio nasce na quina de baixo da boca já inclinada (medida no frasco, não estimada)
+          const mR = src.getBoundingClientRect();
+          const spoutX = (right ? mR.right : mR.left) - bR.left, lip = mR.top - bR.top + sR.width * 0.82;
+          const unit = dR.height * 0.86 / PCAP, bottom = dR.top - bR.top + dR.height, lvl = n => bottom - n * unit - lip;
           const n0 = tubes[to].length, h0 = Math.max(8, lvl(n0)), h1 = Math.max(8, lvl(n0 + k));
           const stream = document.createElement('span');
           stream.className = 'pz-stream';
-          stream.style.cssText = `--c:${color};left:${dR.left - bR.left + dR.width / 2 - 1.5}px;top:${lip}px;width:3px;height:${h1}px;animation:none;transform-origin:50% 0`;
+          stream.style.cssText = `--c:${color};left:${spoutX - 1.5}px;top:${lip}px;width:3px;height:${h1}px;animation:none;transform-origin:50% 0`;
           board.appendChild(stream);
           await stream.animate([{ height: '0px' }, { height: h0 + 'px' }], { duration: 60, easing: 'ease-out', fill: 'forwards' }).finished;
           const srcSpans = [...src.querySelectorAll('.pz-liquid span')].slice(-k).reverse();
