@@ -14,8 +14,8 @@ import { modal, closeModal, toast, ask } from './main.js';
 import { compName } from './cups.js';
 
 // duração de cada tempo em 1x, em minutos reais (preferência de cada usuário; padrão 2 min)
-export const HALF_OPTIONS = [1, 2, 3, 5, 8];
-export function prefs() { try { return { halfMinutes: 2, ...JSON.parse(localStorage.getItem('clublegacy.prefs') || '{}') }; } catch (e) { return { halfMinutes: 2 }; } }
+export const HALF_OPTIONS = [2, 3, 5, 8, 10];
+export function prefs() { try { return { halfMinutes: 5, ...JSON.parse(localStorage.getItem('clublegacy.prefs') || '{}') }; } catch (e) { return { halfMinutes: 5 }; } }
 export function setPrefs(p) { try { localStorage.setItem('clublegacy.prefs', JSON.stringify({ ...prefs(), ...p })); } catch (e) { /* */ } }
 // segundos simulados por segundo real: em 1x, um tempo dura `halfMinutes` minutos reais
 const SPEED_KEYS = [1, 2, 4, 8];
@@ -157,12 +157,14 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
     if (running && m.phase === 'live') {
-      // ritmo: lances perigosos sempre em velocidade natural; o resto acelera de leve
-      // ou é pulado até o próximo lance, para o relógio bater com a velocidade escolhida
+      // 1x e 2x: contínuo, sem cortes nem acelerações (chutes em leve câmera lenta);
+      // 4x e 8x: melhores momentos, cortando o meio-campo até o próximo lance
+      const cont = speed <= 2;
       if (ideal == null || ideal < m.total - 30) ideal = m.total;
       ideal += realDt * speedRate(speed);
       const behind = ideal - m.total;
-      if (!dangerous() && behind > 1.5) { // corta direto para o próximo lance
+      if (cont) acc += realDt * speedRate(speed) * (m.ball.flight?.kind === 'shot' ? 0.55 : 1);
+      else if (!dangerous() && behind > 1.5) { // corta direto para o próximo lance
         let n = 0;
         while (!dangerous() && m.total < ideal && n++ < 1200 && m.phase === 'live') m.tick();
         prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z }; trail = []; acc = 0;
@@ -190,7 +192,8 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
     const owner = m.ball.owner;
     for (const T of m.teams) for (const p of T.on) players.push({
       x: p.px + (p.x - p.px) * a, y: p.py + (p.y - p.py) * a, side: T.side, num: p.p.num, gk: p.role === 'GK', dive: p.dive ? p.dive * (T.side === 0 ? 1 : 1) : 0,
-      ball: p === owner, sel: p.p.id === sel, label: (lb.has(p.p.id) || p.p.id === sel || (p === owner && m.ball.owner?.r && false)) ? p.p.name.split(' ').slice(-1)[0] : null
+      ball: p === owner, sel: p.p.id === sel, target: !!(m.ball.flight && m.ball.flight.kind !== 'shot' && m.ball.flight.res?.to === p),
+      label: (lb.has(p.p.id) || p.p.id === sel || (p === owner && speed <= 2)) ? p.p.name.split(' ').slice(-1)[0] : null
     });
     const b = m.ball;
     const ball = { x: prevBall.x + (b.x - prevBall.x) * a, y: prevBall.y + (b.y - prevBall.y) * a, z: prevBall.z + (b.z - prevBall.z) * a };

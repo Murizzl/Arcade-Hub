@@ -89,9 +89,13 @@ export class PitchRenderer {
       }
     }
     if (scene.pass) {
-      g.strokeStyle = 'rgba(190,242,100,.35)'; g.lineWidth = s * 0.25; g.setLineDash([s * 0.8, s * 0.6]);
-      g.beginPath(); g.moveTo(this.X(scene.pass.sx), this.Y(scene.pass.sy)); g.lineTo(this.X(scene.pass.ex), this.Y(scene.pass.ey)); g.stroke();
-      g.setLineDash([]);
+      // linha do passe com seta no destino (deixa claro para onde a bola vai)
+      const sx = this.X(scene.pass.sx), sy = this.Y(scene.pass.sy), ex = this.X(scene.pass.ex), ey = this.Y(scene.pass.ey);
+      g.strokeStyle = 'rgba(217,249,157,.6)'; g.lineWidth = s * 0.3; g.setLineDash([s * 0.9, s * 0.6]);
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke(); g.setLineDash([]);
+      const ang = Math.atan2(ey - sy, ex - sx), hl = s * 1.6;
+      g.fillStyle = 'rgba(217,249,157,.8)'; g.beginPath(); g.moveTo(ex, ey);
+      g.lineTo(ex - hl * Math.cos(ang - 0.45), ey - hl * Math.sin(ang - 0.45)); g.lineTo(ex - hl * Math.cos(ang + 0.45), ey - hl * Math.sin(ang + 0.45)); g.closePath(); g.fill();
     }
     const r = Math.max(5 * this.dpr, s * 1.25);
     for (const p of scene.players) {
@@ -99,6 +103,7 @@ export class PitchRenderer {
       const X = this.X(p.x), Y = this.Y(p.y);
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(X + r * 0.2, Y + r * 0.35, r, r * 0.7, 0, 0, Math.PI * 2); g.fill();
       if (p.ball) { g.strokeStyle = '#d9f99d'; g.lineWidth = r * 0.28; g.beginPath(); g.arc(X, Y, r * 1.45, 0, Math.PI * 2); g.stroke(); }
+      if (p.target) { g.strokeStyle = 'rgba(217,249,157,.9)'; g.lineWidth = r * 0.22; g.setLineDash([r * 0.5, r * 0.35]); g.beginPath(); g.arc(X, Y, r * 1.6, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
       if (p.sel) { g.strokeStyle = '#fff'; g.lineWidth = r * 0.2; g.beginPath(); g.arc(X, Y, r * 1.75, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = p.gk ? kit.gk : kit.fill;
       g.strokeStyle = kit.stroke; g.lineWidth = r * 0.22;

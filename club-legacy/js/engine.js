@@ -15,7 +15,7 @@ import { ratingAt } from './players.js';
 
 // CLOCK: minutos do placar por minuto de jogo simulado. O relógio corre mais rápido que o
 // movimento, para a partida não se arrastar e os jogadores não ficarem frenéticos ao acelerar.
-export const L = 105, W = 68, DT = 0.25, CLOCK = 2.5, HALF = 2700 / CLOCK;
+export const L = 105, W = 68, DT = 0.25, CLOCK = 5, HALF = 2700 / CLOCK;
 const GOAL_HALF = 3.66; // metade da largura do gol (7,32 m)
 
 export const STYLES = {
@@ -178,7 +178,7 @@ export class Match {
     if (!celebrate) { this.ball.x = L / 2; this.ball.y = W / 2; }
     this.ball.z = 0;
     const net = celebrate ? { x: this.ball.x, y: this.ball.y } : null;
-    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : celebrate ? 13 : 7, celebrate, net };
+    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : celebrate ? 9 : 4, celebrate, net };
     this.poss = side;
     if (snap) for (const T of this.teams) for (const m of T.on) {
       const s = T.slots[m.slot]; const fx = Math.min(0.47, s.x * 0.8);
@@ -189,7 +189,7 @@ export class Match {
   setRestart(kind, side, x, y, wait = 2.5) {
     this.ball.owner = null; this.ball.flight = null; this.ball.vx = this.ball.vy = 0; this.ball.z = 0;
     this.ball.x = clamp(x, 0, L); this.ball.y = clamp(y, 0, W);
-    this.restart = { kind, side, x: this.ball.x, y: this.ball.y, wait };
+    this.restart = { kind, side, x: this.ball.x, y: this.ball.y, wait: wait * 0.55 }; // bola parada rápida: o relógio é comprimido
     this.poss = side;
   }
 
@@ -386,7 +386,7 @@ export class Match {
   handleRestart() {
     const r = this.restart; const b = this.ball;
     // depois do gol a bola fica na rede durante a comemoração e só então volta ao centro
-    if (r.net && r.wait > 6) { b.x = r.net.x; b.y = r.net.y; } else { b.x = r.x; b.y = r.y; }
+    if (r.net && r.wait > 4) { b.x = r.net.x; b.y = r.net.y; } else { b.x = r.x; b.y = r.y; }
     b.z = 0;
     r.wait -= DT;
     if (r.wait > 0) return;
@@ -434,7 +434,7 @@ export class Match {
       const front = (o.x - h.x) * (h.side === 0 ? 1 : -1) > -0.3;
       if (front) h.blocked = true;
       if (od > (front ? 2.4 : 1.6)) continue;
-      if (!this.rng.chance(DT * (front ? 1.7 : 0.55) * pr.tackle)) continue;
+      if (!this.rng.chance(DT * (front ? 3.2 : 1.05) * pr.tackle)) continue;
       const foulP = (Math.abs(this.goalX(h.side) - h.x) < 16.5 ? 0.022 : 0.062) + (O.tactics.press === 'high' ? 0.035 : 0) + (o.a.def < 55 ? 0.03 : 0) + (o.energy < 50 ? 0.03 : 0);
       const careful = o.yellow ? 0.55 : 1; // já advertido, entra com mais cuidado
       if (this.rng.chance(foulP * careful)) return this.foul(o, h);
@@ -448,14 +448,14 @@ export class Match {
       o.stun = 1.2; // driblado
       h.decide = Math.min(h.decide, 0.4);
     }
-    if (h.decide <= 0 || h.carry > 3) this.decide(h);
+    if (h.decide <= 0 || h.carry > 1.8) this.decide(h);
   }
 
   gain(m) {
     const prev = this.ball.owner ? this.ball.owner.side : this.ball.lastSide;
     this.ball.owner = m; this.ball.flight = null; this.ball.lastSide = m.side; m.carry = 0;
     const T = this.teams[m.side];
-    m.decide = 0.4 + this.rng.next() * 0.5;
+    m.decide = 0.22 + this.rng.next() * 0.3;
     if (prev !== m.side) { T.transition = this.total; this.lastPass = null; }
   }
 
@@ -467,20 +467,20 @@ export class Match {
     const press = this.nearestOpp(h);
     h.carry = 0;
     const counter = st === STYLES.counter && T.transition && this.total - T.transition < 8;
-    h.decide = 0.85 * (st.tempo * (counter ? 0.6 : 1)) * (0.6 + this.rng.next() * 0.8) * (press.d < 4 ? 0.5 : 1);
+    h.decide = 0.45 * (st.tempo * (counter ? 0.6 : 1)) * (0.6 + this.rng.next() * 0.8) * (press.d < 4 ? 0.5 : 1);
 
     // 1) finalização
     if (h.role !== 'GK' && d < 33) {
       const xg = this.xgAt(h);
-      const roleK = h.role === 'ST' ? 0.015 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.022 : h.role === 'CM' ? -0.01 : 0;
+      const roleK = h.role === 'ST' ? 0.012 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.025 : h.role === 'CM' ? -0.015 : 0;
       const iH = this.ins(h);
-      const thr = 0.07 + roleK + (iH?.shoot || 0) - m * 0.005 - (h.a.sho - 60) / 2000;
+      const thr = 0.055 + roleK + (iH?.shoot || 0) - m * 0.005 - (h.a.sho - 60) / 2000;
       // altruísmo: rola para um companheiro com chance claramente melhor
       if (xg > thr * 0.6) {
         const alt = this.betterPlaced(h, xg);
-        if (alt && this.rng.chance(0.35 + h.a.pas / 400)) return this.pass(h, alt);
+        if (alt && this.rng.chance((h.role === 'ST' ? 0.55 : 0.35) + h.a.pas / 400)) return this.pass(h, alt);
       }
-      if ((xg > thr && this.rng.chance(0.45 + m * 0.05)) || (d < 27 && this.rng.chance(0.008 + h.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
+      if ((xg > thr && this.rng.chance(0.8 + m * 0.05)) || (d < 27 && this.rng.chance(0.008 + h.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
     }
     // 2) cruzamento das pontas
     if (h.role !== 'GK' && fx > 0.73 && (fy < 0.2 || fy > 0.8) && this.rng.chance(0.4 * st.cross * (this.ins(h)?.cross || 1))) {
@@ -488,7 +488,8 @@ export class Match {
     }
     // 3) passe
     const opt = this.choosePass(h, counter);
-    const passWill = h.role === 'GK' ? 1 : st === STYLES.possession ? 0.85 : 0.68 - (h.a.dri - 60) / 300;
+    let passWill = h.role === 'GK' ? 1 : st === STYLES.possession ? 0.85 : 0.68 - (h.a.dri - 60) / 300;
+    if (h.role === 'ST' && fx > 0.65 && press.d < 4) passWill = 0.9; // pressionado, o centroavante faz o pivô
     if (opt && (press.d < 3.5 || this.rng.chance(passWill) || opt.score > 1.2)) return this.pass(h, opt);
     // 4) condução (continua com a bola)
     h.dribbling = true;
@@ -502,7 +503,7 @@ export class Match {
       const len = dist(h.x, h.y, t.x, t.y);
       if (len < 4 || len > 22) continue;
       const xg = this.xgAt(t);
-      if (xg < myXg * 1.4 || xg < 0.06) continue;
+      if (xg < myXg * (h.role === 'ST' && t.role !== 'ST' ? 0.85 : 1.4) || xg < 0.05) continue; // centroavante divide mais as chances
       let lane = false;
       for (const o of O.on) { if (o.off) continue; const sg = segInfo(h.x, h.y, t.x, t.y, o.x, o.y); if (sg.u > 0.1 && sg.u < 0.95 && sg.d < 1.8) { lane = true; break; } }
       if (lane) continue;
@@ -560,6 +561,9 @@ export class Match {
       const iP = this.ins(h);
       if (iP?.prog && prog > 8) score += prog * 0.012 * iP.prog;
       if (iP?.long && len > 30) score += (len - 30) * 0.03;
+      // no terço final, ponta ou meia livre é uma boa opção (gols mais distribuídos)
+      if (tf > 0.7 && open > 4 && (t.role === 'LW' || t.role === 'RW' || t.role === 'AM' || t.role === 'CM')) score += 0.45;
+      if (t.role === 'ST' && open < 4 && !this.ins(t)?.aerial) score -= 0.35; // centroavante marcado não é a opção automática
       const iT = this.ins(t);
       if (iT?.aerial && isFwdRole(t.role) && tf > 0.7) score += 0.15;
       score += this.rng.next() * 0.35;
@@ -676,7 +680,7 @@ export class Match {
     }
     if (kind === 'freekick' && this.rng.chance(0.24)) blocked = O.on.filter(o => !o.off && o.role !== 'GK').sort((a, c) => dist(a.x, a.y, h.x, h.y) - dist(c.x, c.y, h.x, h.y))[0] || false;
     // finalizador e goleiro deslocam a chance, sem multiplicar a ponto de descolar do xG
-    const adj = clamp(xg * 1.52 * (0.75 + q / 300) * (1.2 - gkQ / 300), 0.003, 0.9);
+    const adj = clamp(xg * 1.5 * (0.75 + q / 300) * (1.2 - gkQ / 300), 0.003, 0.9);
     const onT = clamp(0.28 + q / 210 + xg * 0.63, 0.3, 0.92);
     const r = this.rng.next();
     let outcome;
@@ -952,7 +956,7 @@ export class Match {
             tx = 0.012;
             if (Math.abs(gyW - p.y) > 1) p.dive = gyW > p.y ? 1 : -1;
           }
-        } else if (this.restart && this.restart.kind === 'kickoff' && this.restart.celebrate && this.restart.wait > 6) {
+        } else if (this.restart && this.restart.kind === 'kickoff' && this.restart.celebrate && this.restart.wait > 4) {
           // comemoração: o autor corre para a bandeirinha, os companheiros vão atrás
           const c = this.restart.celebrate;
           if (c.side === s) {
