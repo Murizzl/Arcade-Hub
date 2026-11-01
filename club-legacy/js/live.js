@@ -5,11 +5,11 @@
    ========================================================= */
 import { esc, ic, POS_LABEL } from './util.js';
 import { STYLES, PRESS, LINES, INSTR } from './engine.js';
-import { PitchRenderer, kitsFor } from './render.js';
+import { PitchRenderer, kitsFor, teamColors } from './render.js';
 import { crest } from './art.js';
 import * as C from './career.js';
 import { modal, closeModal, toast } from './main.js';
-import { resultModalHtml } from './match.js';
+import { resultModalHtml, statsHtml } from './match.js';
 import { Arcade } from './arcade.js';
 
 const root = document.getElementById('match');
@@ -87,15 +87,9 @@ export function openLiveGuest(room, { home, away, mySide = 1, oppName, onClose }
   function pane() {
     const el = root.querySelector('#lPane'); if (!el) return;
     if (tab === 'log') el.innerHTML = log.slice().reverse().slice(0, 120).map(l => `<div class="log-item ${l.kind}"><span class="m">${l.min}</span><span>${esc(l.text)}</span></div>`).join('') || '<p class="faint small">Aguardando o apito…</p>';
-    else if (tab === 'stats') el.innerHTML = cur ? statsLite(cur.st) : '';
+    else if (tab === 'stats') el.innerHTML = cur ? statsHtml(cur.st, teamColors(kits)) : '';
     else el.innerHTML = team ? team.on.map(p => `<div class="sub-row"><span class="posb">${POS_LABEL[p.role]}</span><span class="grow small">${p.num}. ${esc(p.name)}${p.yellow ? ' 🟨' : ''}${p.injured ? ' ✚' : ''}</span><span class="energy ${p.energy < 50 ? 'vlow' : p.energy < 70 ? 'low' : ''}"><i style="width:${p.energy}%"></i></span></div>`).join('') : '<p class="faint small">Carregando…</p>';
   }
-  function statsLite(st) {
-    const tot = (st[0].poss + st[1].poss) || 1;
-    const rows = [['Posse', Math.round(st[0].poss / tot * 100) + '%', Math.round(st[1].poss / tot * 100) + '%'], ['Finalizações', st[0].shots, st[1].shots], ['No gol', st[0].onTarget, st[1].onTarget], ['xG', st[0].xg, st[1].xg], ['Passes certos', st[0].passesOk, st[1].passesOk], ['Escanteios', st[0].corners, st[1].corners], ['Faltas', st[0].fouls, st[1].fouls], ['Cartões', st[0].yellows + st[0].reds, st[1].yellows + st[1].reds]];
-    return rows.map(([l, a, b]) => `<div class="sbar"><span class="v">${a}</span><span class="lbl">${l}</span><span class="v">${b}</span></div>`).join('');
-  }
-
   function tacticsPanel() {
     if (!team) return toast('Aguardando dados do time…', false);
     const t = { ...team.tactics };

@@ -111,6 +111,12 @@ function roundRect(g, x, y, w, h, r) {
   g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
 }
 
+// cor de cada time nas barras de estatística: a camisa, ou o detalhe se a camisa for escura demais
+export function teamColors(kits) {
+  const lum = h => { if (!/^#[0-9a-f]{6}$/i.test(h || '')) return 128; const n = parseInt(h.slice(1), 16); return ((n >> 16) * 299 + ((n >> 8 & 255) * 587) + ((n & 255) * 114)) / 1000; };
+  return kits.map(k => lum(k.fill) < 45 ? (lum(k.text) < 45 ? '#9ca3af' : k.text) : k.fill);
+}
+
 // cores dos uniformes: o visitante usa o segundo uniforme se as cores forem parecidas
 export function kitsFor(home, away) {
   const hc = home.colors[0];

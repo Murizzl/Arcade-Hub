@@ -5,9 +5,9 @@
    nunca muda as probabilidades, só a pressa de chegar lá.
    ========================================================= */
 import { esc, ic, POS_LABEL, clamp } from './util.js';
-import { DT, HALF, STYLES, PRESS, LINES, MENTALITY } from './engine.js';
+import { DT, HALF, L, STYLES, PRESS, LINES, MENTALITY } from './engine.js';
 import { ratingAt } from './players.js';
-import { PitchRenderer, kitsFor } from './render.js';
+import { PitchRenderer, kitsFor, teamColors } from './render.js';
 import * as C from './career.js';
 import { crest } from './art.js';
 import { modal, closeModal, toast } from './main.js';
@@ -132,11 +132,44 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
     w.append(c); setTimeout(() => c.remove(), 2600);
   }
 
+  // velocidade natural de exibição (segundos simulados por segundo real)
+  // ~1,8x o tempo real em 1x: os jogadores correm num ritmo natural; o resto do
+  // tempo de jogo passa em cortes, como num programa de melhores momentos
+  const VIS = 1.8;
+  const SPEED_IDX = { 1: 0, 2: 1, 4: 2, 8: 3 };
+  const ZONE = [16, 11, 7, 4], PACE = [1, 1.5, 2, 2.6]; // medidos para bater a duração escolhida
+  let ideal = null, skipT = 0;
+  function dangerous() {
+    const b = m.ball, r = m.restart, fl = b.flight;
+    if (r) return r.kind !== 'throw' && r.kind !== 'goalkick' && r.kind !== 'free' && !(r.kind === 'kickoff' && !r.celebrate);
+    if (fl && (fl.kind === 'shot' || fl.kind === 'cross')) return true;
+    // quanto maior a velocidade, mais perto do gol precisa estar para ser mostrado
+    const z = ZONE[SPEED_IDX[speed]];
+    return b.x < z || b.x > L - z;
+  }
+  function skipFlash() {
+    const now = performance.now(); if (now - skipT < 800) return; skipT = now;
+    const el = root.querySelector('#fieldWrap'); if (!el) return;
+    const f = document.createElement('div'); f.className = 'skip-flash'; f.innerHTML = `${ic('fast-forward')} <span>${m.minuteLabel()}</span>`;
+    el.append(f); icons(); setTimeout(() => f.remove(), 700);
+  }
+
   /* ---------- laço de renderização ---------- */
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
     if (running && m.phase === 'live') {
-      acc += realDt * speedRate(speed);
+      // ritmo: lances perigosos sempre em velocidade natural; o resto acelera de leve
+      // ou é pulado até o próximo lance, para o relógio bater com a velocidade escolhida
+      if (ideal == null || ideal < m.total - 30) ideal = m.total;
+      ideal += realDt * speedRate(speed);
+      const behind = ideal - m.total;
+      if (!dangerous() && behind > 1.5) { // corta direto para o próximo lance
+        let n = 0;
+        while (!dangerous() && m.total < ideal && n++ < 1200 && m.phase === 'live') m.tick();
+        prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z }; trail = []; acc = 0;
+        for (const T of m.teams) for (const p of T.on) { p.px = p.x; p.py = p.y; }
+        if (n > 8) skipFlash();
+      } else acc += realDt * VIS * PACE[SPEED_IDX[speed]];
       let steps = 0;
       while (acc >= DT && steps++ < 300 && running && m.phase === 'live') {
         prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z };
@@ -144,7 +177,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
         // saltos (bola recolocada no centro, reinícios) não são interpolados
         if (Math.hypot(m.ball.x - prevBall.x, m.ball.y - prevBall.y) > 12) { prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z }; trail = []; }
       }
-    }
+    } else ideal = null;
     if (live) { live.room.pushState(m); if (now - teamT > 1000) { teamT = now; sendTeam(); } }
     const a = running ? clamp(acc / DT, 0, 1) : 1;
     draw(a);
@@ -180,7 +213,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
   function pane() {
     const el = root.querySelector('#mPane');
     if (tab === 'log') el.innerHTML = m.log.slice().reverse().slice(0, 120).map(l => `<div class="log-item ${l.kind}"><span class="m">${l.min}</span><span>${esc(l.text)}</span></div>`).join('') || '<p class="faint small">A bola vai rolar…</p>';
-    else if (tab === 'stats') el.innerHTML = statsHtml(m.stats, m);
+    else if (tab === 'stats') el.innerHTML = statsHtml(m.stats, teamColors(kits));
     else if (tab === 'stars') el.innerHTML = starsHtml();
     else el.innerHTML = teamHtml();
   }
@@ -318,7 +351,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
     if (ffwd) return;
     const T = m.teams[side];
     modal(`<div class="modal-head"><h2>${ic('coffee')} Intervalo · ${esc(H.short)} ${m.score[0]} x ${m.score[1]} ${esc(A.short)}</h2></div>
-      ${statsHtml(m.halfStats, m)}
+      ${statsHtml(m.halfStats, teamColors(kits))}
       ${live ? `<p class="small" id="guestReady">${guestReady ? '<span class="pos">Adversário pronto ✓</span>' : '<span class="faint">Aguardando o adversário ajustar o time…</span>'}</p>` : ''}
       <p class="faint small">Ajuste a equipe antes do segundo tempo. ${T.subs}/5 substituições usadas.</p>
       <div class="modal-foot"><button class="btn" data-ht="tactics">${ic('clipboard-list')} Táticas</button><button class="btn" data-ht="subs">${ic('repeat')} Substituições</button><button class="btn btn-primary" data-ht="go">${ic('play')} Começar 2º tempo</button></div>`, { locked: true });
@@ -364,7 +397,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
 /* ---------- componentes compartilhados ---------- */
 function energyBar(v) { return `<span class="energy ${v < 50 ? 'vlow' : v < 70 ? 'low' : ''}"><i style="width:${v}%"></i></span>`; }
 
-function statsHtml(st, m) {
+export function statsHtml(st, colors = ['var(--lime)', '#7dd3fc']) {
   const tot = (st[0].poss + st[1].poss) || 1;
   const rows = [
     ['Posse de bola', Math.round(st[0].poss / tot * 100) + '%', Math.round(st[1].poss / tot * 100) + '%', st[0].poss, st[1].poss],
@@ -373,7 +406,7 @@ function statsHtml(st, m) {
     ['Desarmes', st[0].tackles, st[1].tackles], ['Interceptações', st[0].interceptions, st[1].interceptions],
     ['Escanteios', st[0].corners, st[1].corners], ['Impedimentos', st[0].offsides, st[1].offsides], ['Faltas', st[0].fouls, st[1].fouls], ['Amarelos', st[0].yellows, st[1].yellows], ['Vermelhos', st[0].reds, st[1].reds], ['Defesas', st[0].saves, st[1].saves]
   ];
-  return rows.map(([l, a, b, x = +a, y = +b]) => { const t = (x + y) || 1; return `<div class="sbar"><span class="v">${a}</span><span class="lbl">${l}</span><span class="v">${b}</span><div class="dual"><i style="width:${x / t * 100}%"></i><i style="width:${y / t * 100}%"></i></div></div>`; }).join('');
+  return rows.map(([l, a, b, x = +a, y = +b]) => { const t = (x + y) || 1; return `<div class="sbar"><span class="v">${a}</span><span class="lbl">${l}</span><span class="v">${b}</span><div class="dual"><i style="width:${x / t * 100}%;background:${colors[0]}"></i><i style="width:${y / t * 100}%;background:${colors[1]}"></i></div></div>`; }).join('');
 }
 
 export function resultModalHtml(f, S, extra = {}) {
@@ -403,7 +436,7 @@ export function resultModalHtml(f, S, extra = {}) {
         ${extra.posBefore ? `<h3 style="margin:10px 0 6px">${ic('list-ordered')} Classificação</h3><p class="small">${extra.posBefore}º → <b>${extra.posAfter}º</b> ${extra.posAfter < extra.posBefore ? '<span class="pos">▲</span>' : extra.posAfter > extra.posBefore ? '<span class="neg">▼</span>' : ''}</p>` : ''}
         <h3 style="margin:10px 0 6px">${ic('clipboard-list')} Decisões táticas</h3>${tactics.length ? tactics.map(t => `<div class="li small"><span class="faint mono" style="width:44px">${esc(t.min)}</span><span class="grow">${esc(t.text)}</span></div>`).join('') : '<p class="faint small">Nenhuma mudança durante o jogo.</p>'}
       </div>
-      <div>${statsHtml(sts)}</div>
+      <div>${statsHtml(sts, teamColors(kitsFor(H, A)))}</div>
     </div>
     <div class="grid g2" style="gap:14px;margin-top:12px">
       ${[0, 1].map(sd => `<div><h3 style="margin-bottom:6px">${crest(sd ? A : H, 18)} Notas · ${esc((sd ? A : H).short)}</h3>${ratings(sd).map(r => `<div class="li small"><span class="posb">${POS_LABEL[r.role] || ''}</span><span class="grow">${esc(r.name)} ${r.goals ? '⚽'.repeat(r.goals) : ''}${r.assists ? ' 🅰' : ''}${r.yellow ? ' 🟨' : ''}${r.red ? ' 🟥' : ''}${r.injured ? ' ✚' : ''}</span><span class="faint">${r.mins}'</span><span class="rating ${rc(r.rating)}">${r.rating.toFixed(1)}</span></div>`).join('')}</div>`).join('')}

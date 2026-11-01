@@ -294,3 +294,6 @@ table.t td.num, table.t th.num { text-align: right; font-variant-numeric: tabula
   .attr { grid-template-columns: 92px 1fr 28px; }
   .slot { width: 64px; } .slot .dot { width: 34px; height: 34px; font-size: 13px; } .slot .nm { font-size: 10px; max-width: 64px; }
 }
+
+/* corte para o próximo lance nas velocidades altas */
+.skip-flash { position: absolute; top: 18px; right: 22px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(8,12,10,.8); color: var(--lime-2); font-weight: 700; font-size: 13px; animation: fade .2s; pointer-events: none; }
