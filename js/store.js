@@ -27,7 +27,7 @@
       privacy: { sharePlaying: true, showOnline: true },
       inventory: { frames: [], themes: [], icons: [], titles: [], colors: [] }, title: 'novato',
       gear: { owned: {}, equipped: {} }, // cosméticos por jogo (veja js/gameshop.js)
-      saves: {}, playtime: {} // partida salva e segundos jogados, por jogo
+      saves: {}, playtime: {}, xpByGame: {} // partida salva, segundos jogados e XP ganho, por jogo
     };
   }
 
@@ -227,10 +227,11 @@
     return { level: u.level, xp: u.xp, need, pct: u.level >= C.maxLevel ? 100 : Math.min(100, (u.xp / need) * 100), toNext: Math.max(0, need - u.xp), maxed: u.level >= C.maxLevel };
   }
 
-  function addXp(amount, reason) {
+  function addXp(amount, gameId) {
     const u = state.user; if (!u || amount <= 0) return [];
     const events = [];
     u.totalXp += amount;
+    if (gameId) { u.xpByGame ||= {}; u.xpByGame[gameId] = (u.xpByGame[gameId] || 0) + amount; } // XP obtido em cada jogo (perfil)
     if (u.level >= C.maxLevel) { u.xp = Math.min(u.xp + amount, C.xpForLevel(u.level)); return events; }
     u.xp += amount;
     while (u.level < C.maxLevel && u.xp >= C.xpForLevel(u.level)) {
@@ -340,7 +341,7 @@
     pushHistory(game?.icon || 'gamepad-2', `${resText} uma partida de ${game?.name || gameId}${record ? ' (novo recorde!)' : ''}`);
 
     u.coins += coins;
-    const events = addXp(xp);
+    const events = addXp(xp, gameId);
     const ach = checkAchievements();
     save();
     return { xp, coins, rewards, record, levelUps: events, achievements: ach };
@@ -404,6 +405,8 @@
     }
     try { localStorage.setItem(INBOX_KEY, JSON.stringify(inbox.filter(e => e.userId !== u.id))); } catch (e) { /* sem armazenamento */ }
     syncPersistentSummaries();
+    u.xpByGame ||= {};
+    for (const [g, x] of Object.entries(byGame)) u.xpByGame[g] = (u.xpByGame[g] || 0) + x;
     const levelUps = total ? addXp(total) : [];
     save();
     return total ? { xp: total, byGame, levelUps } : null;

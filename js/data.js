@@ -107,7 +107,12 @@
       href: 'rail-atlas/index.html', isNew: true,
       tagline: 'Gerenciamento ferroviário global',
       desc: 'Funde sua companhia ferroviária, compre trechos entre cidades reais, aceite contratos de carga e veja seus trens cruzarem o mapa-múndi sozinhos. As viagens continuam mesmo com o navegador fechado.',
-      features: [['map', 'Mapa-múndi com 70+ cidades reais'], ['route', 'Monte linhas com nome e cor'], ['package', 'Contratos de 11 tipos de carga'], ['moon', 'Progresso com o jogo fechado']] }
+      features: [['map', 'Mapa-múndi com 70+ cidades reais'], ['route', 'Monte linhas com nome e cor'], ['package', 'Contratos de 11 tipos de carga'], ['moon', 'Progresso com o jogo fechado']] },
+    { id: 'club-legacy', name: 'Club Legacy', cat: 'gerenciamento', icon: 'shield-half', c1: '#0f2a1d', c2: '#a3e635',
+      href: 'club-legacy/index.html', isNew: true,
+      tagline: 'Carreira de treinador de futebol',
+      desc: 'Crie seu treinador, escolha (ou funde) um clube e dispute as Séries A e B de uma liga brasileira fictícia. Assista às partidas em um campo 2D, mude a tática ao vivo, contrate, venda e construa um legado por várias temporadas.',
+      features: [['trophy', 'Séries A e B com acesso e rebaixamento'], ['monitor-play', 'Partidas assistidas em campo 2D'], ['arrow-left-right', 'Mercado com propostas e contratos'], ['sparkles', 'Crie o seu próprio clube']] }
   ];
 
   // ---------- Jogos implementados em games-arcade.js e games-board.js ----------

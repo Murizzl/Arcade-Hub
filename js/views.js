@@ -101,40 +101,49 @@
   const RAIL_ART = `<svg class="persist-art" viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <g fill="none" stroke-linecap="round" stroke-width="7"><path d="M-10 170 C80 160 110 90 190 96 S300 40 350 30" stroke="#ef4444"/><path d="M-10 60 C70 70 120 140 200 140 S300 190 350 200" stroke="#3b82f6"/><path d="M60 -10 C80 60 150 110 190 96 S240 150 250 230" stroke="#22c55e"/></g>
     <g fill="#f8fafc" stroke="#0b1424" stroke-width="3"><circle cx="190" cy="96" r="9"/><circle cx="99" cy="118" r="7"/><circle cx="262" cy="56" r="7"/><circle cx="236" cy="152" r="7"/><circle cx="40" cy="165" r="7"/></g></svg>`;
+  // Ilustração do Club Legacy: campo visto de cima com uma jogada
+  const PITCH_ART = `<svg class="persist-art" viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"><rect x="20" y="20" width="300" height="180" rx="4"/><path d="M170 20 V200"/><circle cx="170" cy="110" r="30"/><rect x="20" y="62" width="44" height="96"/><rect x="276" y="62" width="44" height="96"/></g>
+    <path d="M110 150 L200 90 L262 112" fill="none" stroke="#a3e635" stroke-width="4" stroke-dasharray="8 7" stroke-linecap="round"/>
+    <g stroke="#0b1d14" stroke-width="3"><circle cx="110" cy="150" r="9" fill="#a3e635"/><circle cx="200" cy="90" r="9" fill="#a3e635"/><circle cx="240" cy="70" r="9" fill="#f8fafc"/><circle cx="286" cy="104" r="9" fill="#f8fafc"/></g>
+    <circle cx="262" cy="112" r="5" fill="#fff" stroke="#111" stroke-width="2"/></svg>`;
+  const ART = { 'rail-atlas': RAIL_ART, 'club-legacy': PITCH_ART };
+  // resumo genérico: jogos novos mandam `stats: [[rótulo, valor]]`; o Rail Atlas manda campos próprios
+  const sumStats = sum => sum.stats || [['Companhia', sum.company], ['Nível', fmt(sum.level)], ['Estações', fmt(sum.stations)], ['Entregas', fmt(sum.deliveries)], ...(sum.achievements != null ? [['Conquistas', `${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}`]] : [])];
   function persistentCard(g) {
     const sum = persistentSummary(g.id);
     return `<article class="card persist-card">
       <a class="persist-thumb" href="${g.href}" style="--c1:${g.c1};--c2:${g.c2}" aria-label="Abrir ${esc(g.name)}">
-        ${RAIL_ART}<span class="thumb-art" aria-hidden="true">${ic(g.icon)}</span>${g.isNew ? '<span class="thumb-label tag tag-warning">Novo</span>' : ''}</a>
+        ${ART[g.id] || RAIL_ART}<span class="thumb-art" aria-hidden="true">${ic(g.icon)}</span>${g.isNew ? '<span class="thumb-label tag tag-warning">Novo</span>' : ''}</a>
       <div class="persist-body">
         <div class="row-wrap"><span class="tag tag-primary">${ic('infinity')} Persistente</span><span class="tag">${esc(g.tagline)}</span></div>
         <h2>${esc(g.name)}</h2>
         <p class="muted">${esc(g.desc)}</p>
         <div class="persist-feats">${g.features.map(([i, t]) => `<span>${ic(i)} ${esc(t)}</span>`).join('')}</div>
-        ${sum ? `<div class="stat-boxes">
-          <div class="stat-box"><small>Companhia</small><b>${esc(sum.company)}</b></div>
-          <div class="stat-box"><small>Nível</small><b>${fmt(sum.level)}</b></div>
-          <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
-          <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
-          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}</div>` : ''}
+        ${sum ? `<div class="stat-boxes">${sumStats(sum).map(([l, v]) => `<div class="stat-box"><small>${esc(l)}</small><b>${esc(typeof v === 'number' ? fmt(v) : v)}</b></div>`).join('')}</div>` : ''}
         <div class="row-wrap" style="margin-top:14px"><a class="btn btn-primary btn-lg" href="${g.href}">${ic(sum ? 'play' : 'flag')} ${sum ? 'Continuar' : 'Começar'}</a></div>
       </div>
     </article>`;
   }
   V.persistent = el => {
     S.ingestInbox().then(got => { if (got) { U.toast(`+${fmt(got.xp)} XP dos jogos persistentes`, 'success', 'sparkles'); if (location.hash.startsWith('#/persistent')) AH.app.render(); } });
-    const rules = C.persistentXp['rail-atlas'];
+    // regras de XP de cada jogo, lidas do config
+    const rulesCard = g => {
+      const r = C.persistentXp[g.id]; if (!r) return '';
+      const rows = g.id === 'rail-atlas'
+        ? [...Object.entries(r.cargo_delivered).map(([k, v]) => [r.labels[k], v]), [r.labels.achievement, r.achievement_unlocked.achievement]]
+        : Object.entries(r).filter(([k]) => k !== 'labels').map(([k, v]) => [r.labels[k] || k, Object.values(v).join(' / ')]);
+      return `<div class="card" style="margin-bottom:14px"><h3 style="margin-bottom:12px">${ic('zap')} Como ganhar XP no ${esc(g.name)}</h3>
+        <div class="xp-rules">${rows.map(([l, v]) => `<div class="xp-rule"><span>${esc(l)}</span><span>+${v} XP</span></div>`).join('')}</div></div>`;
+    };
     el.innerHTML = `
       <div class="page-head"><div><h1>Jogos persistentes</h1><p>Mundos que continuam rodando entre uma visita e outra. Seu progresso fica salvo e rende XP para o perfil.</p></div></div>
       ${AH.persistentCategories.map(cat => {
         const games = AH.persistentGames.filter(g => g.cat === cat.id);
         return `<section class="section">${sectionHead(cat.icon, cat.name)}<p class="muted" style="margin:-6px 0 14px">${esc(cat.desc)}</p>${games.map(persistentCard).join('')}</section>`;
       }).join('')}
-      <section class="section"><div class="card"><h3 style="margin-bottom:12px">${ic('zap')} Como ganhar XP no Rail Atlas</h3>
-        <div class="xp-rules">${Object.entries(rules.cargo_delivered).map(([k, v]) => `<div class="xp-rule"><span>${rules.labels[k]}</span><span>+${v} XP</span></div>`).join('')}
-          <div class="xp-rule"><span>${rules.labels.achievement}</span><span>+${rules.achievement_unlocked.achievement} XP</span></div>
-        </div>
-        <p class="faint" style="margin-top:10px">Cada entrega conta uma única vez. O XP é calculado pelo Arcade Hub${AH.cloud.enabled ? ' no servidor' : ''}, não pelo jogo.</p></div></section>`;
+      <section class="section">${AH.persistentGames.map(rulesCard).join('')}
+        <p class="faint">Cada evento conta uma única vez. O XP é calculado pelo Arcade Hub${AH.cloud.enabled ? ' no servidor' : ''}, não pelo jogo.</p></section>`;
   };
 
   /* ==================== CATÁLOGO ==================== */
@@ -915,13 +924,14 @@
     const cards = AH.persistentGames.map(g => {
       const ps = p.persistent?.[g.id], sum = ps?.summary;
       const time = p.playtime?.[g.id] || 0;
-      if (!sum) return `<div class="card persist-prof"><div class="row" style="gap:12px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span><div style="flex:1"><h3>${esc(g.name)}</h3><p class="faint">${isMe ? 'Você ainda não fundou uma companhia.' : 'Este jogador ainda não joga.'}</p></div>${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('flag')} Começar</a>` : ''}</div></div>`;
+      if (!sum) return `<div class="card persist-prof"><div class="row" style="gap:12px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span><div style="flex:1"><h3>${esc(g.name)}</h3><p class="faint">${isMe ? (g.id === 'club-legacy' ? 'Você ainda não começou uma carreira.' : 'Você ainda não fundou uma companhia.') : 'Este jogador ainda não joga.'}</p></div>${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('flag')} Começar</a>` : ''}</div></div>`;
       return `<div class="card persist-prof">
         <div class="row" style="gap:12px;margin-bottom:14px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span>
           <div style="flex:1;min-width:0"><small class="faint">${esc(g.name)}</small><h3 style="display:flex;align-items:center;gap:8px"><span class="co-dot" style="background:${sum.color || 'var(--primary)'}"></span>${esc(sum.company)}</h3>
             <small class="faint">${sum.home ? `Sede em ${esc(sum.home)}` : ''}${sum.since ? ` · desde ${dateBR(sum.since)}` : ''}</small></div>
           ${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('play')} Continuar</a>` : ''}</div>
         <div class="kv">
+          ${sum.stats ? sum.stats.map(([l, v]) => `<div class="stat-box"><small>${esc(l)}</small><b>${esc(typeof v === 'number' ? fmt(v) : v)}</b></div>`).join('') : `
           <div class="stat-box"><small>Nível da companhia</small><b>${fmt(sum.level)}</b></div>
           <div class="stat-box"><small>Entregas</small><b>${fmt(sum.deliveries)}</b></div>
           <div class="stat-box"><small>Estações</small><b>${fmt(sum.stations)}</b></div>
@@ -930,7 +940,7 @@
           ${sum.km != null ? `<div class="stat-box"><small>Km rodados</small><b>${fmt(sum.km)}</b></div>` : ''}
           ${sum.slots != null ? `<div class="stat-box"><small>Vagas transportadas</small><b>${fmt(sum.slots)}</b></div>` : ''}
           ${sum.earned != null ? `<div class="stat-box"><small>Créditos ganhos</small><b>${fmt(sum.earned)}</b></div>` : ''}
-          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}
+          ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}`}
           <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(time)}</b></div>
           ${ps ? `<div class="stat-box"><small>Eventos relatados</small><b>${fmt(ps.events || 0)}</b></div>` : ''}
         </div></div>`;
@@ -1014,6 +1024,14 @@
             <div class="stat-box"><small>Jogo mais jogado</small><b style="font-size:1.05rem">${esc(top.name)}</b></div>
           </div>
           <div class="list">${pt.map(([id, t]) => { const g = anyGame(id); return `<a class="list-item" href="${gameHref(id)}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><small>${fmtDur(t)} jogados${p.stats?.[id]?.last ? ` · última vez ${timeAgo(p.stats[id].last)}` : ''}</small></div></a>`; }).join('')}</div></div>`;
+      })()}
+      ${(() => {
+        // XP de perfil conquistado em cada jogo (catálogo e persistentes)
+        const xg = Object.entries(p.xpByGame || {}).filter(([id, x]) => x > 0 && anyGame(id)).sort((a, b) => b[1] - a[1]);
+        if (!xg.length) return `<div class="card section"><h3 style="margin-bottom:10px">${ic('zap')} XP por jogo</h3>${U.empty('zap', 'Nenhum XP registrado por jogo', isMe ? 'O XP de cada jogo começa a ser contado a partir da próxima partida.' : 'Este jogador ainda não tem XP registrado por jogo.')}</div>`;
+        const max = xg[0][1];
+        return `<div class="card section"><h3 style="margin-bottom:10px">${ic('zap')} XP por jogo</h3>
+          <div class="list">${xg.map(([id, x]) => { const g = anyGame(id); return `<a class="list-item" href="${gameHref(id)}"><span class="ch-icon" style="width:30px;height:30px;border-radius:9px;background:${g.c1};color:#fff">${ic(g.icon, 'style="width:16px;height:16px"')}</span><div class="li-main"><b>${esc(g.name)}</b><div class="bar" style="height:6px;margin-top:5px;border-radius:9px;background:var(--surface-2);overflow:hidden"><span style="display:block;height:100%;width:${Math.max(4, x / max * 100)}%;background:var(--primary)"></span></div></div><b>+${fmt(x)} XP</b></a>`; }).join('')}</div></div>`;
       })()}
       <div class="card section"><h3 style="margin-bottom:10px">${ic('bar-chart-3')} Estatísticas por jogo</h3>
         ${Object.keys(stats).length ? `<div class="table-scroll"><table class="stat-table"><thead><tr><th>Jogo</th><th>Partidas</th><th>Vitórias</th><th>Recorde</th></tr></thead><tbody>

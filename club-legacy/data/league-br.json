@@ -1,0 +1,1409 @@
+{
+ "clubs": [
+  {
+   "id": "rpa",
+   "name": "Real Paulistano FC",
+   "short": "Paulistano",
+   "abbr": "RPA",
+   "city": "São Paulo",
+   "state": "SP",
+   "founded": 1911,
+   "colors": [
+    "#e11d48",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#e11d48"
+   ],
+   "crest": "shield",
+   "stadium": "Arena Ipiranga",
+   "capacity": 52000,
+   "prestige": 5,
+   "budget": 95,
+   "wageBudget": 7.8,
+   "rating": 74,
+   "style": "possession",
+   "formation": "4-3-3",
+   "titles": 9,
+   "division": "A"
+  },
+  {
+   "id": "gua",
+   "name": "Guanabara Atlético Clube",
+   "short": "Guanabara",
+   "abbr": "GUA",
+   "city": "Rio de Janeiro",
+   "state": "RJ",
+   "founded": 1904,
+   "colors": [
+    "#111827",
+    "#facc15"
+   ],
+   "kitText": "#facc15",
+   "away": [
+    "#facc15",
+    "#111827"
+   ],
+   "crest": "round",
+   "stadium": "Estádio da Baía",
+   "capacity": 61000,
+   "prestige": 5,
+   "budget": 88,
+   "wageBudget": 7.4,
+   "rating": 74,
+   "style": "highpress",
+   "formation": "4-2-3-1",
+   "titles": 8,
+   "division": "A"
+  },
+  {
+   "id": "mnr",
+   "name": "Mineração Esporte Clube",
+   "short": "Mineração",
+   "abbr": "MIN",
+   "city": "Belo Horizonte",
+   "state": "MG",
+   "founded": 1915,
+   "colors": [
+    "#1e3a8a",
+    "#e5e7eb"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#e5e7eb",
+    "#1e3a8a"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Serra do Curral",
+   "capacity": 46000,
+   "prestige": 4,
+   "budget": 62,
+   "wageBudget": 5.6,
+   "rating": 72,
+   "style": "balanced",
+   "formation": "4-4-2",
+   "titles": 5,
+   "division": "A"
+  },
+  {
+   "id": "gpo",
+   "name": "Grêmio Porto do Sul",
+   "short": "Porto do Sul",
+   "abbr": "GPS",
+   "city": "Porto Alegre",
+   "state": "RS",
+   "founded": 1909,
+   "colors": [
+    "#0369a1",
+    "#0f172a"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#0369a1"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Guaíba",
+   "capacity": 49000,
+   "prestige": 4,
+   "budget": 58,
+   "wageBudget": 5.3,
+   "rating": 72,
+   "style": "counter",
+   "formation": "4-2-3-1",
+   "titles": 6,
+   "division": "A"
+  },
+  {
+   "id": "lrc",
+   "name": "Leões do Recife FC",
+   "short": "Leões",
+   "abbr": "LEO",
+   "city": "Recife",
+   "state": "PE",
+   "founded": 1923,
+   "colors": [
+    "#b91c1c",
+    "#111827"
+   ],
+   "kitText": "#fde68a",
+   "away": [
+    "#fde68a",
+    "#b91c1c"
+   ],
+   "crest": "round",
+   "stadium": "Arena Capibaribe",
+   "capacity": 38000,
+   "prestige": 3,
+   "budget": 34,
+   "wageBudget": 3.6,
+   "rating": 71,
+   "style": "direct",
+   "formation": "4-4-2",
+   "titles": 2,
+   "division": "A"
+  },
+  {
+   "id": "bat",
+   "name": "Atlântico Baiano SC",
+   "short": "Atlântico",
+   "abbr": "ATL",
+   "city": "Salvador",
+   "state": "BA",
+   "founded": 1931,
+   "colors": [
+    "#2563eb",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#2563eb"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Farol",
+   "capacity": 41000,
+   "prestige": 3,
+   "budget": 30,
+   "wageBudget": 3.4,
+   "rating": 70,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 2,
+   "division": "A"
+  },
+  {
+   "id": "pin",
+   "name": "Pinhais Futebol Clube",
+   "short": "Pinhais",
+   "abbr": "PIN",
+   "city": "Curitiba",
+   "state": "PR",
+   "founded": 1928,
+   "colors": [
+    "#15803d",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#15803d"
+   ],
+   "crest": "shield",
+   "stadium": "Arena Araucária",
+   "capacity": 35000,
+   "prestige": 3,
+   "budget": 28,
+   "wageBudget": 3.2,
+   "rating": 70,
+   "style": "possession",
+   "formation": "4-1-4-1",
+   "titles": 1,
+   "division": "A"
+  },
+  {
+   "id": "cer",
+   "name": "Cerrado Esporte Clube",
+   "short": "Cerrado",
+   "abbr": "CER",
+   "city": "Goiânia",
+   "state": "GO",
+   "founded": 1943,
+   "colors": [
+    "#16a34a",
+    "#fbbf24"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#fbbf24",
+    "#16a34a"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Ipê Amarelo",
+   "capacity": 28000,
+   "prestige": 2,
+   "budget": 18,
+   "wageBudget": 2.4,
+   "rating": 68,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "lit",
+   "name": "Litoral Cearense FC",
+   "short": "Litoral",
+   "abbr": "LIT",
+   "city": "Fortaleza",
+   "state": "CE",
+   "founded": 1938,
+   "colors": [
+    "#f97316",
+    "#0f172a"
+   ],
+   "kitText": "#0f172a",
+   "away": [
+    "#0f172a",
+    "#f97316"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Jangada",
+   "capacity": 33000,
+   "prestige": 2,
+   "budget": 17,
+   "wageBudget": 2.3,
+   "rating": 68,
+   "style": "counter",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "rng",
+   "name": "Rio Negro Amazonense",
+   "short": "Rio Negro",
+   "abbr": "RNA",
+   "city": "Manaus",
+   "state": "AM",
+   "founded": 1949,
+   "colors": [
+    "#0f172a",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#0f172a"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Encontro das Águas",
+   "capacity": 30000,
+   "prestige": 2,
+   "budget": 15,
+   "wageBudget": 2.1,
+   "rating": 68,
+   "style": "highpress",
+   "formation": "3-5-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "ilh",
+   "name": "Ilha Catarina FC",
+   "short": "Ilha Catarina",
+   "abbr": "ILH",
+   "city": "Florianópolis",
+   "state": "SC",
+   "founded": 1957,
+   "colors": [
+    "#0ea5e9",
+    "#ffffff"
+   ],
+   "kitText": "#0f172a",
+   "away": [
+    "#ffffff",
+    "#0ea5e9"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Ponte Hercílio",
+   "capacity": 21000,
+   "prestige": 1,
+   "budget": 11,
+   "wageBudget": 1.7,
+   "rating": 66,
+   "style": "balanced",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "cap",
+   "name": "Capital Federal EC",
+   "short": "Capital",
+   "abbr": "CAP",
+   "city": "Brasília",
+   "state": "DF",
+   "founded": 1962,
+   "colors": [
+    "#7c3aed",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#7c3aed"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Planalto",
+   "capacity": 24000,
+   "prestige": 1,
+   "budget": 10,
+   "wageBudget": 1.6,
+   "rating": 66,
+   "style": "defensive",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "ban",
+   "name": "Bandeirantes Atlético Clube",
+   "short": "Bandeirantes",
+   "abbr": "BAN",
+   "city": "Campinas",
+   "state": "SP",
+   "founded": 1920,
+   "colors": [
+    "#991b1b",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#991b1b"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Barão Geraldo",
+   "capacity": 30000,
+   "prestige": 3,
+   "budget": 26,
+   "wageBudget": 3.0,
+   "rating": 69,
+   "style": "balanced",
+   "formation": "4-2-3-1",
+   "titles": 1,
+   "division": "A"
+  },
+  {
+   "id": "uns",
+   "name": "União Santista FC",
+   "short": "União Santista",
+   "abbr": "USA",
+   "city": "Santos",
+   "state": "SP",
+   "founded": 1913,
+   "colors": [
+    "#f8fafc",
+    "#111827"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#111827",
+    "#f8fafc"
+   ],
+   "crest": "round",
+   "stadium": "Vila do Porto",
+   "capacity": 22000,
+   "prestige": 3,
+   "budget": 24,
+   "wageBudget": 2.9,
+   "rating": 69,
+   "style": "possession",
+   "formation": "4-3-3",
+   "titles": 2,
+   "division": "A"
+  },
+  {
+   "id": "trp",
+   "name": "Tropical Paraense SC",
+   "short": "Tropical",
+   "abbr": "TRO",
+   "city": "Belém",
+   "state": "PA",
+   "founded": 1935,
+   "colors": [
+    "#0e7490",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#0e7490"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Marajoara",
+   "capacity": 36000,
+   "prestige": 2,
+   "budget": 16,
+   "wageBudget": 2.2,
+   "rating": 68,
+   "style": "highpress",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "pot",
+   "name": "Potiguar Esporte Clube",
+   "short": "Potiguar",
+   "abbr": "POT",
+   "city": "Natal",
+   "state": "RN",
+   "founded": 1941,
+   "colors": [
+    "#be123c",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#be123c"
+   ],
+   "crest": "round",
+   "stadium": "Estádio das Dunas",
+   "capacity": 27000,
+   "prestige": 2,
+   "budget": 14,
+   "wageBudget": 2.0,
+   "rating": 67,
+   "style": "counter",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "cpx",
+   "name": "Capixaba Futebol Clube",
+   "short": "Capixaba",
+   "abbr": "CPX",
+   "city": "Vitória",
+   "state": "ES",
+   "founded": 1946,
+   "colors": [
+    "#1d4ed8",
+    "#f97316"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f97316",
+    "#1d4ed8"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Penedo",
+   "capacity": 21000,
+   "prestige": 2,
+   "budget": 13,
+   "wageBudget": 1.9,
+   "rating": 67,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "arb",
+   "name": "Atlético Ribeirense",
+   "short": "Ribeirense",
+   "abbr": "ARB",
+   "city": "Ribeirão Preto",
+   "state": "SP",
+   "founded": 1933,
+   "colors": [
+    "#b45309",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#b45309"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Canavial",
+   "capacity": 25000,
+   "prestige": 2,
+   "budget": 14,
+   "wageBudget": 1.9,
+   "rating": 67,
+   "style": "direct",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "mnt",
+   "name": "Mantiqueira Futebol Clube",
+   "short": "Mantiqueira",
+   "abbr": "MNT",
+   "city": "Juiz de Fora",
+   "state": "MG",
+   "founded": 1939,
+   "colors": [
+    "#334155",
+    "#22c55e"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#22c55e",
+    "#334155"
+   ],
+   "crest": "round",
+   "stadium": "Arena Serra Verde",
+   "capacity": 19000,
+   "prestige": 2,
+   "budget": 12,
+   "wageBudget": 1.8,
+   "rating": 66,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "pnt",
+   "name": "Pantanal Esporte Clube",
+   "short": "Pantanal",
+   "abbr": "PAN",
+   "city": "Cuiabá",
+   "state": "MT",
+   "founded": 1959,
+   "colors": [
+    "#065f46",
+    "#fde047"
+   ],
+   "kitText": "#fde047",
+   "away": [
+    "#fde047",
+    "#065f46"
+   ],
+   "crest": "shield",
+   "stadium": "Arena Chapada",
+   "capacity": 32000,
+   "prestige": 2,
+   "budget": 13,
+   "wageBudget": 1.8,
+   "rating": 66,
+   "style": "counter",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "A"
+  },
+  {
+   "id": "lag",
+   "name": "Lagoa Mundaú FC",
+   "short": "Lagoa Mundaú",
+   "abbr": "LAG",
+   "city": "Maceió",
+   "state": "AL",
+   "founded": 1948,
+   "colors": [
+    "#0284c7",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#0284c7"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Pajuçara",
+   "capacity": 19000,
+   "prestige": 1,
+   "budget": 7,
+   "wageBudget": 1.0,
+   "rating": 62,
+   "style": "balanced",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "ara",
+   "name": "Aracaju Atlético Clube",
+   "short": "Aracaju",
+   "abbr": "ARA",
+   "city": "Aracaju",
+   "state": "SE",
+   "founded": 1944,
+   "colors": [
+    "#dc2626",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#dc2626"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Atalaia",
+   "capacity": 16000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 61,
+   "style": "counter",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "par",
+   "name": "Parnaíba Esporte Clube",
+   "short": "Parnaíba",
+   "abbr": "PAR",
+   "city": "Teresina",
+   "state": "PI",
+   "founded": 1952,
+   "colors": [
+    "#7c2d12",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#7c2d12"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Poti",
+   "capacity": 15000,
+   "prestige": 1,
+   "budget": 5,
+   "wageBudget": 0.8,
+   "rating": 60,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "lud",
+   "name": "Ludovicense FC",
+   "short": "Ludovicense",
+   "abbr": "LUD",
+   "city": "São Luís",
+   "state": "MA",
+   "founded": 1950,
+   "colors": [
+    "#1e40af",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#dc2626",
+    "#1e40af"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Lençóis",
+   "capacity": 18000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 61,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "tam",
+   "name": "Tambaú Futebol Clube",
+   "short": "Tambaú",
+   "abbr": "TAM",
+   "city": "João Pessoa",
+   "state": "PB",
+   "founded": 1955,
+   "colors": [
+    "#111827",
+    "#ef4444"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ef4444",
+    "#111827"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Cabo Branco",
+   "capacity": 17000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 61,
+   "style": "direct",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "npr",
+   "name": "Norte Paranaense EC",
+   "short": "Norte Paranaense",
+   "abbr": "NPR",
+   "city": "Londrina",
+   "state": "PR",
+   "founded": 1956,
+   "colors": [
+    "#0f766e",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#0f766e"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Café",
+   "capacity": 20000,
+   "prestige": 2,
+   "budget": 9,
+   "wageBudget": 1.2,
+   "rating": 63,
+   "style": "possession",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "bab",
+   "name": "Babitonga Futebol Clube",
+   "short": "Babitonga",
+   "abbr": "BAB",
+   "city": "Joinville",
+   "state": "SC",
+   "founded": 1960,
+   "colors": [
+    "#991b1b",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#991b1b"
+   ],
+   "crest": "round",
+   "stadium": "Arena Cachoeira",
+   "capacity": 18000,
+   "prestige": 1,
+   "budget": 8,
+   "wageBudget": 1.1,
+   "rating": 62,
+   "style": "balanced",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "ser",
+   "name": "Serra Gaúcha EC",
+   "short": "Serra Gaúcha",
+   "abbr": "SGA",
+   "city": "Caxias do Sul",
+   "state": "RS",
+   "founded": 1935,
+   "colors": [
+    "#7f1d1d",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#7f1d1d"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Parreiral",
+   "capacity": 21000,
+   "prestige": 2,
+   "budget": 9,
+   "wageBudget": 1.2,
+   "rating": 63,
+   "style": "highpress",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "lrj",
+   "name": "Laranjal Futebol Clube",
+   "short": "Laranjal",
+   "abbr": "LRJ",
+   "city": "Pelotas",
+   "state": "RS",
+   "founded": 1928,
+   "colors": [
+    "#ea580c",
+    "#1e3a8a"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#1e3a8a",
+    "#ea580c"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Doce Lagoa",
+   "capacity": 14000,
+   "prestige": 1,
+   "budget": 5,
+   "wageBudget": 0.8,
+   "rating": 60,
+   "style": "counter",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "tri",
+   "name": "Triângulo Mineiro EC",
+   "short": "Triângulo",
+   "abbr": "TRI",
+   "city": "Uberlândia",
+   "state": "MG",
+   "founded": 1953,
+   "colors": [
+    "#047857",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#047857"
+   ],
+   "crest": "round",
+   "stadium": "Arena Cerrado Mineiro",
+   "capacity": 22000,
+   "prestige": 1,
+   "budget": 7,
+   "wageBudget": 1.0,
+   "rating": 62,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "sor",
+   "name": "Sorocabano Atlético",
+   "short": "Sorocabano",
+   "abbr": "SOR",
+   "city": "Sorocaba",
+   "state": "SP",
+   "founded": 1937,
+   "colors": [
+    "#b91c1c",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#b91c1c"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Ferroviário",
+   "capacity": 16000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 61,
+   "style": "balanced",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "mor",
+   "name": "Morena Futebol Clube",
+   "short": "Morena",
+   "abbr": "MOR",
+   "city": "Campo Grande",
+   "state": "MS",
+   "founded": 1963,
+   "colors": [
+    "#9333ea",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#9333ea"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Ipê Roxo",
+   "capacity": 19000,
+   "prestige": 1,
+   "budget": 5,
+   "wageBudget": 0.8,
+   "rating": 60,
+   "style": "direct",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "mad",
+   "name": "Madeira Esporte Clube",
+   "short": "Madeira",
+   "abbr": "MAD",
+   "city": "Porto Velho",
+   "state": "RO",
+   "founded": 1965,
+   "colors": [
+    "#15803d",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#15803d"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Mamoré",
+   "capacity": 12000,
+   "prestige": 1,
+   "budget": 4,
+   "wageBudget": 0.7,
+   "rating": 59,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "eqd",
+   "name": "Equador Futebol Clube",
+   "short": "Equador",
+   "abbr": "EQU",
+   "city": "Macapá",
+   "state": "AP",
+   "founded": 1968,
+   "colors": [
+    "#facc15",
+    "#166534"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#166534",
+    "#facc15"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Marco Zero",
+   "capacity": 11000,
+   "prestige": 1,
+   "budget": 4,
+   "wageBudget": 0.6,
+   "rating": 59,
+   "style": "counter",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "toc",
+   "name": "Tocantins Esporte Clube",
+   "short": "Tocantins",
+   "abbr": "TOC",
+   "city": "Palmas",
+   "state": "TO",
+   "founded": 1990,
+   "colors": [
+    "#f59e0b",
+    "#1e3a8a"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#1e3a8a",
+    "#f59e0b"
+   ],
+   "crest": "diamond",
+   "stadium": "Arena Capim Dourado",
+   "capacity": 13000,
+   "prestige": 1,
+   "budget": 4,
+   "wageBudget": 0.7,
+   "rating": 59,
+   "style": "balanced",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "rrm",
+   "name": "Roraima Monte FC",
+   "short": "Roraima",
+   "abbr": "ROR",
+   "city": "Boa Vista",
+   "state": "RR",
+   "founded": 1972,
+   "colors": [
+    "#2563eb",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#2563eb"
+   ],
+   "crest": "round",
+   "stadium": "Estádio Caburaí",
+   "capacity": 10000,
+   "prestige": 1,
+   "budget": 4,
+   "wageBudget": 0.6,
+   "rating": 59,
+   "style": "highpress",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "sgr",
+   "name": "Seringueiros do Acre",
+   "short": "Seringueiros",
+   "abbr": "SER",
+   "city": "Rio Branco",
+   "state": "AC",
+   "founded": 1958,
+   "colors": [
+    "#166534",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#166534"
+   ],
+   "crest": "shield",
+   "stadium": "Arena Floresta",
+   "capacity": 12000,
+   "prestige": 1,
+   "budget": 4,
+   "wageBudget": 0.6,
+   "rating": 59,
+   "style": "defensive",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "pse",
+   "name": "Princesa do Sertão FC",
+   "short": "Princesa",
+   "abbr": "PRS",
+   "city": "Feira de Santana",
+   "state": "BA",
+   "founded": 1947,
+   "colors": [
+    "#db2777",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#db2777"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Joia",
+   "capacity": 15000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 61,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "aco",
+   "name": "Aço Fluminense FC",
+   "short": "Aço Fluminense",
+   "abbr": "ACO",
+   "city": "Volta Redonda",
+   "state": "RJ",
+   "founded": 1951,
+   "colors": [
+    "#475569",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#475569"
+   ],
+   "crest": "round",
+   "stadium": "Estádio da Usina",
+   "capacity": 16000,
+   "prestige": 1,
+   "budget": 7,
+   "wageBudget": 1.0,
+   "rating": 62,
+   "style": "direct",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "B"
+  },
+  {
+   "id": "ica",
+   "name": "Icaraí Futebol Clube",
+   "short": "Icaraí",
+   "abbr": "ICA",
+   "city": "Niterói",
+   "state": "RJ",
+   "founded": 1925,
+   "colors": [
+    "#0891b2",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#0891b2"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Boa Viagem",
+   "capacity": 17000,
+   "prestige": 1,
+   "budget": 8,
+   "wageBudget": 1.1,
+   "rating": 62,
+   "style": "possession",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "B"
+  }
+ ],
+ "names": {
+  "first": [
+   "Gabriel",
+   "Lucas",
+   "Matheus",
+   "Pedro",
+   "Rafael",
+   "Gustavo",
+   "Felipe",
+   "Bruno",
+   "Thiago",
+   "Diego",
+   "Vinícius",
+   "Caio",
+   "Leonardo",
+   "Rodrigo",
+   "Eduardo",
+   "André",
+   "Henrique",
+   "João",
+   "Vitor",
+   "Igor",
+   "Murilo",
+   "Renan",
+   "Davi",
+   "Samuel",
+   "Arthur",
+   "Enzo",
+   "Kauã",
+   "Luan",
+   "Wesley",
+   "Everton",
+   "Alisson",
+   "Danilo",
+   "Fabrício",
+   "Gilberto",
+   "Hugo",
+   "Ícaro",
+   "Jefferson",
+   "Kleber",
+   "Leandro",
+   "Marcelo",
+   "Nathan",
+   "Otávio",
+   "Paulo",
+   "Raul",
+   "Sérgio",
+   "Tiago",
+   "Ulisses",
+   "Wagner",
+   "Yago",
+   "Ramon",
+   "Cauê",
+   "Breno",
+   "Emerson",
+   "Juninho",
+   "Robson",
+   "Cristian",
+   "Alexandre",
+   "Douglas",
+   "Fábio",
+   "Márcio"
+  ],
+  "last": [
+   "Silva",
+   "Santos",
+   "Oliveira",
+   "Souza",
+   "Rodrigues",
+   "Ferreira",
+   "Alves",
+   "Pereira",
+   "Lima",
+   "Gomes",
+   "Costa",
+   "Ribeiro",
+   "Martins",
+   "Carvalho",
+   "Almeida",
+   "Lopes",
+   "Soares",
+   "Fernandes",
+   "Vieira",
+   "Barbosa",
+   "Rocha",
+   "Dias",
+   "Nascimento",
+   "Andrade",
+   "Moreira",
+   "Nunes",
+   "Marques",
+   "Machado",
+   "Mendes",
+   "Freitas",
+   "Cardoso",
+   "Ramos",
+   "Gonçalves",
+   "Santana",
+   "Teixeira",
+   "Araújo",
+   "Pinto",
+   "Correia",
+   "Batista",
+   "Moura",
+   "Cavalcanti",
+   "Bezerra",
+   "Medeiros",
+   "Brandão",
+   "Queiroz",
+   "Peixoto",
+   "Siqueira",
+   "Monteiro",
+   "Tavares",
+   "Farias"
+  ],
+  "nick": [
+   "Pelezinho",
+   "Tavinho",
+   "Dudu",
+   "Neto",
+   "Biel",
+   "Juca",
+   "Toninho",
+   "Zé Rafael",
+   "Kaká Lima",
+   "Nenê",
+   "Pipoca",
+   "Didi",
+   "Tuca",
+   "Fumaça",
+   "Bolt",
+   "Gaúcho",
+   "Paulinho",
+   "Serginho",
+   "Guga",
+   "Fofão"
+  ],
+  "foreign": [
+   [
+    "Uruguai",
+    "UY"
+   ],
+   [
+    "Argentina",
+    "AR"
+   ],
+   [
+    "Colômbia",
+    "CO"
+   ],
+   [
+    "Paraguai",
+    "PY"
+   ],
+   [
+    "Chile",
+    "CL"
+   ],
+   [
+    "Equador",
+    "EC"
+   ],
+   [
+    "Portugal",
+    "PT"
+   ],
+   [
+    "Venezuela",
+    "VE"
+   ]
+  ]
+ },
+ "leagues": [
+  {
+   "id": "A",
+   "name": "Liga Brasil Série A",
+   "short": "Série A",
+   "division": 1,
+   "prizeByPosition": [
+    48,
+    40,
+    34,
+    29,
+    25,
+    22,
+    19,
+    17,
+    15,
+    13.5,
+    12,
+    11,
+    10,
+    9,
+    8.5,
+    8,
+    7,
+    6.5,
+    6,
+    5.5
+   ],
+   "promote": 0,
+   "relegate": 4,
+   "ticket": 4.5e-05,
+   "sponsorMonthly": 0.35
+  },
+  {
+   "id": "B",
+   "name": "Liga Brasil Série B",
+   "short": "Série B",
+   "division": 2,
+   "prizeByPosition": [
+    9,
+    8,
+    7,
+    6.5,
+    6,
+    5.5,
+    5,
+    4.6,
+    4.3,
+    4,
+    3.8,
+    3.6,
+    3.4,
+    3.2,
+    3,
+    2.8,
+    2.6,
+    2.4,
+    2.2,
+    2
+   ],
+   "promote": 4,
+   "relegate": 0,
+   "ticket": 3e-05,
+   "sponsorMonthly": 0.08
+  }
+ ],
+ "country": {
+  "name": "Brasil",
+  "continent": "América do Sul",
+  "seasonStart": "2027-04-10",
+  "daysBetweenRounds": 7,
+  "currency": "R$"
+ }
+}

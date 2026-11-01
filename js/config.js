@@ -34,6 +34,15 @@ AH.config = {
       cargo_delivered: { common: 2, medium: 4, international: 8, special: 12 },
       achievement_unlocked: { achievement: 20 },
       labels: { common: 'Entrega comum', medium: 'Entrega de média distância', international: 'Entrega internacional', special: 'Contrato especial', achievement: 'Conquista inédita' }
+    },
+    'club-legacy': {
+      first_win: { first: 20 },
+      match_win: { common: 3 },
+      five_matches: { common: 10 },
+      season_complete: { common: 40 },
+      promotion: { common: 60 },
+      league_title: { serie_b: 100, serie_a: 150 },
+      labels: { first_win: 'Primeira vitória da carreira', match_win: 'Vitória (até 15 por temporada)', five_matches: 'A cada 5 partidas', season_complete: 'Temporada completa', promotion: 'Acesso à Série A', league_title: 'Título da Série B / Série A' }
     }
   },
   // XP extra proporcional ao desempenho na partida (soma às regras acima).

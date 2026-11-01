@@ -188,7 +188,7 @@
   // XP relatado pelos jogos persistentes (outra aba ou ao voltar para o hub)
   function pullPersistentXp() {
     if (!S.state.session || parse().name === 'persistent') return;
-    S.ingestInbox().then(got => { if (got) { U.toast(`+${fmt(got.xp)} XP do Rail Atlas`, 'success', 'train-front'); got.levelUps.forEach(e => U.toast(`Nível ${e.level}!`, 'success', 'trending-up')); } });
+    S.ingestInbox().then(got => { if (got) { U.toast(`+${fmt(got.xp)} XP dos jogos persistentes`, 'success', 'sparkles'); got.levelUps.forEach(e => U.toast(`Nível ${e.level}!`, 'success', 'trending-up')); } });
   }
   window.addEventListener('storage', e => { if (e.key === 'arcadehub.inbox') pullPersistentXp(); });
   window.addEventListener('focus', pullPersistentXp);
