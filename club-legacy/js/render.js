@@ -13,17 +13,31 @@ export class PitchRenderer {
     const r = this.c.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     this.c.width = Math.max(10, r.width * dpr); this.c.height = Math.max(10, r.height * dpr);
-    const sx = this.c.width / (L + MARGIN * 2), sy = this.c.height / (W + MARGIN * 2);
+    // tela em pé (celular): o campo é desenhado na vertical para aproveitar a altura
+    const cw = this.c.width, ch = this.c.height;
+    const sH = Math.min(cw / (L + MARGIN * 2), ch / (W + MARGIN * 2)), sV = Math.min(ch / (L + MARGIN * 2), cw / (W + MARGIN * 2));
+    this.vertical = sV > sH * 1.08; // gira só quando o campo fica bem maior assim
+    this.lw = this.vertical ? this.c.height : this.c.width; this.lh = this.vertical ? this.c.width : this.c.height;
+    const sx = this.lw / (L + MARGIN * 2), sy = this.lh / (W + MARGIN * 2);
     this.s = Math.min(sx, sy);
-    this.ox = (this.c.width - L * this.s) / 2; this.oy = (this.c.height - W * this.s) / 2;
+    this.ox = (this.lw - L * this.s) / 2; this.oy = (this.lh - W * this.s) / 2;
     this.dpr = dpr;
   }
+  // ponto da tela (clientX/Y) -> coordenadas do campo, considerando a rotação
+  toPitch(cx, cy) {
+    const r = this.c.getBoundingClientRect();
+    let px = (cx - r.left) * this.dpr, py = (cy - r.top) * this.dpr;
+    if (this.vertical) [px, py] = [py, this.c.width - px];
+    return { x: (px - this.ox) / this.s, y: (py - this.oy) / this.s };
+  }
+  // texto e rótulos sempre de pé, mesmo com o campo girado
+  upright(X, Y, fn) { const g = this.ctx; g.save(); g.translate(X, Y); if (this.vertical) g.rotate(-Math.PI / 2); fn(g); g.restore(); }
   X(x) { return this.ox + x * this.s; }
   Y(y) { return this.oy + y * this.s; }
 
   drawPitch() {
     const g = this.ctx, s = this.s;
-    g.fillStyle = '#123d24'; g.fillRect(0, 0, this.c.width, this.c.height);
+    g.fillStyle = '#123d24'; g.fillRect(-2, -2, this.lw + 4, this.lh + 4);
     // faixas do gramado
     const stripes = 14;
     for (let i = 0; i < stripes; i++) { g.fillStyle = i % 2 ? '#1a5230' : '#1d5a35'; g.fillRect(this.X(i * L / stripes), this.Y(0), L / stripes * s + 1, W * s); }
@@ -55,10 +69,13 @@ export class PitchRenderer {
     const base = [this.s, this.ox, this.oy];
     if (scene.cam) {
       this.s = base[0] * scene.cam.zoom;
-      this.ox = this.c.width / 2 - scene.cam.x * this.s;
-      this.oy = this.c.height / 2 - scene.cam.y * this.s;
+      this.ox = this.lw / 2 - scene.cam.x * this.s;
+      this.oy = this.lh / 2 - scene.cam.y * this.s;
     }
+    const g = this.ctx;
+    if (this.vertical) g.setTransform(0, 1, -1, 0, this.c.width, 0); // gira 90°: o comprimento do campo fica na vertical
     this.drawScene(scene);
+    g.setTransform(1, 0, 0, 1, 0, 0);
     [this.s, this.ox, this.oy] = base;
   }
   drawScene(scene) {
@@ -88,14 +105,16 @@ export class PitchRenderer {
       // goleiro mergulhando: corpo alongado na direção do salto
       if (p.dive) { g.beginPath(); g.ellipse(X, Y + p.dive * r * 0.5, r * 0.85, r * 1.75, 0, 0, Math.PI * 2); g.fill(); g.stroke(); }
       else { g.beginPath(); g.arc(X, Y, r, 0, Math.PI * 2); g.fill(); g.stroke(); }
-      g.fillStyle = p.gk ? '#111827' : kit.text; g.font = `700 ${r * 1.05}px Inter, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(p.num, X, Y + r * 0.06);
-      if (p.label) {
-        g.font = `600 ${Math.max(10 * this.dpr, r * 0.95)}px Inter, sans-serif`;
-        const w = g.measureText(p.label).width + r;
-        g.fillStyle = 'rgba(10,14,12,.85)'; roundRect(g, X - w / 2, Y - r * 3.4, w, r * 1.7, r * 0.5); g.fill();
-        g.fillStyle = '#ecfccb'; g.fillText(p.label, X, Y - r * 2.55);
-      }
+      this.upright(X, Y, g => {
+        g.fillStyle = p.gk ? '#111827' : kit.text; g.font = `700 ${r * 1.05}px Inter, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(p.num, 0, r * 0.06);
+        if (p.label) {
+          g.font = `600 ${Math.max(10 * this.dpr, r * 0.95)}px Inter, sans-serif`;
+          const w = g.measureText(p.label).width + r;
+          g.fillStyle = 'rgba(10,14,12,.85)'; roundRect(g, -w / 2, -r * 3.4, w, r * 1.7, r * 0.5); g.fill();
+          g.fillStyle = '#ecfccb'; g.fillText(p.label, 0, -r * 2.55);
+        }
+      });
     }
     // bola (com sombra para a altura)
     const b = scene.ball; if (b) {

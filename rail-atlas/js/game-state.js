@@ -27,7 +27,7 @@ export function haversine(a, b) {
 const TRACK_FACTOR = 1.18;
 
 export async function loadData(base = 'data/') {
-  const get = f => fetch(base + f).then(r => { if (!r.ok) throw new Error(f + ': ' + r.status); return r.json(); });
+  const get = f => fetch(base + f + `?v=${window.APP_VERSION || ''}`).then(r => { if (!r.ok) throw new Error(f + ': ' + r.status); return r.json(); });
   const [cities, conn, cargo, models, ups] = await Promise.all([
     get('cities.json'), get('connections.json'), get('cargo-types.json'), get('train-models.json'), get('station-upgrades.json')
   ]);

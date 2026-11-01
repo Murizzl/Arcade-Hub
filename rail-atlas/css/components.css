@@ -189,10 +189,12 @@ body.panel-open .panel { transform: none; }
 .setup-brand > svg { width: 50px; height: 50px; padding: 11px; border-radius: 15px; background: linear-gradient(135deg, #fbbf24, #f97316); color: #1c1302; }
 .setup-brand h1 { font-size: 28px; }
 .setup-brand p { margin: 2px 0 0; color: var(--text-2); font-size: 13px; }
-.start-list { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.start-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
 .start-city { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; text-align: left; padding: 9px 10px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface-2); }
 .start-city .flag { grid-row: span 2; font-size: 22px; }
-.start-city small { color: var(--text-3); font-size: 11px; }
+.start-city { min-width: 0; }
+.start-city b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-city small { color: var(--text-3); font-size: 11px; min-width: 0; }
 .start-city.on { border-color: var(--accent); background: rgba(245, 179, 36, .12); }
 .hint { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; margin-top: 8px; }
 .hint svg { width: 14px; height: 14px; }

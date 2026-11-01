@@ -37,6 +37,19 @@ export function modal(html, opts = {}) {
   modalEl.onclick = e => { if (e.target === modalEl && !opts.locked) closeModal(); };
   return modalEl.firstElementChild;
 }
+// confirmação no próprio jogo (o navegador embutido do app bloqueia o await ask() nativo)
+export function ask(text, { ok = 'Confirmar', cancel = 'Cancelar', danger = false } = {}) {
+  return new Promise(res => {
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-wrap'; wrap.style.zIndex = 95;
+    wrap.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true" style="width:min(420px,100%)"><p style="margin:0 0 4px;font-size:15px">${esc(text)}</p>
+      <div class="modal-foot"><button class="btn btn-ghost" data-a="0">${esc(cancel)}</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-a="1">${esc(ok)}</button></div></div>`;
+    document.body.append(wrap);
+    const done = v => { wrap.remove(); res(v); };
+    wrap.addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-a]'); if (b) done(b.dataset.a === '1'); else if (e.target === wrap) done(false); });
+    wrap.querySelector('[data-a="1"]').focus();
+  });
+}
 export function closeModal() { modalEl.hidden = true; modalEl.innerHTML = ''; }
 let progEl = null;
 function progress(text, frac = 0) {
@@ -1188,8 +1201,8 @@ const ACT = {
   home: () => renderStart(),
   'wiz-next': () => { if (!W.coach.first || !W.coach.last) return toast('Informe nome e sobrenome.', false); W.step = 2; renderWizard(); },
   'wiz-back': () => { W.step = 1; renderWizard(); },
-  'wiz-start': () => { if (C.hasSave() && !confirm('Isso substitui a carreira salva. Continuar?')) return; startCareer(false); },
-  'wiz-create': () => { if (C.hasSave() && !confirm('Isso substitui a carreira salva. Continuar?')) return; startCareer(true); },
+  'wiz-start': async () => { if (C.hasSave() && !await ask('Isso substitui a carreira salva. Continuar?')) return; startCareer(false); },
+  'wiz-create': async () => { if (C.hasSave() && !await ask('Isso substitui a carreira salva. Continuar?')) return; startCareer(true); },
   menu: () => document.getElementById('side')?.classList.toggle('open'),
   day: () => { const r = C.advanceDay(); if (!r.ok) return toast(r.msg, false); refresh(); },
   tonext: async () => { progress('Avançando o calendário…', 0.3); const r = await C.advanceToNextMatch(() => progress('Avançando o calendário…', 0.6)); progressEnd(); if (!r.ok) toast(r.msg, false); refresh(); },
@@ -1206,12 +1219,12 @@ const ACT = {
   readall: () => { S().inbox.forEach(m => m.read = true); C.save(); refresh(); },
   autopick: () => { C.autoLineup(C.myClub()); C.save(); renderView(); toast('Escalação automática aplicada.'); },
   compare: () => compareModal(),
-  resign: () => { if (!confirm('Pedir demissão? Seu progresso pessoal é mantido e você poderá procurar outro clube.')) return; C.fire('O treinador pediu para sair.', true); C.save(); view = 'central'; refresh(); },
+  resign: async () => { if (!await ask('Pedir demissão? Seu progresso pessoal é mantido e você poderá procurar outro clube.')) return; C.fire('O treinador pediu para sair.', true); C.save(); view = 'central'; refresh(); },
   jobhunt: () => { C.makeJobOffers(true); C.save(); refresh(); },
-  wipe: () => { if (!confirm('Apagar a carreira salva permanentemente?')) return; C.deleteSave(); renderStart(); }
+  wipe: async () => { if (!await ask('Apagar a carreira salva permanentemente?')) return; C.deleteSave(); renderStart(); }
 };
 
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   if (view === 'wizard' && app.contains(e.target) && !e.target.closest('[data-act]')) return; // o assistente trata os próprios cliques
   const t = e.target.closest('[data-act],[data-halfmin],[data-mp],[data-mpteam],[data-focus],[data-instr],[data-sqtab],[data-promote],[data-yrelease],[data-identity],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
   if (!t || document.getElementById('match').contains(t)) return;
@@ -1231,7 +1244,7 @@ document.addEventListener('click', e => {
   if (d.mpteam) { const r = MP.cache?.[d.mpteam]; if (!r) return; return playFriendly(r.snapshot, { oppName: `${r.coach} (${r.club})`, oppId: r.id, mySideIdx: +d.side }); }
   if (d.sqtab) { ui.squadTab = d.sqtab; return renderView(); }
   if (d.promote) { const r = Y.promote(S().players[d.promote]); toast(r.ok ? 'Promovido ao time principal!' : r.msg, r.ok, 'sprout'); return renderView(); }
-  if (d.yrelease) { const p = S().players[d.yrelease]; if (!confirm(`Dispensar ${p.name} da base?`)) return; Y.release(p); return renderView(); }
+  if (d.yrelease) { const p = S().players[d.yrelease]; if (!await ask(`Dispensar ${p.name} da base?`)) return; Y.release(p); return renderView(); }
   if (d.identity) return identityModal();
   if (d.bid) { closeModal(); return bidModal(d.bid); }
   if (d.treat) { const r = M.treat(S().players[d.treat]); toast(r.ok ? 'Tratamento intensivo iniciado: recuperação mais rápida.' : r.msg, r.ok); closeModal(); return refresh(); }
@@ -1239,11 +1252,11 @@ document.addEventListener('click', e => {
   if (d.scout) { const r = M.scout(S().players[d.scout]); toast(r.ok ? `Olheiro designado. Relatório em ${r.days} dias.` : r.msg, r.ok, 'scan-search'); return; }
   if (d.pre) { closeModal(); return negotiationModal(S().players[d.pre], 'pre', 0); }
   if (d.loan) { closeModal(); return loanModal(d.loan); }
-  if (d.clause) { const p = S().players[d.clause]; const r = M.payClause(p); if (!r.ok) return toast(r.msg, false); if (!confirm(`Pagar a multa de ${money(r.fee)} ao ${r.from.short}? O clube é obrigado a liberar ${p.name}.`)) return; closeModal(); return contractModal(p, r.fee); }
+  if (d.clause) { const p = S().players[d.clause]; const r = M.payClause(p); if (!r.ok) return toast(r.msg, false); if (!await ask(`Pagar a multa de ${money(r.fee)} ao ${r.from.short}? O clube é obrigado a liberar ${p.name}.`)) return; closeModal(); return contractModal(p, r.fee); }
   if (d.board) { const r = M.boardRequest(d.board); toast(r.msg, r.ok, 'landmark'); return refresh(); }
   if (d.renew) { return renewModal(d.renew); }
   if (d.sale) { const p = S().players[d.sale]; p.forSale = !p.forSale; C.save(); closeModal(); toast(p.forSale ? `${p.name} está à venda. Aguarde propostas na caixa de entrada.` : `${p.name} saiu da lista de vendas.`); return renderView(); }
-  if (d.release) { const p = S().players[d.release]; const comp = Math.round(p.wage * Math.max(1, p.contract) * 6 * 1000) / 1000; if (!confirm(`Rescindir com ${p.name}? Multa: ${money(comp)}.`)) return; const r = C.releasePlayer(p); closeModal(); toast(r.ok ? `${p.name} foi dispensado.` : r.msg, r.ok); return refresh(); }
+  if (d.release) { const p = S().players[d.release]; const comp = Math.round(p.wage * Math.max(1, p.contract) * 6 * 1000) / 1000; if (!await ask(`Rescindir com ${p.name}? Multa: ${money(comp)}.`)) return; const r = C.releasePlayer(p); closeModal(); toast(r.ok ? `${p.name} foi dispensado.` : r.msg, r.ok); return refresh(); }
   if (d.offerYes || d.offerNo) {
     const m = S().inbox.find(x => x.id === (d.offerYes || d.offerNo)); if (!m) return;
     m.read = true;
@@ -1251,7 +1264,7 @@ document.addEventListener('click', e => {
     if (m.offer.kind === 'request') { M.answerRequest(m, !!d.offerYes); return refresh(); }
     if (m.offer.kind === 'sale') { const r = C.acceptSale(m); toast(r.ok ? 'Venda concluída.' : r.msg, r.ok); return refresh(); }
     if (m.offer.kind === 'loanout') { const r = M.acceptLoanOut(m); toast(r.ok ? 'Empréstimo acertado.' : r.msg, r.ok); return refresh(); }
-    if (m.offer.kind === 'job') { if (C.myClub() && !confirm(`Deixar o ${C.myClub().short} e assumir o ${S().clubs[m.offer.club].short}?`)) return; m.done = 'aceita'; C.acceptJob(m.offer.club); view = 'central'; return refresh(); }
+    if (m.offer.kind === 'job') { if (C.myClub() && !await ask(`Deixar o ${C.myClub().short} e assumir o ${S().clubs[m.offer.club].short}?`)) return; m.done = 'aceita'; C.acceptJob(m.offer.club); view = 'central'; return refresh(); }
     return;
   }
   if (d.msg) { const m = S().inbox.find(x => x.id === d.msg); if (m && !m.read) { m.read = true; C.save(); } return; }

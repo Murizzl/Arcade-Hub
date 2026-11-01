@@ -10,7 +10,7 @@ import { ratingAt } from './players.js';
 import { PitchRenderer, kitsFor, teamColors } from './render.js';
 import * as C from './career.js';
 import { crest } from './art.js';
-import { modal, closeModal, toast } from './main.js';
+import { modal, closeModal, toast, ask } from './main.js';
 import { compName } from './cups.js';
 
 // duração de cada tempo em 1x, em minutos reais (preferência de cada usuário; padrão 2 min)
@@ -68,8 +68,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
   window.addEventListener('resize', onResize);
 
   canvas.addEventListener('click', e => {
-    const r = canvas.getBoundingClientRect();
-    const x = ((e.clientX - r.left) * R.dpr - R.ox) / R.s, y = ((e.clientY - r.top) * R.dpr - R.oy) / R.s;
+    const { x, y } = R.toPitch(e.clientX, e.clientY);
     let best = null, bd = 4;
     for (const T of m.teams) for (const p of T.on) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p; } }
     sel = best ? best.p.id : null;
@@ -237,7 +236,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
   function pause() { running = false; setPlayIcon(); live?.room.send('pz', { running: false }); }
   function resume() { if (m.phase !== 'live') return; running = true; last = performance.now(); setPlayIcon(); live?.room.send('pz', { running: true }); }
   function setPlayIcon() { const b = root.querySelector('#mPlay'); b.innerHTML = ic(running ? 'pause' : 'play'); icons(); }
-  root.onclick = e => {
+  root.onclick = async e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.id === 'mPlay') return running ? pause() : resume();
     if (t.dataset.speed) { speed = +t.dataset.speed; root.querySelectorAll('#mSpeed button').forEach(b => b.classList.toggle('on', b === t)); return; }
@@ -249,7 +248,7 @@ export function openMatch(f, { onCommit, onClose, friendly = null }) {
     if (a === 'replays') { pause(); replaysPanel(); }
     if (a === 'finish') {
       if (m.phase === 'FT') return;
-      if (!confirm('Simular o restante da partida? O auxiliar técnico fará as trocas necessárias.')) return;
+      if (!await ask('Simular o restante da partida? O auxiliar técnico fará as trocas necessárias.')) return;
       ffwd = true; m.assistant = true; m.runToEnd();
     }
     if (a === 'close') close();

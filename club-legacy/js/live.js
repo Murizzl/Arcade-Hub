@@ -8,7 +8,7 @@ import { STYLES, PRESS, LINES, INSTR } from './engine.js';
 import { PitchRenderer, kitsFor, teamColors } from './render.js';
 import { crest } from './art.js';
 import * as C from './career.js';
-import { modal, closeModal, toast } from './main.js';
+import { modal, closeModal, toast, ask } from './main.js';
 import { resultModalHtml, statsHtml } from './match.js';
 import { Arcade } from './arcade.js';
 
@@ -161,13 +161,13 @@ export function openLiveGuest(room, { home, away, mySide = 1, oppName, onClose }
     room.close();
     onClose?.();
   }
-  root.onclick = e => {
+  root.onclick = async e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.id === 'lPlay') { room.send('cmd', { k: running ? 'pause' : 'resume' }); return; }
     if (t.dataset.ltab) { tab = t.dataset.ltab; root.querySelectorAll('[data-ltab]').forEach(b => b.classList.toggle('on', b === t)); return pane(); }
     if (t.dataset.lact === 'tactics') tacticsPanel();
     if (t.dataset.lact === 'subs') subsPanel();
-    if (t.dataset.lact === 'leave' && confirm('Sair da sala? A IA assume o seu time.')) close();
+    if (t.dataset.lact === 'leave' && await ask('Sair da sala? A IA assume o seu time.')) close();
   };
   requestAnimationFrame(() => { R.resize(); raf = requestAnimationFrame(frame); });
   pane();

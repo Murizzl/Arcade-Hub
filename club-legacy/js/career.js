@@ -19,8 +19,8 @@ export let S = null;    // estado da carreira
 
 export async function loadData() {
   const [league, formations] = await Promise.all([
-    fetch('data/league-br.json').then(r => r.json()),
-    fetch('data/formations.json').then(r => r.json())
+    fetch(`data/league-br.json?v=${window.APP_VERSION || ''}`).then(r => r.json()),
+    fetch(`data/formations.json?v=${window.APP_VERSION || ''}`).then(r => r.json())
   ]);
   delete formations._doc;
   DB = { ...league, formations };

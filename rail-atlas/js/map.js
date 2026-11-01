@@ -108,6 +108,7 @@ export function createMap(svg, handlers = {}) {
   function focus(lon, lat, width = 320, animate = true) {
     const [x, y] = project(lon, lat);
     const r = svg.getBoundingClientRect();
+    if (r.width && r.width < 600) width *= 1.7; // celular: mostra mais vizinhos ao centralizar
     const h = width / ((r.width || 1) / (r.height || 1));
     const target = { x: x - width / 2, y: y - h / 2, w: width };
     cancelAnimationFrame(anim);

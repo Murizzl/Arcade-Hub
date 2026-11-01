@@ -617,6 +617,10 @@ function settingsPanel() {
 
 /* ==================== AÇÕES ==================== */
 function bindChrome() {
+  // celular: esconde o degradê de "tem mais" quando a barra rolou até o fim
+  const navEl = $('#nav');
+  const navEnd = () => navEl.classList.toggle('at-end', navEl.scrollLeft + navEl.clientWidth >= navEl.scrollWidth - 4);
+  navEl.addEventListener('scroll', navEnd, { passive: true }); addEventListener('resize', navEnd); navEnd();
   $('#nav').addEventListener('click', e => {
     const b = e.target.closest('[data-view]'); if (!b || !state) return;
     const v = b.dataset.view;

@@ -10,13 +10,36 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/map.css">
-  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/main.css?v=2026.11.01.1211">
+  <link rel="stylesheet" href="css/map.css?v=2026.11.01.1211">
+  <link rel="stylesheet" href="css/components.css?v=2026.11.01.1211">
   <script src="https://unpkg.com/lucide@0.400.0/dist/umd/lucide.min.js"></script>
   <!-- mesma configuração e mesma sessão do Arcade Hub (nuvem do Arcade Social) -->
   <script src="../js/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <!-- versão dos arquivos: ao publicar uma atualização, troque APP_VERSION e os ?v= abaixo
+       (evita o navegador misturar módulos novos com antigos em cache) -->
+  <script>window.APP_VERSION = '2026.11.01.1211';</script>
+  <script type="importmap">
+  {
+    "imports": {
+      "./js/arcade-integration.js": "./js/arcade-integration.js?v=2026.11.01.1211",
+      "./js/automation.js": "./js/automation.js?v=2026.11.01.1211",
+      "./js/cargo.js": "./js/cargo.js?v=2026.11.01.1211",
+      "./js/cities.js": "./js/cities.js?v=2026.11.01.1211",
+      "./js/economy.js": "./js/economy.js?v=2026.11.01.1211",
+      "./js/game-state.js": "./js/game-state.js?v=2026.11.01.1211",
+      "./js/main.js": "./js/main.js?v=2026.11.01.1211",
+      "./js/map.js": "./js/map.js?v=2026.11.01.1211",
+      "./js/progression.js": "./js/progression.js?v=2026.11.01.1211",
+      "./js/railways.js": "./js/railways.js?v=2026.11.01.1211",
+      "./js/save-system.js": "./js/save-system.js?v=2026.11.01.1211",
+      "./js/sprites.js": "./js/sprites.js?v=2026.11.01.1211",
+      "./js/trains.js": "./js/trains.js?v=2026.11.01.1211",
+      "./js/ui.js": "./js/ui.js?v=2026.11.01.1211"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="boot" class="boot"><div class="boot-card"><div class="spinner"></div><p>Preparando os trilhos…</p></div></div>
@@ -61,6 +84,6 @@
   <div class="modal" id="modal"></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=2026.11.01.1211"></script>
 </body>
 </html>
