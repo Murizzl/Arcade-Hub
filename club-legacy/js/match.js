@@ -12,7 +12,8 @@ import * as C from './career.js';
 import { crest } from './art.js';
 import { modal, closeModal, toast } from './main.js';
 
-const SPEEDS = { 1: 6, 2: 12, 4: 24, 8: 48 }; // segundos simulados por segundo real
+// segundos simulados por segundo real (com CLOCK 2,5: 1x ≈ 7 min de partida, 8x ≈ 55 s)
+const SPEEDS = { 1: 5, 2: 10, 4: 20, 8: 40 };
 const root = document.getElementById('match');
 const icons = () => window.lucide?.createIcons();
 
