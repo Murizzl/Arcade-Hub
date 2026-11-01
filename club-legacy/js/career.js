@@ -7,6 +7,7 @@ import { RNG, hashSeed, clamp, dateOf, fmtDate, money } from './util.js';
 import { makeSquad, makePlayer, numberSquad, ratingAt, marketValue, wageFor, trainPlayer, seasonAging, setIdCounter, getIdCounter } from './players.js';
 import { Match } from './engine.js';
 import { Arcade } from './arcade.js';
+import * as M from './management.js';
 
 const SAVE_KEY = 'clublegacy.save.v1';
 export let DB = null;   // dados configuráveis (JSON)
@@ -36,6 +37,7 @@ export function load() {
     if (!raw) return null;
     S = JSON.parse(raw);
     setIdCounter(S.idc || 0);
+    M.migrate(S);
     return S;
   } catch (e) { return null; }
 }
@@ -54,7 +56,7 @@ export const squadOf = c => c.squad.map(id => S.players[id]).filter(Boolean);
 export const AI_TACTICS = {
   balanced:   { style: 'balanced',   mentality: 0,  press: 'normal', line: 'normal' },
   possession: { style: 'possession', mentality: 0,  press: 'normal', line: 'normal' },
-  highpress:  { style: 'balanced',   mentality: 1,  press: 'high',   line: 'high' },
+  highpress:  { style: 'balanced',   mentality: 0,  press: 'high',   line: 'high' },
   counter:    { style: 'counter',    mentality: -1, press: 'normal', line: 'normal' },
   defensive:  { style: 'counter',    mentality: -1, press: 'low',    line: 'low' },
   direct:     { style: 'direct',     mentality: 0,  press: 'normal', line: 'normal' },
@@ -102,6 +104,7 @@ export function newCareer({ coach, clubId, customClub }) {
     seasonWins: 0, matchesPlayed: 0, offers: [], idc: 0, pendingSale: [],
     firedFrom: null
   };
+  M.migrate(S);
   setupSeason(rng);
   const me = myClub();
   autoLineup(me);
@@ -234,14 +237,15 @@ function dailyUpdate(rng) {
   // virada de mês: salários, patrocínio e custos
   if (d.getUTCDate() === 1) monthly();
   // propostas por jogadores à venda do usuário
-  if (me) incomingOffers(rng, me);
+  if (me && M.windowState().open) incomingOffers(rng, me);
+  M.daily(rng);
   // clubes da IA completam elencos com agentes livres
   if (S.day % 10 === 0) aiMarket(rng);
 }
 
 function monthly() {
   for (const c of Object.values(S.clubs)) {
-    const wages = squadOf(c).reduce((s, p) => s + p.wage, 0);
+    const wages = M.wageCost(c);
     const lg = leagueCfg(c.division);
     const sponsor = lg.sponsorMonthly * (0.6 + c.prestige * 0.35);
     const ops = 0.05 + c.prestige * 0.04;
@@ -347,7 +351,7 @@ export function commitResult(f, m, isUser) {
       p.morale = clamp(p.morale + (won ? 6 : lost ? -5 : 1) + ((rt?.rating || 6) - 6.5) * 3, 15, 100);
       if (mp.yellow) { p.st.yc++; p.yellowAcc++; if (p.yellowAcc >= 3) { p.suspended = 1; p.yellowAcc = 0; } }
       if (mp.off && !mp.injured && mp.minOut != null && T.off.includes(mp)) { p.st.rc++; p.suspended = 1; }
-      if (mp.injured) p.injury = Math.max(p.injury, mp.injuryDays || 7);
+      if (mp.injured) { p.injury = Math.max(p.injury, mp.injuryDays || 7); p.injuryType = M.injuryName(p.injury); p.treated = false; }
     }
     // quem não jogou cumpre suspensão
     for (const p of squadOf(c)) if (p.suspended && !T.used.some(x => x.p.id === p.id)) p.suspended = 0;
@@ -481,6 +485,7 @@ export function acceptSale(msg) {
   const o = msg.offer; const p = S.players[o.player]; const b = S.clubs[o.buyer]; const me = myClub();
   if (!p || p.club !== me.id || b.balance < o.fee) { msg.done = 'expirada'; save(); return { ok: false, msg: 'A proposta não é mais válida.' }; }
   if (me.squad.length <= 16) return { ok: false, msg: 'Elenco mínimo de 16 jogadores.' };
+  M.logTransfer(p, me.id, b.id, o.fee);
   moveTo(p, b.id);
   b.balance -= o.fee; me.balance += o.fee;
   ledger(`Venda de ${p.name}`, o.fee);
@@ -507,6 +512,7 @@ export function evaluateBid(p, fee) {
   const importance = rank === 0 ? 0.45 : rank === 1 ? 0.2 : 0;
   const short = samePos.length <= 2 ? 0.25 : 0;
   const ask = Math.round(p.value * (1 + importance + short) * (p.contract <= 1 ? 0.85 : 1) * (c.balance < 0 ? 0.85 : 1) * 100) / 100;
+  if (p.clause && fee >= p.clause) return { kind: 'accept', ask, clause: true };
   if (p.forSale && fee >= p.value * 0.9) return { kind: 'accept', ask };
   if (fee >= ask) return { kind: 'accept', ask };
   if (fee >= ask * 0.75) return { kind: 'counter', ask };
@@ -517,19 +523,22 @@ export function wageDemand(p, toClub) {
   const base = wageFor(p);
   return Math.round(base * (1.15 + (p.club ? 0.1 : -0.1) - c.prestige * 0.02) * 1000) / 1000;
 }
-export function payroll(c) { return squadOf(c).reduce((s, p) => s + p.wage, 0); }
+export function payroll(c) { return M.wageCost(c); }
 
-export function completeSigning(p, fee, wage, years) {
+export function completeSigning(p, fee, wage, years, bonus = 0) {
   const me = myClub();
-  if (fee > me.balance) return { ok: false, msg: 'Orçamento de transferências insuficiente.' };
+  if (fee + bonus > me.balance) return { ok: false, msg: 'Orçamento insuficiente para a transferência e as luvas.' };
+  if (fee > 0 && !M.windowState().open) return { ok: false, msg: 'A janela de transferências está fechada (agentes livres podem ser contratados).' };
   if (payroll(me) + wage > me.wageBudget) return { ok: false, msg: 'A folha salarial ultrapassaria o limite da diretoria.' };
   if (me.squad.length >= 32) return { ok: false, msg: 'Elenco cheio (máx. 32).' };
   const from = p.club ? S.clubs[p.club] : null;
   if (from) { from.balance += fee; }
-  me.balance -= fee;
+  me.balance -= fee + bonus;
+  M.logTransfer(p, p.club, me.id, fee);
   moveTo(p, me.id);
   p.wage = wage; p.contract = years; p.morale = 80;
-  ledger(`Contratação de ${p.name}`, -fee);
+  if (fee) ledger(`Contratação de ${p.name}`, -fee);
+  if (bonus) ledger(`Luvas de ${p.name}`, -bonus);
   addNews(`${me.short} contrata ${p.name}`, `${p.name} (${p.ovr}, ${p.age} anos) chega ${from ? `do ${from.short} por ${money(fee)}` : 'sem custos de transferência'}.`, 'pen-line');
   save();
   return { ok: true };
@@ -620,6 +629,7 @@ function endSeason() {
   summary.relegated.forEach(id => { S.clubs[id].division = 'B'; S.clubs[id].prestige = Math.max(1, S.clubs[id].prestige - (S.clubs[id].prestige >= 3 ? 1 : 0)); });
   summary.promoted.forEach(id => { S.clubs[id].division = 'A'; });
 
+  M.seasonEnd();
   // evolução, aposentadorias, contratos e novas gerações
   for (const c of Object.values(S.clubs)) {
     for (const p of squadOf(c)) {
@@ -632,6 +642,7 @@ function endSeason() {
         if (c.id === S.coach.clubId) inbox('Elenco', `${p.name} se aposenta`, `Aos ${p.age} anos, ${p.name} pendurou as chuteiras.`, 'report');
         continue;
       }
+      if (p.contract <= 0 && p.precontract) { M.executePrecontract(p); continue; }
       if (p.contract <= 0) {
         if (c.id === S.coach.clubId) { moveTo(p, null); inbox('Elenco', `Contrato encerrado: ${p.name}`, `${p.name} deixou o clube como agente livre.`, 'report'); }
         else if (rng.chance(p.ovr >= c.rating - 4 ? 0.85 : 0.45)) p.contract = rng.int(1, 3);
@@ -643,7 +654,7 @@ function endSeason() {
     while (c.squad.length < 22 && guard++ < 12) {
       const pos = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'LW', 'RW', 'ST'].find(x => squadOf(c).filter(p => p.pos === x).length < (x === 'GK' ? 2 : x === 'CB' || x === 'CM' ? 3 : 1)) || rng.pick(['CM', 'ST', 'CB', 'LW']);
       const p = makePlayer(rng, DB.names, pos, c.rating - 12 + rng.int(0, 6), { age: rng.int(17, 19) });
-      p.pot = clamp(p.pot + rng.int(2, 10), p.ovr, 92);
+      p.pot = clamp(p.pot + rng.int(2, 10) + ((c.youthLevel || 1) - 1) * 3, p.ovr, 94);
       p.club = c.id; S.players[p.id] = p; c.squad.push(p.id);
       if (c.id === S.coach.clubId) inbox('Categorias de base', `Promovido da base: ${p.name}`, `${p.name}, ${p.age} anos, ${p.pos}. Potencial estimado: ${p.pot - 3}–${p.pot + 3}.`, 'youth');
     }

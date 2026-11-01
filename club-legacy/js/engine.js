@@ -89,7 +89,7 @@ export class Match {
       const gap = str(T) - str(O) + (T.home ? 1.5 : -1.5);
       const b = T.aiBase;
       if (gap <= -4) { b.mentality = Math.max(-2, b.mentality - 1); b.line = 'low'; if (b.style === 'possession' || b.style === 'balanced') b.style = 'counter'; T.plan = 'Fechado atrás, saindo no contra-ataque'; }
-      else if (gap >= 4) { b.mentality = Math.min(2, b.mentality + 1); if (b.press === 'low') b.press = 'normal'; T.plan = 'Propondo o jogo desde o início'; }
+      else if (gap >= 4) { b.mentality = Math.min(1, b.mentality + 1); if (b.press === 'low') b.press = 'normal'; T.plan = 'Propondo o jogo desde o início'; }
       else T.plan = 'Jogo equilibrado';
       T.tactics = { ...T.tactics, ...b };
     }
@@ -232,8 +232,10 @@ export class Match {
   updateTeam(T) {
     const homeB = T.home ? 1.03 : 1;
     for (const m of T.on) {
-      m.eff = (0.7 + 0.3 * m.energy / 100) * homeB * (0.96 + 0.08 * T.morale) * (m.injured ? 0.7 : 1);
+      m.eff = (0.7 + 0.3 * m.energy / 100) * homeB * (0.96 + 0.08 * T.morale) * (0.97 + 0.06 * ((m.p.morale ?? 70) - 50) / 50) * (m.injured ? 0.7 : 1);
       if (m.stun > 0) m.stun -= DT;
+      // músculo cansado: risco de lesão sem contato
+      if (!m.injured && m.energy < 42 && this.rng.chance(DT * CLOCK * 0.00004 * (42 - m.energy))) this.injure(m, 'muscle');
     }
     T.aiClock += DT;
     if (T.aiClock >= 180 / CLOCK) { T.aiClock = 0; if (T.ai) this.aiTactics(T); if (T.ai || (T.side === this.userSide && this.assistant)) this.aiSubs(T); }
@@ -433,14 +435,14 @@ export class Match {
     // 1) finalização
     if (h.role !== 'GK' && d < 33) {
       const xg = this.xgAt(h);
-      const roleK = h.role === 'ST' ? 0.045 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.022 : h.role === 'CM' ? -0.01 : 0;
+      const roleK = h.role === 'ST' ? 0.015 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.022 : h.role === 'CM' ? -0.01 : 0;
       const thr = 0.07 + roleK - m * 0.005 - (h.a.sho - 60) / 2000;
       // altruísmo: rola para um companheiro com chance claramente melhor
       if (xg > thr * 0.6) {
         const alt = this.betterPlaced(h, xg);
         if (alt && this.rng.chance(0.35 + h.a.pas / 400)) return this.pass(h, alt);
       }
-      if ((xg > thr && this.rng.chance(0.75 + m * 0.05)) || (d < 27 && this.rng.chance(0.008 + h.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
+      if ((xg > thr && this.rng.chance(0.45 + m * 0.05)) || (d < 27 && this.rng.chance(0.008 + h.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
     }
     // 2) cruzamento das pontas
     if (h.role !== 'GK' && fx > 0.73 && (fy < 0.2 || fy > 0.8) && this.rng.chance(0.4 * st.cross)) {
@@ -631,7 +633,7 @@ export class Match {
     }
     if (kind === 'freekick' && this.rng.chance(0.24)) blocked = O.on.filter(o => !o.off && o.role !== 'GK').sort((a, c) => dist(a.x, a.y, h.x, h.y) - dist(c.x, c.y, h.x, h.y))[0] || false;
     // finalizador e goleiro deslocam a chance, sem multiplicar a ponto de descolar do xG
-    const adj = clamp(xg * 1.75 * (0.75 + q / 300) * (1.2 - gkQ / 300), 0.003, 0.9);
+    const adj = clamp(xg * 1.52 * (0.75 + q / 300) * (1.2 - gkQ / 300), 0.003, 0.9);
     const onT = clamp(0.28 + q / 210 + xg * 0.63, 0.3, 0.92);
     const r = this.rng.next();
     let outcome;
@@ -677,18 +679,7 @@ export class Match {
       if (card !== 'yellow') this.captureReplay('red', cev);
     }
     // lesão
-    if (this.rng.chance(0.03)) {
-      h.injured = true;
-      const days = this.rng.int(4, 35);
-      h.injuryDays = days;
-      this.say(`${h.p.name} sente a pancada e pede atendimento.`, h.side, 'injury');
-      this.emit('injury', { side: h.side, player: h.p.id, name: h.p.name, days });
-      const HT = this.teams[h.side];
-      if (HT.ai || (h.side === this.userSide && this.assistant)) {
-        const best = HT.bench.filter(p => !p.injury).map(p => ({ p, r: ratingAt(p, h.role) })).sort((a, b) => b.r - a.r)[0];
-        if (best && HT.subs < 5) this.substitute(h.side, h.p.id, best.p.id);
-      }
-    }
+    if (this.rng.chance(0.03)) this.injure(h, 'contact');
     const dGoal = dist(h.x, h.y, gx, W / 2);
     if (inBox && this.rng.chance(0.12)) {
       this.say(`Pênalti para o ${this.teams[h.side].club.short}!`, h.side, 'chance');
@@ -700,6 +691,19 @@ export class Match {
       this.setRestart('fkshot', h.side, h.x, h.y, 4);
     } else if (!inBox && fwdF > 0.72) this.setRestart('fkcross', h.side, h.x, h.y, 3.5);
     else this.setRestart('free', h.side, h.x, h.y, 2.5);
+  }
+
+  injure(h, kind) {
+    h.injured = true;
+    const days = kind === 'muscle' ? this.rng.int(6, 22) : this.rng.int(3, 40);
+    h.injuryDays = days;
+    this.say(kind === 'muscle' ? `${h.p.name} sente a coxa e pede para sair.` : `${h.p.name} sente a pancada e pede atendimento.`, h.side, 'injury');
+    this.emit('injury', { side: h.side, player: h.p.id, name: h.p.name, days });
+    const HT = this.teams[h.side];
+    if (HT.ai || (h.side === this.userSide && this.assistant)) {
+      const best = HT.bench.filter(p => !p.injury).map(p => ({ p, r: ratingAt(p, h.role) })).sort((a, b) => b.r - a.r)[0];
+      if (best && HT.subs < 5) this.substitute(h.side, h.p.id, best.p.id);
+    }
   }
 
   sendOff(m) {

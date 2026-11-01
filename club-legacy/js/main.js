@@ -8,6 +8,7 @@ import * as C from './career.js';
 import { crest, avatar, LOOK } from './art.js';
 import { openMatch, resultModalHtml } from './match.js';
 import { Arcade } from './arcade.js';
+import * as M from './management.js';
 
 const app = document.getElementById('app');
 const modalEl = document.getElementById('modal');
@@ -41,9 +42,9 @@ const ovrCls = v => v >= 80 ? 'o5' : v >= 72 ? 'o4' : v >= 64 ? 'o3' : v >= 56 ?
 const ovrB = v => `<span class="ovr ${ovrCls(v)}">${v}</span>`;
 const posB = pos => `<span class="posb ${POS_GROUP[pos]}">${POS_LABEL[pos]}</span>`;
 const stars = n => `<span class="stars" title="Prestígio ${n}/5">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
-const potEst = p => { const e = p.club === S().coach.clubId ? 2 : 5; return `${Math.max(p.ovr, p.pot - e)}–${Math.min(99, p.pot + e)}`; };
+const potEst = p => M.potRange(p);
 const energyBar = v => `<span class="energy ${v < 50 ? 'vlow' : v < 70 ? 'low' : ''}" title="Condição ${Math.round(v)}%"><i style="width:${v}%"></i></span>`;
-const statusTags = p => `${p.injury ? `<span class="tag tag-red">${ic('cross')} ${p.injury}d</span>` : ''}${p.suspended ? '<span class="tag tag-red">Suspenso</span>' : ''}${p.forSale ? `<span class="tag tag-yellow">${ic('tag')} À venda</span>` : ''}${p.contract <= 1 ? '<span class="tag">Fim de contrato</span>' : ''}`;
+const statusTags = p => `${p.injury ? `<span class="tag tag-red" title="${esc(p.injuryType || 'Lesão')}">${ic('cross')} ${p.injury}d</span>` : ''}${p.loan ? `<span class="tag tag-blue">${ic('repeat')} ${p.loan.to === S().coach.clubId ? 'Emprestado' : 'Cedido'}</span>` : ''}${p.precontract ? '<span class="tag tag-lime">Pré-contrato</span>' : ''}${p.wantsOut ? '<span class="tag tag-red">Quer sair</span>' : ''}${p.forLoan ? '<span class="tag">Para empréstimo</span>' : ''}${p.suspended ? '<span class="tag tag-red">Suspenso</span>' : ''}${p.forSale ? `<span class="tag tag-yellow">${ic('tag')} À venda</span>` : ''}${p.contract <= 1 ? '<span class="tag">Fim de contrato</span>' : ''}`;
 
 /* ---------- boot ---------- */
 async function boot() {
@@ -260,6 +261,7 @@ export function renderShell() {
       <div class="club">${me ? crest(me, 36) : `<span class="tag">${ic('briefcase')} Desempregado</span>`}<div style="min-width:0"><b>${me ? esc(me.name) : esc(`${s.coach.first} ${s.coach.last}`)}</b><small>${me ? `${me.division === 'A' ? 'Série A' : 'Série B'} · ${C.position(me.id)}º lugar` : 'Procurando clube'}</small></div></div>
       <div class="chips">
         <span class="chip">${ic('calendar')} ${C.dateLabel(s.day)}</span>
+        <span class="chip hide-sm" title="${M.windowState().days != null ? `${M.windowState().open ? 'Fecha' : 'Abre'} em ${M.windowState().days} dias` : ''}">${ic(M.windowState().open ? 'door-open' : 'lock')} ${M.windowState().open ? 'Janela aberta' : 'Janela fechada'}</span>
         ${me ? `<span class="chip hide-sm ${me.balance < 0 ? 'neg' : ''}">${ic('wallet')} ${money(me.balance)}</span><span class="chip hide-sm">${ic('landmark')} ${s.board.confidence}%</span>` : ''}
       </div>
     </header>
@@ -347,9 +349,9 @@ function vCentral() {
 
 function msgHtml(m) {
   const off = m.offer && !m.done;
-  return `<div class="msg ${m.read ? '' : 'unread'}" data-msg="${m.id}"><span class="news-item" style="padding:0"><span class="ic">${ic({ board: 'landmark', offer: 'banknote', job: 'briefcase', medical: 'cross', youth: 'sprout', report: 'file-text' }[m.kind] || 'mail')}</span></span>
+  return `<div class="msg ${m.read ? '' : 'unread'}" data-msg="${m.id}"><span class="news-item" style="padding:0"><span class="ic">${ic({ board: 'landmark', offer: 'banknote', job: 'briefcase', medical: 'cross', youth: 'sprout', report: 'file-text', request: 'message-circle-warning' }[m.kind] || 'mail')}</span></span>
     <div class="grow"><b class="small">${esc(m.title)}</b><p class="small muted" style="margin:2px 0">${esc(m.body)}</p><small class="faint">${esc(m.from)} · ${C.dateLabel(m.day, false)}</small>
-    ${off ? `<div class="row-wrap" style="margin-top:8px"><button class="btn btn-sm btn-primary" data-offer-yes="${m.id}">${ic('check')} Aceitar</button><button class="btn btn-sm" data-offer-no="${m.id}">Recusar</button></div>` : m.offer ? `<span class="tag" style="margin-top:6px">${esc(String(m.done))}</span>` : ''}</div></div>`;
+    ${off ? `<div class="row-wrap" style="margin-top:8px"><button class="btn btn-sm btn-primary" data-offer-yes="${m.id}">${ic('check')} ${m.offer.kind === 'request' ? 'Prometer mais minutos' : 'Aceitar'}</button><button class="btn btn-sm" data-offer-no="${m.id}">${m.offer.kind === 'request' ? 'Colocar à venda' : 'Recusar'}</button></div>` : m.offer ? `<span class="tag" style="margin-top:6px">${esc(String(m.done))}</span>` : ''}</div></div>`;
 }
 
 function miniTable(lg, myId) {
@@ -388,8 +390,8 @@ function vSquad() {
   return `<div class="page-head"><div><h1>Elenco</h1><p>${me.squad.length} jogadores · média ${Math.round(C.clubRating(me))} · folha ${money(C.payroll(me))}/mês</p></div>
     <div class="right row-wrap"><button class="btn" data-act="compare">${ic('git-compare')} Comparar</button><button class="btn" data-nav="tactics">${ic('clipboard-list')} Escalação</button></div></div>
   <div class="card" style="padding:6px"><div class="table-wrap"><table class="t">
-    <thead><tr>${th('pos', 'Pos')}<th>#</th>${th('name', 'Nome')}${th('age', 'Idade', 'num')}${th('ovr', 'OVR', 'num')}${th('pot', 'Pot.', 'num')}${th('cond', 'Cond.')}${th('morale', 'Moral', 'num')}${th('value', 'Valor', 'num')}${th('wage', 'Salário', 'num')}${th('contract', 'Contr.', 'num')}${th('apps', 'J', 'num')}${th('goals', 'G', 'num')}${th('assists', 'A', 'num')}${th('rating', 'Nota', 'num')}<th></th></tr></thead>
-    <tbody>${list.map(p => `<tr class="click" data-player="${p.id}"><td>${posB(p.pos)}</td><td class="faint">${p.num}</td><td><b>${esc(p.name)}</b> ${lineup.has(p.id) ? '<span class="tag tag-lime">Titular</span>' : bench.has(p.id) ? '<span class="tag tag-blue">Reserva</span>' : ''} ${statusTags(p)}</td><td class="num">${p.age}</td><td class="num">${ovrB(p.ovr)}</td><td class="num faint">${potEst(p)}</td><td>${energyBar(p.cond)}</td><td class="num">${Math.round(p.morale)}</td><td class="num">${money(p.value)}</td><td class="num">${money(p.wage)}</td><td class="num">${p.contract}a</td><td class="num">${p.st.apps}</td><td class="num">${p.st.goals}</td><td class="num">${p.st.assists}</td><td class="num">${p.st.apps ? p.st.rating.toFixed(1) : '–'}</td><td><span class="faint small">${p.natCode !== 'BR' ? p.natCode : ''}</span></td></tr>`).join('')}</tbody>
+    <thead><tr>${th('pos', 'Pos')}<th>#</th>${th('name', 'Nome')}${th('age', 'Idade', 'num')}${th('ovr', 'OVR', 'num')}${th('pot', 'Pot.', 'num')}${th('cond', 'Cond.')}${th('morale', 'Moral', 'num')}${th('value', 'Valor', 'num')}${th('wage', 'Salário', 'num')}${th('contract', 'Contr.', 'num')}${th('apps', 'J', 'num')}${th('goals', 'G', 'num')}${th('assists', 'A', 'num')}${th('rating', 'Nota', 'num')}<th>Humor</th></tr></thead>
+    <tbody>${list.map(p => `<tr class="click" data-player="${p.id}"><td>${posB(p.pos)}</td><td class="faint">${p.num}</td><td><b>${esc(p.name)}</b> ${lineup.has(p.id) ? '<span class="tag tag-lime">Titular</span>' : bench.has(p.id) ? '<span class="tag tag-blue">Reserva</span>' : ''} ${statusTags(p)}</td><td class="num">${p.age}</td><td class="num">${ovrB(p.ovr)}</td><td class="num faint">${potEst(p)}</td><td>${energyBar(p.cond)}</td><td class="num">${Math.round(p.morale)}</td><td class="num">${money(p.value)}</td><td class="num">${money(p.wage)}</td><td class="num">${p.contract}a</td><td class="num">${p.st.apps}</td><td class="num">${p.st.goals}</td><td class="num">${p.st.assists}</td><td class="num">${p.st.apps ? p.st.rating.toFixed(1) : '–'}</td><td><span class="small ${M.happiness(p)[1]}">${M.happiness(p)[0]}</span></td></tr>`).join('')}</tbody>
   </table></div></div>`;
 }
 
@@ -408,6 +410,10 @@ function playerModal(id) {
       <div>
         <div class="row-wrap" style="margin-bottom:8px">${statusTags(p)}</div>
         <div class="li"><span class="grow faint">Contrato</span><b>${p.contract} temporada(s)</b></div>
+        <div class="li"><span class="grow faint">Multa rescisória</span><b>${p.clause ? money(p.clause) : '—'}</b></div>
+        ${mine ? `<div class="li"><span class="grow faint">Papel no elenco</span><b>${M.ROLES[p.role] || '—'}${p.promise ? ' <span class="tag tag-yellow">prometido</span>' : ''}</b></div><div class="li"><span class="grow faint">Humor</span><b class="${M.happiness(p)[1]}">${M.happiness(p)[0]}</b></div>` : ''}
+        ${p.loan ? `<div class="li"><span class="grow faint">Empréstimo</span><b>${esc(S().clubs[p.loan.from].short)} → ${esc(S().clubs[p.loan.to].short)} (${Math.round(p.loan.share * 100)}% do salário)</b></div>` : ''}
+        ${p.injury ? `<div class="li"><span class="grow faint">Lesão</span><b class="neg">${esc(p.injuryType || 'Lesão')} · ${p.injury} dias${p.treated ? ' (em tratamento)' : ''}</b></div>` : ''}
         <div class="li"><span class="grow faint">Condição física</span><b>${Math.round(p.cond)}%</b></div>
         <div class="li"><span class="grow faint">Moral</span><b>${Math.round(p.morale)}</b></div>
         <div class="li"><span class="grow faint">Jogos · Gols · Assist.</span><b>${p.st.apps} · ${p.st.goals} · ${p.st.assists}</b></div>
@@ -416,11 +422,26 @@ function playerModal(id) {
         ${mine ? `<label class="field" style="margin-top:8px">Plano de treinamento<select class="input" id="pPlan">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${p.plan === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>` : ''}
       </div>
     </div>
-    <div class="modal-foot">
-      ${mine ? `<button class="btn btn-danger" data-release="${p.id}">${ic('user-x')} Rescindir</button><button class="btn" data-sale="${p.id}">${ic('tag')} ${p.forSale ? 'Tirar da venda' : 'Colocar à venda'}</button><button class="btn btn-primary" data-renew="${p.id}">${ic('file-signature')} Renovar contrato</button>`
-      : `<button class="btn btn-primary" data-bid="${p.id}">${ic('hand-coins')} ${p.club ? 'Fazer proposta' : 'Oferecer contrato'}</button>`}
+    <div class="modal-foot">${playerActions(p, mine)}
     </div>`, { wide: true });
   modalEl.querySelector('#pPlan')?.addEventListener('change', e => { p.plan = e.target.value; C.save(); toast(`Plano de ${p.name}: ${PLANS[p.plan].label}`); });
+}
+
+function playerActions(p, mine) {
+  const s = S(), win = M.windowState();
+  if (mine && p.loan && p.loan.to === s.coach.clubId) return `<span class="faint small">Emprestado pelo ${esc(s.clubs[p.loan.from].short)} até o fim de ${p.loan.until}.</span>`;
+  if (mine) return `${p.injury && !p.treated ? `<button class="btn" data-treat="${p.id}">${ic('cross')} Tratamento (${money(M.treatCost(p))})</button>` : ''}
+    <button class="btn btn-danger" data-release="${p.id}">${ic('user-x')} Rescindir</button>
+    <button class="btn" data-forloan="${p.id}">${ic('repeat')} ${p.forLoan ? 'Tirar do empréstimo' : 'Disponível p/ empréstimo'}</button>
+    <button class="btn" data-sale="${p.id}">${ic('tag')} ${p.forSale ? 'Tirar da venda' : 'Colocar à venda'}</button>
+    <button class="btn btn-primary" data-renew="${p.id}">${ic('file-signature')} Renovar contrato</button>`;
+  if (!p.club) return `<button class="btn" data-scout="${p.id}">${ic('scan-search')} Observar</button><button class="btn btn-primary" data-bid="${p.id}">${ic('hand-coins')} Oferecer contrato</button>`;
+  const lt = M.loanTerms(p);
+  return `<button class="btn" data-scout="${p.id}">${ic('scan-search')} Observar</button>
+    ${M.canPrecontract(p) ? `<button class="btn" data-pre="${p.id}">${ic('calendar-check')} Pré-contrato</button>` : ''}
+    ${lt.available ? `<button class="btn" data-loan="${p.id}" ${win.open ? '' : 'disabled title="Janela fechada"'}>${ic('repeat')} Pedir empréstimo</button>` : ''}
+    <button class="btn" data-clause="${p.id}" ${win.open ? '' : 'disabled title="Janela fechada"'}>${ic('banknote')} Pagar multa (${money(p.clause)})</button>
+    <button class="btn btn-primary" data-bid="${p.id}" ${win.open ? '' : 'disabled title="Janela fechada"'}>${ic('hand-coins')} Fazer proposta</button>`;
 }
 
 function compareModal(a, b) {
@@ -440,18 +461,45 @@ function compareModal(a, b) {
   modalEl.querySelector('#cmpB').onchange = e => compareModal(a, e.target.value);
 }
 
-function renewModal(id) {
-  const p = S().players[id]; const d = C.renewDemand(p);
-  modal(`<div class="modal-head"><h2>${ic('file-signature')} Renovar com ${esc(p.name)}</h2><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
-    <p class="muted">Salário atual ${money(p.wage)}/mês · contrato de ${p.contract} temporada(s). O empresário sinaliza algo perto de <b>${money(d)}</b>/mês.</p>
-    <div class="grid g2"><label class="field">Salário mensal (R$ mil)<input class="input" id="rWage" type="number" min="1" step="1" value="${Math.round(d * 1000)}"></label>
-    <label class="field">Duração<select class="input" id="rYears">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === 3 ? 'selected' : ''}>${y} temporada(s)</option>`).join('')}</select></label></div>
-    <p class="faint small">Folha atual ${money(C.payroll(C.myClub()))} de ${money(C.myClub().wageBudget)}.</p>
-    <div class="modal-foot"><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="rGo">${ic('check')} Propor renovação</button></div>`);
-  modalEl.querySelector('#rGo').onclick = () => {
-    const r = C.renewContract(p, (+modalEl.querySelector('#rWage').value || 0) / 1000, +modalEl.querySelector('#rYears').value);
-    if (r.ok) { closeModal(); toast(`${p.name} renovou até ${S().year + p.contract}.`); refresh(); } else toast(r.msg, false);
+function renewModal(id) { negotiationModal(S().players[id], 'renew', 0); }
+
+// negociação com o agente: salário, luvas, duração, multa rescisória e papel no elenco
+function negotiationModal(p, type, fee) {
+  const sess = M.startTalks(p, type, fee);
+  if (sess.error) return toast(sess.error, false);
+  const d = sess.dem, me = C.myClub();
+  const offer = sess.last || { wage: d.wage, bonus: Math.round(d.bonus * 0.6 * 100) / 100, years: d.years[0] + 1 > d.years[1] ? d.years[1] : d.years[0] + 1, clause: Math.round(d.clauseMax * 1.3 * 10) / 10, role: d.role };
+  const title = { sign: `Contrato de ${p.name}`, renew: `Renovação com ${p.name}`, pre: `Pré-contrato com ${p.name}` }[type];
+  let agreed = false, reply = '';
+  const render = () => {
+    modal(`<div class="modal-head"><h2>${ic('file-signature')} ${esc(title)}</h2><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
+      <p class="muted small">${fee ? `Transferência acertada por <b>${money(fee)}</b>. ` : type === 'pre' ? 'Ele chega de graça ao fim da temporada. ' : type === 'sign' ? 'Agente livre: sem custo de transferência. ' : ''}O agente sinaliza cerca de <b>${money(d.wage)}</b>/mês, luvas perto de <b>${money(d.bonus)}</b>, ${d.years[0]}–${d.years[1]} temporadas e papel de <b>${M.ROLES[d.role].toLowerCase()}</b>.</p>
+      <div class="grid g2">
+        <label class="field">Salário mensal (R$ mil)<input class="input" id="nWage" type="number" min="1" value="${Math.round(offer.wage * 1000)}"></label>
+        <label class="field">Luvas (R$ mi)<input class="input" id="nBonus" type="number" min="0" step="0.05" value="${offer.bonus}"></label>
+        <label class="field">Duração<select class="input" id="nYears">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === offer.years ? 'selected' : ''}>${y} temporada(s)</option>`).join('')}</select></label>
+        <label class="field">Multa rescisória (R$ mi)<input class="input" id="nClause" type="number" min="0.5" step="0.5" value="${offer.clause}"></label>
+        <label class="field" style="grid-column:1/-1">Papel prometido<select class="input" id="nRole">${Object.entries(M.ROLES).map(([k, v]) => `<option value="${k}" ${k === offer.role ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      </div>
+      <p class="faint small">Multa alta protege o clube, mas o jogador quer uma saída possível. Prometer um papel maior agrada agora, mas ele cobrará os minutos. Folha atual ${money(C.payroll(me))} de ${money(me.wageBudget)}.</p>
+      <div class="row" style="gap:8px"><small class="faint">Paciência do agente</small><div class="meter ${sess.patience <= 1 ? 'bad' : sess.patience === 2 ? 'warn' : ''}" style="flex:1"><i style="width:${sess.patience / 3 * 100}%"></i></div></div>
+      ${reply ? `<div class="msg ${agreed ? 'unread' : ''}" style="margin-top:10px"><div class="grow small">${esc(reply)}</div></div>` : ''}
+      <div class="modal-foot"><button class="btn btn-ghost" data-close>Desistir</button>${agreed ? `<button class="btn btn-primary" id="nSign">${ic('check')} Assinar</button>` : `<button class="btn btn-primary" id="nGo" ${sess.patience <= 0 ? 'disabled' : ''}>${ic('send')} Enviar proposta</button>`}</div>`);
+    const read = () => ({ wage: (+modalEl.querySelector('#nWage').value || 0) / 1000, bonus: Math.max(0, +modalEl.querySelector('#nBonus').value || 0), years: +modalEl.querySelector('#nYears').value, clause: Math.max(0.5, +modalEl.querySelector('#nClause').value || 0), role: modalEl.querySelector('#nRole').value });
+    modalEl.querySelector('#nGo')?.addEventListener('click', () => { Object.assign(offer, read()); const r = M.propose(sess, offer); reply = r.msg; agreed = r.kind === 'accept'; render(); });
+    modalEl.querySelector('#nSign')?.addEventListener('click', () => { const r = M.finalize(sess, offer); if (!r.ok) return toast(r.msg, false); closeModal(); toast(type === 'renew' ? `${p.name} renovou até ${S().year + p.contract}.` : type === 'pre' ? 'Pré-contrato assinado.' : `${p.name} é o novo reforço!`, true, 'pen-line'); refresh(); });
   };
+  render();
+}
+
+function loanModal(id) {
+  const p = S().players[id], t = M.loanTerms(p);
+  modal(`<div class="modal-head"><h2>${ic('repeat')} Empréstimo de ${esc(p.name)}</h2><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
+    <p class="muted small">Até o fim da temporada ${S().year}. Salário ${money(p.wage)}/mês. O ${esc(S().clubs[p.club].short)} quer que você pague parte do salário.</p>
+    <label class="field">Parte do salário paga por você: <b id="lPct">${Math.round(Math.max(t.minShare, 0.5) * 100)}%</b><input type="range" id="lShare" min="40" max="100" step="5" value="${Math.round(Math.max(t.minShare, 0.5) * 100)}"></label>
+    <div class="modal-foot"><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="lGo">${ic('send')} Propor</button></div>`);
+  const r = modalEl.querySelector('#lShare'); r.oninput = () => { modalEl.querySelector('#lPct').textContent = r.value + '%'; };
+  modalEl.querySelector('#lGo').onclick = () => { const res = M.requestLoan(p, +r.value / 100); if (!res.ok) return toast(res.msg, false); closeModal(); toast(`${p.name} chega emprestado.`, true, 'repeat'); refresh(); };
 }
 
 /* =========================================================
@@ -591,8 +639,41 @@ function vComps() {
    ========================================================= */
 function vTransfers() {
   const s = S(), me = C.myClub(), f = ui.mk;
-  const tabs = `<div class="seg"><button class="${f.tab === 'search' ? 'on' : ''}" data-mktab="search">${ic('search')} Buscar</button><button class="${f.tab === 'free' ? 'on' : ''}" data-mktab="free">${ic('user')} Livres</button><button class="${f.tab === 'sell' ? 'on' : ''}" data-mktab="sell">${ic('tag')} Minhas vendas</button></div>`;
-  const head = `<div class="page-head"><div><h1>Transferências</h1><p>Caixa ${money(me.balance)} · folha ${money(C.payroll(me))} de ${money(me.wageBudget)}/mês · elenco ${me.squad.length}/32</p></div><div class="right">${tabs}</div></div>`;
+  const T = [['search', 'search', 'Buscar'], ['free', 'user', 'Livres'], ['market', 'line-chart', 'Mercado'], ['scout', 'scan-search', 'Olheiros'], ['loans', 'repeat', 'Empréstimos'], ['sell', 'tag', 'Minhas vendas']];
+  const tabs = `<div class="seg">${T.map(([k, i, l]) => `<button class="${f.tab === k ? 'on' : ''}" data-mktab="${k}">${ic(i)} ${l}</button>`).join('')}</div>`;
+  const win = M.windowState();
+  const head = `<div class="page-head"><div><h1>Transferências</h1><p>Caixa ${money(me.balance)} · folha ${money(C.payroll(me))} de ${money(me.wageBudget)}/mês · elenco ${me.squad.length}/32</p>
+    <p><span class="tag ${win.open ? 'tag-lime' : 'tag-red'}">${ic(win.open ? 'door-open' : 'lock')} ${esc(win.label)}${win.days != null ? ` · ${win.open ? 'fecha' : 'abre'} em ${win.days} dias` : ''}</span></p></div><div class="right">${tabs}</div></div>`;
+  const pRow = (p, extra = '') => `<div class="li click" data-player="${p.id}" style="cursor:pointer">${posB(p.pos)}<span class="grow"><b>${esc(p.name)}</b> <span class="faint small">${p.club ? esc(s.clubs[p.club].short) : 'livre'} · ${p.age} anos</span></span>${extra}${ovrB(p.ovr)}</div>`;
+  if (f.tab === 'market') {
+    const tr = s.transfers.slice(0, 25);
+    const expiring = Object.values(s.players).filter(p => p.club && p.club !== me.id && p.contract <= 1 && !p.precontract).sort((a, b) => b.ovr - a.ovr).slice(0, 10);
+    const bargains = Object.values(s.players).filter(p => p.club && p.club !== me.id && !p.loan).sort((a, b) => (b.ovr - b.value * 0.8) - (a.ovr - a.value * 0.8)).slice(0, 8);
+    return head + `<div class="grid g2">
+      <div class="card"><div class="card-head"><h3>${ic('arrow-left-right')} Últimas transferências</h3></div>${tr.map(t => `<div class="li small"><span class="faint" style="width:70px">${C.dateLabel(t.day, false)}</span><span class="grow"><b>${esc(t.name)}</b> <span class="faint">${t.from ? esc(s.clubs[t.from]?.short || '—') : 'livre'} → ${esc(s.clubs[t.to]?.short || '—')}</span></span><span class="tag">${esc(t.kind)}</span><b>${t.fee ? money(t.fee) : '—'}</b></div>`).join('') || '<p class="faint">Nenhuma movimentação ainda.</p>'}</div>
+      <div class="grid" style="align-content:start">
+        <div class="card"><div class="card-head"><h3>${ic('calendar-check')} Contratos terminando</h3></div><p class="faint small" style="margin-top:0">A partir da metade da temporada dá para assinar pré-contrato e trazê-los de graça.</p>${expiring.map(p => pRow(p)).join('') || '<p class="faint">—</p>'}</div>
+        <div class="card"><div class="card-head"><h3>${ic('badge-percent')} Melhor custo-benefício</h3></div>${bargains.map(p => pRow(p, `<span class="small">${money(p.value)}</span>`)).join('')}</div>
+      </div></div>`;
+  }
+  if (f.tab === 'scout') {
+    const known = Object.keys(s.scout.known).map(id => s.players[id]).filter(Boolean).sort((a, b) => b.pot - a.pot);
+    return head + `<div class="grid g2">
+      <div class="card"><div class="card-head"><h3>${ic('scan-search')} Olheiros em campo</h3><span class="right faint">${s.scout.tasks.length}/3</span></div>
+        ${s.scout.tasks.map(t => { const p = s.players[t.pid]; return p ? pRow(p, `<span class="tag">relatório em ${Math.max(0, t.until - s.day)}d</span>`) : ''; }).join('') || '<p class="faint">Nenhum olheiro ocupado. Abra um jogador e toque em “Observar” para revelar o potencial exato.</p>'}</div>
+      <div class="card"><div class="card-head"><h3>${ic('file-text')} Relatórios concluídos</h3></div>${known.slice(0, 30).map(p => pRow(p, `<span class="small">pot. <b>${p.pot}</b></span>`)).join('') || '<p class="faint">—</p>'}</div></div>`;
+  }
+  if (f.tab === 'loans') {
+    const inL = C.squadOf(me).filter(p => p.loan);
+    const outL = Object.values(s.players).filter(p => p.loan && p.loan.from === me.id);
+    const avail = C.squadOf(me).filter(p => p.forLoan);
+    const offers = s.inbox.filter(m => m.offer?.kind === 'loanout');
+    return head + `<div class="grid g2">
+      <div class="card"><div class="card-head"><h3>${ic('log-in')} Emprestados para você</h3></div>${inL.map(p => pRow(p, `<span class="small">${Math.round(p.loan.share * 100)}% do salário</span>`)).join('') || '<p class="faint">Nenhum. Peça empréstimo abrindo um jogador reserva de outro clube.</p>'}
+        <div class="card-head" style="margin-top:14px"><h3>${ic('log-out')} Cedidos por você</h3></div>${outL.map(p => pRow(p, `<span class="small">${p.st.apps} jogos</span>`)).join('') || '<p class="faint">Nenhum.</p>'}</div>
+      <div class="card"><div class="card-head"><h3>${ic('repeat')} Disponíveis para empréstimo</h3></div>${avail.map(p => pRow(p)).join('') || '<p class="faint">Marque jovens com poucos minutos como “Disponível p/ empréstimo” para que joguem e evoluam.</p>'}
+        <div class="card-head" style="margin-top:14px"><h3>${ic('mail')} Propostas</h3></div>${offers.map(msgHtml).join('') || '<p class="faint">Nenhuma proposta.</p>'}</div></div>`;
+  }
   if (f.tab === 'sell') {
     const sale = C.squadOf(me).filter(p => p.forSale);
     const offers = s.inbox.filter(m => m.offer?.kind === 'sale');
@@ -637,28 +718,13 @@ function bidModal(id) {
     if (fee > me.balance) return toast('Você não tem orçamento para essa proposta.', false);
     const ev = C.evaluateBid(p, fee);
     const out = modalEl.querySelector('#bRes');
-    if (ev.kind === 'accept') { closeModal(); toast(`${s.clubs[p.club].short} aceitou ${money(fee)}. Agora negocie o contrato.`); contractModal(p, fee); }
+    if (ev.kind === 'accept') { closeModal(); toast(ev.clause ? `Multa paga: o ${s.clubs[p.club].short} é obrigado a liberar. Negocie com o jogador.` : `${s.clubs[p.club].short} aceitou ${money(fee)}. Agora negocie o contrato.`); contractModal(p, fee); }
     else if (ev.kind === 'counter') { out.innerHTML = `<div class="msg unread"><div class="grow"><b>Contraproposta</b><p class="small muted">O ${esc(s.clubs[p.club].short)} libera por <b>${money(ev.ask)}</b>.</p><button class="btn btn-sm btn-primary" id="bCounter" ${ev.ask > me.balance ? 'disabled' : ''}>Aceitar ${money(ev.ask)}</button></div></div>`; icons(); modalEl.querySelector('#bCounter').onclick = () => { closeModal(); contractModal(p, ev.ask); }; }
     else { s.bidBlock[id] = s.day + 3; C.save(); out.innerHTML = `<div class="msg"><div class="grow"><b class="neg">Proposta recusada</b><p class="small muted">O clube considera o atleta fundamental. Tente de novo em alguns dias com um valor maior.</p></div></div>`; modalEl.querySelector('#bGo').disabled = true; }
   };
 }
 
-function contractModal(p, fee) {
-  const me = C.myClub(); const d = C.wageDemand(p, me.id);
-  modal(`<div class="modal-head"><h2>${ic('file-signature')} Contrato de ${esc(p.name)}</h2><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
-    <p class="muted">${fee ? `Transferência acertada por <b>${money(fee)}</b>.` : 'Agente livre: sem custo de transferência.'} O jogador pede cerca de <b>${money(d)}</b>/mês.</p>
-    <div class="grid g2"><label class="field">Salário mensal (R$ mil)<input class="input" id="cWage" type="number" min="1" value="${Math.round(d * 1000)}"></label>
-    <label class="field">Duração<select class="input" id="cYears">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === 3 ? 'selected' : ''}>${y} temporada(s)</option>`).join('')}</select></label></div>
-    <p class="faint small">Folha atual ${money(C.payroll(me))} de ${money(me.wageBudget)}/mês.</p>
-    <div class="modal-foot"><button class="btn btn-ghost" data-close>Desistir</button><button class="btn btn-primary" id="cGo">${ic('check')} Fechar contratação</button></div>`);
-  modalEl.querySelector('#cGo').onclick = () => {
-    const wage = (+modalEl.querySelector('#cWage').value || 0) / 1000;
-    if (wage < d * 0.92) return toast(`${p.name} recusou o salário. Pede perto de ${money(d)}.`, false);
-    const r = C.completeSigning(p, fee, wage, +modalEl.querySelector('#cYears').value);
-    if (!r.ok) return toast(r.msg, false);
-    closeModal(); toast(`${p.name} é o novo reforço!`, true, 'pen-line'); refresh();
-  };
-}
+function contractModal(p, fee) { negotiationModal(p, 'sign', fee); }
 
 /* =========================================================
    7. Treinamentos
@@ -672,7 +738,7 @@ function vTraining() {
     <div class="card"><div class="card-head"><h3>${ic('gauge')} Intensidade</h3></div><div class="seg">${[[0.7, 'Leve'], [1, 'Normal'], [1.3, 'Intensa']].map(([v, l]) => `<button class="${s.training.intensity === v ? 'on' : ''}" data-intensity="${v}">${l}</button>`).join('')}</div>
       <p class="faint small">${s.training.intensity > 1 ? 'Mais evolução, recuperação física mais lenta.' : s.training.intensity < 1 ? 'Recuperação plena, evolução menor.' : 'Equilíbrio entre evolução e recuperação.'}</p></div>
     <div class="card stat"><small>Jovens (≤ 21)</small><b>${sq.filter(p => p.age <= 21).length}</b><span class="faint small">${S().coach.style === 'youth' ? 'Treinador formador: +15% de evolução' : 'Mais minutos = mais evolução'}</span></div>
-    <div class="card stat"><small>Lesionados</small><b>${sq.filter(p => p.injury).length}</b><span class="faint small">${sq.filter(p => p.injury).map(p => p.name).join(', ') || 'Elenco saudável'}</span></div>
+    <div class="card"><div class="card-head"><h3>${ic('cross')} Departamento médico</h3><span class="right faint">${sq.filter(p => p.injury).length} lesionado(s)</span></div>${sq.filter(p => p.injury).map(p => `<div class="li small"><span class="grow"><b>${esc(p.name)}</b><br><span class="faint">${esc(p.injuryType || 'Lesão')} · ${p.injury} dias</span></span>${p.treated ? '<span class="tag">Em tratamento</span>' : `<button class="btn btn-sm" data-treat="${p.id}">Tratar (${money(M.treatCost(p))})</button>`}</div>`).join('') || '<p class="faint small">Elenco saudável.</p>'}</div>
   </div>
   <div class="card" style="padding:6px"><div class="table-wrap"><table class="t"><thead><tr><th>Pos</th><th>Nome</th><th class="num">Idade</th><th class="num">OVR</th><th class="num">Pot. est.</th><th class="num">Min.</th><th>Progresso</th><th>Plano individual</th></tr></thead><tbody>
     ${sq.map(p => `<tr><td>${posB(p.pos)}</td><td><b>${esc(p.name)}</b></td><td class="num">${p.age}</td><td class="num">${ovrB(p.ovr)}</td><td class="num faint">${potEst(p)}</td><td class="num">${p.st.mins}</td><td><span class="meter" style="width:80px;display:inline-block"><i style="width:${Math.round(Math.max(0, p.xp) * 100)}%"></i></span></td><td><select class="input" style="height:30px;width:auto" data-plan="${p.id}">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${p.plan === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></td></tr>`).join('')}
@@ -726,6 +792,12 @@ function vBoard() {
       <div class="li"><span class="grow">Desenvolver jovens</span><b>${C.squadOf(me).filter(p => p.age <= 21 && p.st.apps >= 5).length} jovens com 5+ jogos</b></div>
       <div class="li"><span class="grow">Expectativa pela força do elenco</span><b>${b.expected}º</b></div></div>
   </div>
+  <div class="card" style="margin-bottom:14px"><div class="card-head"><h3>${ic('hand')} Pedidos à diretoria</h3><span class="right faint">um de cada por temporada</span></div>
+    <div class="grid g3">
+      <div><b>Verba para reforços</b><p class="faint small">Aporte extra no caixa. Exige confiança ≥ 60%.</p><button class="btn btn-sm" data-board="budget" ${b.requests?.[`${s.year}:budget`] ? 'disabled' : ''}>${ic('banknote')} Pedir verba</button></div>
+      <div><b>Aumento da folha</b><p class="faint small">+12% no limite salarial. Exige confiança ≥ 55%.</p><button class="btn btn-sm" data-board="wages" ${b.requests?.[`${s.year}:wages`] ? 'disabled' : ''}>${ic('wallet')} Pedir aumento</button></div>
+      <div><b>Categorias de base · nível ${me.youthLevel}/3</b><p class="faint small">Jovens promovidos com mais potencial. Custa ${money(M.youthCost(me))}.</p><button class="btn btn-sm" data-board="youth" ${me.youthLevel >= 3 || b.requests?.[`${s.year}:youth`] ? 'disabled' : ''}>${ic('sprout')} Investir</button></div>
+    </div></div>
   <div class="card"><div class="card-head"><h3>${ic('mail')} Comunicações</h3><button class="btn btn-sm btn-danger right" data-act="resign">${ic('door-open')} Pedir demissão</button></div>${msgs.slice(0, 10).map(msgHtml).join('') || '<p class="faint">Sem mensagens.</p>'}</div>`;
 }
 
@@ -840,21 +912,30 @@ const ACT = {
 
 document.addEventListener('click', e => {
   if (view === 'wizard' && app.contains(e.target) && !e.target.closest('[data-act]')) return; // o assistente trata os próprios cliques
-  const t = e.target.closest('[data-act],[data-nav],[data-player],[data-sort],[data-close],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
+  const t = e.target.closest('[data-act],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
   if (!t || document.getElementById('match').contains(t)) return;
   const d = t.dataset;
   if (d.act) return ACT[d.act]?.(t);
   if (d.close !== undefined) return closeModal();
   if (d.nav) { if (t.disabled) return; view = d.nav; document.getElementById('side')?.classList.remove('open'); ui.tSlot = null; return renderShell(); }
   if (d.bid) { closeModal(); return bidModal(d.bid); }
+  if (d.treat) { const r = M.treat(S().players[d.treat]); toast(r.ok ? 'Tratamento intensivo iniciado: recuperação mais rápida.' : r.msg, r.ok); closeModal(); return refresh(); }
+  if (d.forloan) { const p = S().players[d.forloan]; p.forLoan = !p.forLoan; C.save(); closeModal(); toast(p.forLoan ? `${p.name} disponível para empréstimo. Propostas chegam na janela.` : 'Removido da lista de empréstimos.'); return renderView(); }
+  if (d.scout) { const r = M.scout(S().players[d.scout]); toast(r.ok ? `Olheiro designado. Relatório em ${r.days} dias.` : r.msg, r.ok, 'scan-search'); return; }
+  if (d.pre) { closeModal(); return negotiationModal(S().players[d.pre], 'pre', 0); }
+  if (d.loan) { closeModal(); return loanModal(d.loan); }
+  if (d.clause) { const p = S().players[d.clause]; const r = M.payClause(p); if (!r.ok) return toast(r.msg, false); if (!confirm(`Pagar a multa de ${money(r.fee)} ao ${r.from.short}? O clube é obrigado a liberar ${p.name}.`)) return; closeModal(); return contractModal(p, r.fee); }
+  if (d.board) { const r = M.boardRequest(d.board); toast(r.msg, r.ok, 'landmark'); return refresh(); }
   if (d.renew) { return renewModal(d.renew); }
   if (d.sale) { const p = S().players[d.sale]; p.forSale = !p.forSale; C.save(); closeModal(); toast(p.forSale ? `${p.name} está à venda. Aguarde propostas na caixa de entrada.` : `${p.name} saiu da lista de vendas.`); return renderView(); }
   if (d.release) { const p = S().players[d.release]; const comp = Math.round(p.wage * Math.max(1, p.contract) * 6 * 1000) / 1000; if (!confirm(`Rescindir com ${p.name}? Multa: ${money(comp)}.`)) return; const r = C.releasePlayer(p); closeModal(); toast(r.ok ? `${p.name} foi dispensado.` : r.msg, r.ok); return refresh(); }
   if (d.offerYes || d.offerNo) {
     const m = S().inbox.find(x => x.id === (d.offerYes || d.offerNo)); if (!m) return;
     m.read = true;
-    if (d.offerNo) { m.done = 'recusada'; C.save(); return refresh(); }
+    if (d.offerNo && m.offer.kind !== 'request') { m.done = 'recusada'; C.save(); return refresh(); }
+    if (m.offer.kind === 'request') { M.answerRequest(m, !!d.offerYes); return refresh(); }
     if (m.offer.kind === 'sale') { const r = C.acceptSale(m); toast(r.ok ? 'Venda concluída.' : r.msg, r.ok); return refresh(); }
+    if (m.offer.kind === 'loanout') { const r = M.acceptLoanOut(m); toast(r.ok ? 'Empréstimo acertado.' : r.msg, r.ok); return refresh(); }
     if (m.offer.kind === 'job') { if (C.myClub() && !confirm(`Deixar o ${C.myClub().short} e assumir o ${S().clubs[m.offer.club].short}?`)) return; m.done = 'aceita'; C.acceptJob(m.offer.club); view = 'central'; return refresh(); }
     return;
   }
