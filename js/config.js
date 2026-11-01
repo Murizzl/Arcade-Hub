@@ -46,7 +46,8 @@ AH.config = {
       continental_title: { common: 150 },
       achievement_unlocked: { achievement: 20 },
       weekly_challenge: { common: 50 },
-      labels: { first_win: 'Primeira vitória da carreira', match_win: 'Vitória (até 15 por temporada)', five_matches: 'A cada 5 partidas', season_complete: 'Temporada completa', promotion: 'Acesso à Série A', league_title: 'Título da Série B / Série A / liga estrangeira', cup_title: 'Copa Nacional', continental_title: 'Copa Continental (conquista internacional)', achievement_unlocked: 'Conquista inédita', weekly_challenge: 'Desafio semanal da comunidade' }
+      friendly_win: { common: 5 },
+      labels: { first_win: 'Primeira vitória da carreira', match_win: 'Vitória (até 15 por temporada)', five_matches: 'A cada 5 partidas', season_complete: 'Temporada completa', promotion: 'Acesso à Série A', league_title: 'Título da Série B / Série A / liga estrangeira', cup_title: 'Copa Nacional', continental_title: 'Copa Continental (conquista internacional)', achievement_unlocked: 'Conquista inédita', weekly_challenge: 'Desafio semanal da comunidade', friendly_win: 'Vitória em amistoso multiplayer (1x por adversário/dia)' }
     }
   },
   // XP extra proporcional ao desempenho na partida (soma às regras acima).

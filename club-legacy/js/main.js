@@ -6,13 +6,15 @@ import { ATTRS, GK_ATTRS, ATTR_LABEL, ATTR_SHORT, PLANS, FOCUS, ratingAt } from 
 import { STYLES, PRESS, LINES, MENTALITY, INSTR, instrFor } from './engine.js';
 import * as C from './career.js';
 import { crest, avatar, LOOK, CREST_SHAPES, CREST_PATTERNS, CREST_EMBLEMS } from './art.js';
-import { openMatch, resultModalHtml } from './match.js';
+import { openMatch, resultModalHtml, prefs, setPrefs, HALF_OPTIONS } from './match.js';
 import { Arcade } from './arcade.js';
 import * as M from './management.js';
 import * as Cups from './cups.js';
 import * as Y from './youth.js';
 import * as Social from './social.js';
 import { Cloud } from './cloud.js';
+import * as MP from './multiplayer.js';
+import { openLiveGuest } from './live.js';
 
 const app = document.getElementById('app');
 const modalEl = document.getElementById('modal');
@@ -273,9 +275,9 @@ function startCareer(custom) {
 const NAV = [
   ['central', 'layout-dashboard', 'Central'], ['squad', 'users', 'Elenco'], ['tactics', 'clipboard-list', 'Táticas'], ['calendar', 'calendar-days', 'Calendário'],
   ['comps', 'trophy', 'Competições'], ['transfers', 'arrow-left-right', 'Transferências'], ['training', 'dumbbell', 'Treinamentos'], ['finance', 'wallet', 'Finanças'],
-  ['board', 'landmark', 'Diretoria'], ['career', 'contact', 'Carreira']
+  ['board', 'landmark', 'Diretoria'], ['career', 'contact', 'Carreira'], ['multi', 'swords', 'Multiplayer']
 ];
-const NEEDS_CLUB = new Set(['squad', 'tactics', 'calendar', 'transfers', 'training', 'finance', 'board']);
+const NEEDS_CLUB = new Set(['squad', 'tactics', 'calendar', 'transfers', 'training', 'finance', 'board', 'multi']);
 
 export function renderShell() {
   const s = S(); const me = C.myClub();
@@ -1006,6 +1008,9 @@ function vCareer() {
       <div class="card"><div class="card-head"><h3>${ic('briefcase')} Histórico de clubes</h3></div><table class="t"><thead><tr><th>Clube</th><th>Período</th><th class="num">V</th><th class="num">E</th><th class="num">D</th><th>Saída</th></tr></thead><tbody>
         ${co.history.slice().reverse().map(h => `<tr><td>${crest(s.clubs[h.club], 18)} ${esc(s.clubs[h.club]?.short || h.club)}</td><td>${h.from}–${h.to || 'atual'}</td><td class="num">${h.w}</td><td class="num">${h.d}</td><td class="num">${h.l}</td><td class="faint small">${esc(h.left || '')}</td></tr>`).join('')}</tbody></table></div>
       ${me && me.history.length ? `<div class="card"><div class="card-head"><h3>${ic('line-chart')} Campanhas do ${esc(me.short)}</h3></div>${me.history.slice().reverse().map(h => `<div class="li"><b>${h.year}</b><span class="grow">${esc(C.leagueShort(h.division))}</span><b>${h.pos}º</b></div>`).join('')}</div>` : ''}
+      <div class="card"><div class="card-head"><h3>${ic('settings')} Preferências</h3><span class="right faint">salvas neste aparelho</span></div>
+        <div class="opt-group"><small>Duração de cada tempo na velocidade 1x</small><div class="seg">${HALF_OPTIONS.map(v => `<button class="${prefs().halfMinutes === v ? 'on' : ''}" data-halfmin="${v}">${v} min</button>`).join('')}</div>
+        <span class="faint small">Partida inteira em 1x: ${prefs().halfMinutes * 2} min reais (2x, 4x e 8x aceleram a partir disso). Não muda as probabilidades, só a pressa. No ao vivo vale a preferência de quem criou a sala.</span></div></div>
       <div class="card"><div class="card-head"><h3>${ic('award')} Conquistas</h3><span class="right faint">${Object.keys(s.ach || {}).length}/${Social.ACHIEVEMENTS.length} · 20 XP cada</span></div>
         <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">${Social.ACHIEVEMENTS.map(a => { const got = s.ach?.[a.id]; return `<div class="msg ${got ? 'unread' : ''}" style="margin:0;padding:10px;opacity:${got ? 1 : 0.5}" title="${esc(a.desc)}"><div class="grow"><b class="small">${ic(got ? a.icon : 'lock', got ? 'lime' : '')} ${esc(a.name)}</b><p class="faint small" style="margin:2px 0 0">${esc(a.desc)}</p>${got ? `<small class="pos">${got.year}</small>` : ''}</div></div>`; }).join('')}</div></div>
       <div class="card"><div class="card-head"><h3>${ic('bar-chart-3')} Ranking global de treinadores</h3><span class="right faint">pontuação ${Social.coachScore(s)}</span></div><div id="rankBox"><p class="faint small">${Cloud.enabled ? 'Carregando…' : 'Entre no Arcade Hub para aparecer no ranking global.'}</p></div>
@@ -1025,7 +1030,101 @@ function xpRules() {
 /* =========================================================
    Ações
    ========================================================= */
-const VIEWS = { central: vCentral, squad: vSquad, tactics: vTactics, calendar: vCalendar, comps: vComps, transfers: vTransfers, training: vTraining, finance: vFinance, board: vBoard, career: vCareer };
+const VIEWS = { multi: vMulti, central: vCentral, squad: vSquad, tactics: vTactics, calendar: vCalendar, comps: vComps, transfers: vTransfers, training: vTraining, finance: vFinance, board: vBoard, career: vCareer };
+/* =========================================================
+   11. Multiplayer: amistosos contra times de amigos e salas ao vivo
+   ========================================================= */
+function vMulti() {
+  const s = S(), me = C.myClub(), snap = MP.snapshot();
+  const hist = s.friendlies || [];
+  return `<div class="page-head"><div><h1>Multiplayer</h1><p>Desafie times de amigos — contra a foto salva do time deles ou ao vivo, os dois assistindo e mexendo no time. Amistosos não afetam a carreira.</p></div></div>
+  ${Cloud.enabled ? (Cloud.status === 'missing' ? '<p class="small warn">Falta criar as tabelas no Supabase (rode <code>supabase/schema.sql</code>) para publicar times e jogar ao vivo.</p>' : '') : '<p class="small warn">Entre no Arcade Hub para publicar seu time e jogar ao vivo. Sem login, use o código do time.</p>'}
+  <div class="grid g3" style="margin-bottom:14px">
+    <div class="card"><div class="card-head"><h3>${ic('upload')} Meu time</h3></div>
+      <div class="row">${crest(me, 44)}<div class="grow"><b>${esc(me.short)}</b><br><span class="faint small">${snap.tactics.formation} · força ${snap.rating} · ${s.mp?.published ? `publicado ${new Date(s.mp.published).toLocaleDateString('pt-BR')}` : 'não publicado'}</span></div></div>
+      <div class="row-wrap" style="margin-top:12px"><button class="btn btn-primary btn-sm" data-mp="publish" ${Cloud.enabled ? '' : 'disabled'}>${ic('cloud-upload')} Publicar time atual</button><button class="btn btn-sm" data-mp="code">${ic('copy')} Copiar código</button></div>
+      <p class="faint small" style="margin:8px 0 0">Publica escalação, banco, táticas e instruções de agora. Republique quando mudar o time.</p></div>
+    <div class="card"><div class="card-head"><h3>${ic('radio')} Ao vivo</h3></div>
+      <p class="small muted" style="margin-top:0">Crie uma sala e mande o código para o amigo. Os dois assistem juntos e fazem substituições e mudanças táticas em tempo real.</p>
+      <div class="row-wrap"><button class="btn btn-primary btn-sm" data-mp="host" ${Cloud.enabled ? '' : 'disabled'}>${ic('plus')} Criar sala</button>
+        <input class="input" id="mpRoom" maxlength="6" placeholder="CÓDIGO" style="width:110px;height:30px;text-transform:uppercase"><button class="btn btn-sm" data-mp="join" ${Cloud.enabled ? '' : 'disabled'}>${ic('log-in')} Entrar</button></div></div>
+    <div class="card"><div class="card-head"><h3>${ic('clipboard-paste')} Desafiar por código</h3></div>
+      <textarea class="input" id="mpCode" rows="3" style="height:auto;padding:8px;font-size:11px" placeholder="Cole aqui o código do time do seu amigo (CL1.…)"></textarea>
+      <button class="btn btn-sm" style="margin-top:8px" data-mp="import">${ic('swords')} Jogar amistoso</button></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-head"><h3>${ic('users')} Times para desafiar</h3><button class="btn btn-sm btn-ghost right" data-mp="refresh">${ic('refresh-cw')}</button></div><div id="mpTeams"><p class="faint small">${Cloud.enabled ? 'Carregando…' : 'Disponível com login no Arcade Hub.'}</p></div></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><div class="card-head"><h3>${ic('history')} Meus amistosos</h3></div>${hist.map(h => `<div class="li small"><span class="form"><i class="${h.res}">${h.res}</i></span><span class="grow">${h.side === 0 ? 'x' : 'em'} ${esc(h.opp)} ${h.live ? '<span class="tag tag-lime">ao vivo</span>' : ''}</span><b class="mono">${h.score[0]} – ${h.score[1]}</b><span class="faint">${new Date(h.at).toLocaleDateString('pt-BR')}</span></div>`).join('') || '<p class="faint small">Nenhum amistoso ainda.</p>'}</div>
+      <div class="card"><div class="card-head"><h3>${ic('bell')} Desafios contra o seu time</h3></div><div id="mpAgainst"><p class="faint small">${Cloud.enabled ? 'Carregando…' : '—'}</p></div></div>
+    </div>
+  </div>`;
+}
+async function afterMulti(main) {
+  if (!Cloud.enabled) return;
+  const box = main.querySelector('#mpTeams'), ag = main.querySelector('#mpAgainst');
+  const { friends, others, error } = await MP.listTeams();
+  if (!box?.isConnected) return;
+  const row = r => `<div class="li"><span class="grow"><b>${esc(r.club)}</b> <span class="faint small">${esc(r.coach || '')} · @${esc(r.username || '?')} · força ${r.rating}</span></span><button class="btn btn-sm" data-mpteam="${r.id}" data-side="0">${ic('home')} Em casa</button><button class="btn btn-sm" data-mpteam="${r.id}" data-side="1">${ic('plane')} Fora</button></div>`;
+  MP.cache = Object.fromEntries([...friends, ...others].map(r => [r.id, r]));
+  box.innerHTML = error ? `<p class="faint small">${/relation|does not exist|schema cache|Could not find/i.test(error) ? 'Falta criar a tabela club_legacy_teams no Supabase.' : 'Não foi possível carregar os times.'}</p>`
+    : `${friends.length ? `<small class="faint">Amigos</small>${friends.map(row).join('')}` : '<p class="faint small">Nenhum amigo publicou um time ainda.</p>'}${others.length ? `<small class="faint" style="display:block;margin-top:10px">Comunidade</small>${others.map(row).join('')}` : ''}`;
+  const list = await MP.challengesAgainstMe();
+  if (ag?.isConnected) ag.innerHTML = list.map(c => { const mine = c.challenger_side === 0 ? c.away_goals : c.home_goals, theirs = c.challenger_side === 0 ? c.home_goals : c.away_goals; const r = mine > theirs ? 'V' : mine < theirs ? 'D' : 'E'; return `<div class="li small"><span class="form"><i class="${r}">${r}</i></span><span class="grow">${esc(c.challenger_name)} ${c.live ? '<span class="tag tag-lime">ao vivo</span>' : 'desafiou seu time'}</span><b class="mono">${mine} – ${theirs}</b><span class="faint">${new Date(c.created_at).toLocaleDateString('pt-BR')}</span></div>`; }).join('') || '<p class="faint small">Ninguém desafiou seu time ainda.</p>';
+  icons();
+}
+
+// amistoso contra a foto do time de alguém (a IA comanda o adversário)
+function playFriendly(opp, { oppName, oppId = null, mySideIdx = 0 }) {
+  const mine = MP.snapshot();
+  const home = mySideIdx === 0 ? mine : opp, away = mySideIdx === 0 ? opp : mine;
+  const seed = MP.seedFor(oppName, S().seed);
+  const { m, f, clubs } = MP.buildFriendly(home, away, { seed, userSide: mySideIdx, humans: [mySideIdx] });
+  openMatch(f, { friendly: { match: m, clubs, userSide: mySideIdx, onFinish: mm => MP.finishFriendly(f, mm, { userSide: mySideIdx, opp: oppName, oppId }) }, onClose: () => refresh() });
+}
+
+// sala ao vivo: o anfitrião é o mandante e roda o motor
+async function hostRoom() {
+  const code = MP.newRoomCode();
+  const room = new MP.LiveRoom(code, 'host');
+  try { await room.open(); } catch (e) { return toast(e.message, false); }
+  let guest = null;
+  const render = () => modal(`<div class="modal-head"><h2>${ic('radio')} Sala ao vivo</h2><button class="btn btn-icon btn-ghost x" id="rClose">${ic('x')}</button></div>
+    <p>Código da sala: <b style="font-size:26px;letter-spacing:.15em;font-family:var(--display)">${code}</b> <button class="btn btn-sm" id="rCopy">${ic('copy')} Copiar</button></p>
+    ${guest ? `<div class="card"><div class="row">${crest({ ...guest.club, id: 'g' }, 40)}<div class="grow"><b>${esc(guest.club.short)}</b><br><span class="faint small">${esc(guest.coach)} · força ${guest.rating}</span></div><span class="tag tag-lime">Conectado</span></div></div>` : `<p class="muted">${ic('loader-2')} Aguardando o adversário entrar com o código…</p>`}
+    <div class="modal-foot"><button class="btn btn-ghost" id="rCancel">Cancelar</button><button class="btn btn-primary" id="rStart" ${guest ? '' : 'disabled'}>${ic('play')} Começar partida</button></div>`, { locked: true });
+  const bind = () => {
+    render();
+    modalEl.querySelector('#rCopy').onclick = () => { navigator.clipboard?.writeText(code); toast('Código copiado.'); };
+    modalEl.querySelector('#rClose').onclick = modalEl.querySelector('#rCancel').onclick = () => { room.send('bye', {}); room.close(); closeModal(); };
+    modalEl.querySelector('#rStart').onclick = () => {
+      const mine = MP.snapshot();
+      const seed = MP.seedFor(code, S().seed);
+      const { m, f, clubs } = MP.buildFriendly(mine, guest, { seed, userSide: 0, humans: [0, 1] });
+      room.send('start', { home: mine, away: guest, oppName: `${S().coach.first} ${S().coach.last} (${mine.club.short})` });
+      closeModal();
+      openMatch(f, { friendly: { match: m, clubs, userSide: 0, live: { room, guestSide: 1 }, onFinish: mm => MP.finishFriendly(f, mm, { userSide: 0, opp: `${guest.coach} (${guest.club.short})`, oppId: guest.uid || null, live: true }) }, onClose: () => refresh() });
+    };
+  };
+  room.on('join', d => { guest = d; bind(); toast(`${d.coach} entrou na sala.`, true, 'user-plus'); });
+  room.on('peer-leave', () => { if (guest && !document.getElementById('match').hidden) return; guest = null; if (!modalEl.hidden) bind(); });
+  bind();
+}
+async function joinRoom(code) {
+  if (!/^[A-Z0-9]{6}$/.test(code)) return toast('Digite o código de 6 caracteres da sala.', false);
+  const room = new MP.LiveRoom(code, 'guest');
+  try { await room.open(); } catch (e) { return toast(e.message, false); }
+  const mine = MP.snapshot();
+  room.on('start', d => { closeModal(); openLiveGuest(room, { home: d.home, away: d.away, mySide: 1, oppName: d.oppName, onClose: () => refresh() }); });
+  room.on('bye', () => { closeModal(); toast('O anfitrião fechou a sala.', false); room.close(); });
+  room.send('join', { ...mine, uid: Cloud.uid() });
+  // reenvia caso o anfitrião tenha aberto a sala depois
+  room.on('peer-join', () => room.send('join', { ...mine, uid: Cloud.uid() }));
+  modal(`<div class="modal-head"><h2>${ic('radio')} Sala ${esc(code)}</h2></div><p class="muted">${ic('loader-2')} Conectado. Aguardando o anfitrião começar a partida…</p>
+    <div class="modal-foot"><button class="btn btn-ghost" id="jLeave">Sair</button></div>`, { locked: true });
+  modalEl.querySelector('#jLeave').onclick = () => { room.close(); closeModal(); };
+}
+
 async function loadRanking(main) {
   const box = main.querySelector('#rankBox'); if (!box || !Cloud.enabled) return;
   const rows = await Cloud.ranking(15);
@@ -1037,6 +1136,7 @@ async function loadRanking(main) {
 
 const AFTER = {
   career: loadRanking,
+  multi: afterMulti,
   tactics: afterTactics,
   transfers: main => main.querySelectorAll('[data-mk]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'change', () => { const k = el.dataset.mk; ui.mk[k] = el.type === 'number' ? (+el.value || 0) : el.value; renderView(); })),
   training: main => main.querySelectorAll('[data-plan]').forEach(el => el.addEventListener('change', () => { S().players[el.dataset.plan].plan = el.value; C.save(); toast('Plano atualizado.'); }))
@@ -1113,12 +1213,22 @@ const ACT = {
 
 document.addEventListener('click', e => {
   if (view === 'wizard' && app.contains(e.target) && !e.target.closest('[data-act]')) return; // o assistente trata os próprios cliques
-  const t = e.target.closest('[data-act],[data-focus],[data-instr],[data-sqtab],[data-promote],[data-yrelease],[data-identity],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
+  const t = e.target.closest('[data-act],[data-halfmin],[data-mp],[data-mpteam],[data-focus],[data-instr],[data-sqtab],[data-promote],[data-yrelease],[data-identity],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
   if (!t || document.getElementById('match').contains(t)) return;
   const d = t.dataset;
   if (d.act) return ACT[d.act]?.(t);
   if (d.close !== undefined) return closeModal();
   if (d.nav) { if (t.disabled) return; view = d.nav; document.getElementById('side')?.classList.remove('open'); ui.tSlot = null; return renderShell(); }
+  if (d.halfmin) { setPrefs({ halfMinutes: +d.halfmin }); toast(`Cada tempo dura ${d.halfmin} min reais em 1x.`, true, 'timer'); return renderView(); }
+  if (d.mp) {
+    if (d.mp === 'publish') { MP.publish(MP.snapshot()).then(r => { toast(r.ok ? 'Time publicado! Seus amigos já podem desafiá-lo.' : r.msg, r.ok, 'cloud-upload'); if (r.ok) renderView(); }); return; }
+    if (d.mp === 'code') { MP.toCode(MP.snapshot()).then(c => { navigator.clipboard?.writeText(c); toast('Código do time copiado. Mande para o seu amigo.', true, 'copy'); }); return; }
+    if (d.mp === 'import') { MP.fromCode(document.getElementById('mpCode').value).then(snap => playFriendly(snap, { oppName: `${snap.coach} (${snap.club.short})` })).catch(e => toast(e.message, false)); return; }
+    if (d.mp === 'host') return hostRoom();
+    if (d.mp === 'join') return joinRoom((document.getElementById('mpRoom').value || '').trim().toUpperCase());
+    if (d.mp === 'refresh') return renderView();
+  }
+  if (d.mpteam) { const r = MP.cache?.[d.mpteam]; if (!r) return; return playFriendly(r.snapshot, { oppName: `${r.coach} (${r.club})`, oppId: r.id, mySideIdx: +d.side }); }
   if (d.sqtab) { ui.squadTab = d.sqtab; return renderView(); }
   if (d.promote) { const r = Y.promote(S().players[d.promote]); toast(r.ok ? 'Promovido ao time principal!' : r.msg, r.ok, 'sprout'); return renderView(); }
   if (d.yrelease) { const p = S().players[d.yrelease]; if (!confirm(`Dispensar ${p.name} da base?`)) return; Y.release(p); return renderView(); }

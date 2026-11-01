@@ -178,6 +178,45 @@ drop policy if exists "dono atualiza a propria carreira" on public.club_legacy_s
 create policy "dono atualiza a propria carreira" on public.club_legacy_saves
   for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
+-- Club Legacy multiplayer: times publicados para amistosos
+create table if not exists public.club_legacy_teams (
+  id          uuid primary key references auth.users on delete cascade,
+  username    text,
+  coach       text,
+  club        text,
+  rating      int not null default 0,
+  snapshot    jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+alter table public.club_legacy_teams enable row level security;
+drop policy if exists "times visiveis para logados" on public.club_legacy_teams;
+create policy "times visiveis para logados" on public.club_legacy_teams for select to authenticated using (true);
+drop policy if exists "dono publica o proprio time" on public.club_legacy_teams;
+create policy "dono publica o proprio time" on public.club_legacy_teams for insert to authenticated with check (auth.uid() = id);
+drop policy if exists "dono atualiza o proprio time" on public.club_legacy_teams;
+create policy "dono atualiza o proprio time" on public.club_legacy_teams for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
+-- Club Legacy multiplayer: histórico de amistosos (o desafiado vê quem jogou contra o time dele)
+create table if not exists public.club_legacy_friendlies (
+  id              bigserial primary key,
+  challenger      uuid not null references auth.users on delete cascade,
+  opponent        uuid not null references auth.users on delete cascade,
+  challenger_name text,
+  opponent_name   text,
+  home_goals      int not null,
+  away_goals      int not null,
+  challenger_side int not null default 0,
+  live            boolean not null default false,
+  seed            text,
+  created_at      timestamptz not null default now()
+);
+create index if not exists club_legacy_friendlies_opp on public.club_legacy_friendlies (opponent, created_at desc);
+alter table public.club_legacy_friendlies enable row level security;
+drop policy if exists "envolvidos veem amistosos" on public.club_legacy_friendlies;
+create policy "envolvidos veem amistosos" on public.club_legacy_friendlies for select to authenticated using (auth.uid() = challenger or auth.uid() = opponent);
+drop policy if exists "desafiante registra amistoso" on public.club_legacy_friendlies;
+create policy "desafiante registra amistoso" on public.club_legacy_friendlies for insert to authenticated with check (auth.uid() = challenger);
+
 -- Eventos relatados pelos jogos (cada ID conta uma única vez)
 create table if not exists public.persistent_events (
   id          text primary key,
@@ -224,6 +263,7 @@ begin
     when 'club-legacy:continental_title:common' then 150
     when 'club-legacy:achievement_unlocked:achievement' then 20
     when 'club-legacy:weekly_challenge:common' then 50
+    when 'club-legacy:friendly_win:common' then 5
     else 0 end;
   v_xp := v_base;
   insert into persistent_events (id, user_id, game_id, event_type, kind, xp) values (p_event_id, v_uid, p_game_id, p_event_type, p_kind, v_xp);

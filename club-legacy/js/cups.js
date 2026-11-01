@@ -53,7 +53,7 @@ function makeRound(cup, ids, r) {
 export function cupFixtures() { return Object.values(S().cups || {}).flatMap(c => c.rounds.flatMap(r => r.ties)); }
 export function cupFixturesOf(clubId) { return cupFixtures().filter(f => f.home === clubId || f.away === clubId); }
 export function lastCupDay() { return Math.max(0, ...Object.values(DAYS).flat()); }
-export const compName = f => f.comp ? `${cupCfg(f.comp).short} · ${f.roundName}` : `${f.round}ª rodada`;
+export const compName = f => f.friendly ? 'Amistoso multiplayer' : f.comp ? `${cupCfg(f.comp).short} · ${f.roundName}` : `${f.round}ª rodada`;
 
 // disputa de pênaltis determinística a partir dos jogadores que terminaram em campo
 export function shootout(f, m) {

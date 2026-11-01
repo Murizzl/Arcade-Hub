@@ -5,7 +5,7 @@
    nunca muda as probabilidades, só a pressa de chegar lá.
    ========================================================= */
 import { esc, ic, POS_LABEL, clamp } from './util.js';
-import { DT, STYLES, PRESS, LINES, MENTALITY } from './engine.js';
+import { DT, HALF, STYLES, PRESS, LINES, MENTALITY } from './engine.js';
 import { ratingAt } from './players.js';
 import { PitchRenderer, kitsFor } from './render.js';
 import * as C from './career.js';
@@ -13,19 +13,26 @@ import { crest } from './art.js';
 import { modal, closeModal, toast } from './main.js';
 import { compName } from './cups.js';
 
-// segundos simulados por segundo real (com CLOCK 2,5: 1x ≈ 7 min de partida, 8x ≈ 55 s)
-const SPEEDS = { 1: 5, 2: 10, 4: 20, 8: 40 };
+// duração de cada tempo em 1x, em minutos reais (preferência de cada usuário; padrão 2 min)
+export const HALF_OPTIONS = [1, 2, 3, 5, 8];
+export function prefs() { try { return { halfMinutes: 2, ...JSON.parse(localStorage.getItem('clublegacy.prefs') || '{}') }; } catch (e) { return { halfMinutes: 2 }; } }
+export function setPrefs(p) { try { localStorage.setItem('clublegacy.prefs', JSON.stringify({ ...prefs(), ...p })); } catch (e) { /* */ } }
+// segundos simulados por segundo real: em 1x, um tempo dura `halfMinutes` minutos reais
+const SPEED_KEYS = [1, 2, 4, 8];
+const speedRate = k => HALF / (prefs().halfMinutes * 60) * k;
 const root = document.getElementById('match');
 const icons = () => window.lucide?.createIcons();
 
-export function openMatch(f, { onCommit, onClose }) {
+export function openMatch(f, { onCommit, onClose, friendly = null }) {
   const S = C.S;
-  const m = C.createMatch(f, { record: true, assistant: false });
-  const me = C.myClub();
-  const side = f.home === me.id ? 0 : 1;
-  const H = S.clubs[f.home], A = S.clubs[f.away];
+  // amistoso multiplayer: partida e clubes vêm prontos e nada é gravado na carreira
+  const m = friendly ? friendly.match : C.createMatch(f, { record: true, assistant: false });
+  const me = friendly ? null : C.myClub();
+  const side = friendly ? friendly.userSide : f.home === me.id ? 0 : 1;
+  const clubOf = id => friendly?.clubs[id] || S.clubs[id];
+  const H = clubOf(f.home), A = clubOf(f.away);
   const kits = kitsFor(H, A);
-  const posBefore = C.position(me.id);
+  const posBefore = friendly ? null : C.position(me.id);
   let speed = 1, running = true, acc = 0, last = performance.now(), raf = 0, tab = 'log';
   let banner = null, labels = [], sel = null, committed = false, ffwd = false, lastLogLen = -1;
   let prevBall = { x: m.ball.x, y: m.ball.y, z: 0 };
@@ -47,7 +54,7 @@ export function openMatch(f, { onCommit, onClose }) {
     </div>
     <div class="controls">
       <button class="btn btn-primary btn-icon" id="mPlay" title="Pausar / continuar">${ic('pause')}</button>
-      <div class="seg" id="mSpeed">${Object.keys(SPEEDS).map(k => `<button data-speed="${k}" class="${+k === speed ? 'on' : ''}">${k}x</button>`).join('')}</div>
+      <div class="seg" id="mSpeed">${SPEED_KEYS.map(k => `<button data-speed="${k}" class="${+k === speed ? 'on' : ''}">${k}x</button>`).join('')}</div>
       <button class="btn" data-mact="tactics">${ic('clipboard-list')}<span class="lbl-sm">Táticas</span></button>
       <button class="btn" data-mact="subs">${ic('repeat')}<span class="lbl-sm">Substituições</span> <span class="tag" id="mSubs">0/5</span></button>
       <button class="btn" data-mact="stats">${ic('bar-chart-3')}<span class="lbl-sm">Estatísticas</span></button>
@@ -69,12 +76,30 @@ export function openMatch(f, { onCommit, onClose }) {
   });
 
   /* ---------- eventos do motor ---------- */
+  // modo ao vivo (anfitrião): comandos do convidado e presença
+  const live = friendly?.live, gSide = live?.guestSide ?? 1;
+  let guestReady = false, teamT = 0;
+  const sendTeam = () => live?.room.send('team', live.room.teamOf(m, gSide));
+  if (live) {
+    live.room.on('cmd', d => {
+      if (d.k === 'sub') { const r = m.substitute(gSide, d.out, d.in); if (r.ok) toast('Adversário fez uma substituição.', true, 'repeat'); else live.room.send('toast', r.msg); sendTeam(); live.room.pushState(m, true); }
+      if (d.k === 'tac') { m.applyTactics(gSide, d.tac); toast('Adversário mudou a tática.', true, 'clipboard-list'); sendTeam(); }
+      if (d.k === 'pause') { pause(); toast('Adversário pausou a partida.', true, 'pause'); }
+      if (d.k === 'resume') { resume(); }
+      if (d.k === 'ready') { guestReady = true; const el = document.getElementById('guestReady'); if (el) el.innerHTML = '<span class="pos">Adversário pronto ✓</span>'; }
+      if (d.k === 'hello') { sendTeam(); live.room.pushState(m, true); live.room.send('pz', { running }); }
+    });
+    live.room.on('peer-leave', () => { m.teams[gSide].ai = true; toast('O adversário saiu. A IA assume o time dele.', false, 'wifi-off'); });
+    live.room.on('peer-join', () => { m.teams[gSide].ai = false; toast('Adversário de volta à sala.', true, 'wifi'); sendTeam(); });
+  }
+
   m.onEvent = ev => {
+    if (live && !['stoppage'].includes(ev.type)) live.room.send('ev', { type: ev.type, side: ev.side, name: ev.name, min: ev.min, assistName: ev.assistName, card: ev.card, second: ev.second, kind: ev.kind, big: ev.big, outcome: ev.outcome, player: ev.player });
     if (ffwd && ev.type !== 'fulltime') return;
     if (ev.type === 'goal') {
       showBanner(`<div class="big">GOL!</div><div class="who"><b>${esc(ev.name)} · ${ev.min}</b><small>${ev.assistName ? `Assistência: ${esc(ev.assistName)}` : (ev.kind === 'penalty' ? 'De pênalti' : 'Jogada individual')}</small></div>`, 4200, 'goal');
       flashScore();
-      if (ev.side === side) confetti(H === S.clubs[me.id] ? kits[0].fill : kits[1].fill);
+      if (ev.side === side) confetti(kits[side].fill);
       labels.push({ id: ev.player, until: m.total + 10 });
     } else if (ev.type === 'card') {
       showBanner(`<div class="big">${ev.card === 'red' ? 'VERMELHO' : 'AMARELO'}</div><div class="who"><b>${esc(ev.name)} · ${ev.min}</b><small>${esc(m.teams[ev.side].club.short)}${ev.second ? ' · segundo amarelo' : ''}</small></div>`, 2600, `card ${ev.card === 'red' ? 'red' : ''}`);
@@ -111,7 +136,7 @@ export function openMatch(f, { onCommit, onClose }) {
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
     if (running && m.phase === 'live') {
-      acc += realDt * SPEEDS[speed];
+      acc += realDt * speedRate(speed);
       let steps = 0;
       while (acc >= DT && steps++ < 300 && running && m.phase === 'live') {
         prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z };
@@ -120,6 +145,7 @@ export function openMatch(f, { onCommit, onClose }) {
         if (Math.hypot(m.ball.x - prevBall.x, m.ball.y - prevBall.y) > 12) { prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z }; trail = []; }
       }
     }
+    if (live) { live.room.pushState(m); if (now - teamT > 1000) { teamT = now; sendTeam(); } }
     const a = running ? clamp(acc / DT, 0, 1) : 1;
     draw(a);
     hud();
@@ -175,8 +201,8 @@ export function openMatch(f, { onCommit, onClose }) {
   }
 
   /* ---------- controles ---------- */
-  function pause() { running = false; setPlayIcon(); }
-  function resume() { if (m.phase !== 'live') return; running = true; last = performance.now(); setPlayIcon(); }
+  function pause() { running = false; setPlayIcon(); live?.room.send('pz', { running: false }); }
+  function resume() { if (m.phase !== 'live') return; running = true; last = performance.now(); setPlayIcon(); live?.room.send('pz', { running: true }); }
   function setPlayIcon() { const b = root.querySelector('#mPlay'); b.innerHTML = ic(running ? 'pause' : 'play'); icons(); }
   root.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
@@ -293,13 +319,14 @@ export function openMatch(f, { onCommit, onClose }) {
     const T = m.teams[side];
     modal(`<div class="modal-head"><h2>${ic('coffee')} Intervalo · ${esc(H.short)} ${m.score[0]} x ${m.score[1]} ${esc(A.short)}</h2></div>
       ${statsHtml(m.halfStats, m)}
+      ${live ? `<p class="small" id="guestReady">${guestReady ? '<span class="pos">Adversário pronto ✓</span>' : '<span class="faint">Aguardando o adversário ajustar o time…</span>'}</p>` : ''}
       <p class="faint small">Ajuste a equipe antes do segundo tempo. ${T.subs}/5 substituições usadas.</p>
       <div class="modal-foot"><button class="btn" data-ht="tactics">${ic('clipboard-list')} Táticas</button><button class="btn" data-ht="subs">${ic('repeat')} Substituições</button><button class="btn btn-primary" data-ht="go">${ic('play')} Começar 2º tempo</button></div>`, { locked: true });
     document.getElementById('modal').onclick = e => {
       const b = e.target.closest('[data-ht]'); if (!b) return;
       if (b.dataset.ht === 'tactics') tacticsPanel(halftime);
       if (b.dataset.ht === 'subs') subsPanel(halftime);
-      if (b.dataset.ht === 'go') { closeModal(); m.startSecondHalf(); resume(); }
+      if (b.dataset.ht === 'go') { closeModal(); m.startSecondHalf(); guestReady = false; resume(); live?.room.pushState(m, true); }
     };
   }
 
@@ -307,20 +334,22 @@ export function openMatch(f, { onCommit, onClose }) {
   async function finish() {
     if (committed) return; committed = true;
     hud(); draw(1);
-    C.commitResult(f, m, true);
-    C.save();
+    if (friendly) { friendly.onFinish(m); live?.room.send('end', { score: f.score, user: f.user }); }
+    else { C.commitResult(f, m, true); C.save(); }
     await onCommit?.();
-    const posAfter = C.position(me.id);
-    modal(resultModalHtml(f, S, { posBefore, posAfter, replays: m.replays.length }), { wide: true, locked: true });
+    const posAfter = friendly ? null : C.position(me.id);
+    const extra = { posBefore, posAfter, replays: m.replays.length, clubs: friendly?.clubs };
+    modal(resultModalHtml(f, S, extra), { wide: true, locked: true });
     const el = document.getElementById('modal');
     el.onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.rpopen !== undefined) return replaysPanel(() => modal(resultModalHtml(f, S, { posBefore, posAfter, replays: m.replays.length }), { wide: true, locked: true }));
+      if (b.dataset.rpopen !== undefined) return replaysPanel(() => modal(resultModalHtml(f, S, extra), { wide: true, locked: true }));
       if (b.dataset.close !== undefined || b.dataset.mclose !== undefined) { closeModal(); close(); }
     };
   }
 
   function close() {
+    if (live) { live.room.send('bye', {}); live.room.close(); }
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', onResize);
     root.hidden = true; root.innerHTML = ''; root.onclick = null;
@@ -348,7 +377,7 @@ function statsHtml(st, m) {
 }
 
 export function resultModalHtml(f, S, extra = {}) {
-  const H = S.clubs[f.home], A = S.clubs[f.away], u = f.user;
+  const H = extra.clubs?.[f.home] || S.clubs[f.home], A = extra.clubs?.[f.away] || S.clubs[f.away], u = f.user;
   if (!u) return `<p>${esc(H.short)} ${f.score[0]} x ${f.score[1]} ${esc(A.short)}</p>`;
   const evs = u.events;
   const goals = evs.filter(e => e.type === 'goal');

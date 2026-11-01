@@ -7,14 +7,14 @@
    ========================================================= */
 let sb = null, uid = null, timer = null, pushing = null;
 
-async function gzip(text) {
+export async function gzip(text) {
   if (!window.CompressionStream) return 'raw:' + text;
   const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
   const buf = new Uint8Array(await new Response(stream).arrayBuffer());
   let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
   return 'gz:' + btoa(bin);
 }
-async function gunzip(str) {
+export async function gunzip(str) {
   if (str.startsWith('raw:')) return str.slice(4);
   const bin = atob(str.slice(3)); const buf = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
@@ -24,12 +24,13 @@ async function gunzip(str) {
 
 export const Cloud = {
   enabled: false, status: 'local', // local | ok | missing | error
+  db: () => sb, uid: () => uid,
   lastPush: null,
   async init() {
     const B = window.AH?.config?.backend;
     if (!B || B.provider !== 'supabase' || !window.supabase) return false;
     try {
-      sb = window.supabase.createClient(B.supabaseUrl, B.supabaseAnonKey);
+      sb = window.supabase.createClient(B.supabaseUrl, B.supabaseAnonKey, { realtime: { params: { eventsPerSecond: 20 } } });
       const { data } = await sb.auth.getSession();
       uid = data.session?.user?.id || null;
     } catch (e) { uid = null; }
