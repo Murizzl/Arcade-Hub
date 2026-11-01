@@ -398,7 +398,10 @@
       p.seen.push(e.id); p.seen = p.seen.slice(-400); p.events++;
       const base = rules[e.eventType]?.[e.kind] ?? rules[e.eventType]?.common ?? 0;
       const remote = await serverXp(e);
-      const xp = remote ?? base;
+      // servidor respondeu 0 para um evento que vale XP: a função no banco está desatualizada
+      // (supabase/schema.sql não foi reaplicado). Usa as regras locais e avisa uma vez.
+      if (remote === 0 && base > 0 && !serverXp.warned) { serverXp.warned = true; console.warn('[Arcade Hub] report_persistent_event devolveu 0 XP para', e.id, '— reaplique supabase/schema.sql no Supabase. Usando as regras locais.'); }
+      const xp = remote === 0 && base > 0 ? base : (remote ?? base);
       if (!xp) continue;
       p.xpToday += xp; // só estatística (não há limite diário)
       total += xp; byGame[e.gameId] = (byGame[e.gameId] || 0) + xp;

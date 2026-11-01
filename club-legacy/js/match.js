@@ -115,6 +115,8 @@ export function openMatch(f, { onCommit, onClose }) {
       while (acc >= DT && steps++ < 300 && running && m.phase === 'live') {
         prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z };
         m.tick(); acc -= DT;
+        // saltos (bola recolocada no centro, reinícios) não são interpolados
+        if (Math.hypot(m.ball.x - prevBall.x, m.ball.y - prevBall.y) > 12) { prevBall = { x: m.ball.x, y: m.ball.y, z: m.ball.z }; trail = []; }
       }
     }
     const a = running ? clamp(acc / DT, 0, 1) : 1;

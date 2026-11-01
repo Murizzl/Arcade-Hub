@@ -144,8 +144,11 @@ export class Match {
 
   /* ---------- reinícios ---------- */
   kickoff(side, snap = false, celebrate = null) {
-    this.ball.owner = null; this.ball.flight = null; this.ball.x = L / 2; this.ball.y = W / 2; this.ball.z = 0;
-    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : celebrate ? 13 : 7, celebrate };
+    this.ball.owner = null; this.ball.flight = null;
+    if (!celebrate) { this.ball.x = L / 2; this.ball.y = W / 2; }
+    this.ball.z = 0;
+    const net = celebrate ? { x: this.ball.x, y: this.ball.y } : null;
+    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : celebrate ? 13 : 7, celebrate, net };
     this.poss = side;
     if (snap) for (const T of this.teams) for (const m of T.on) {
       const s = T.slots[m.slot]; const fx = Math.min(0.47, s.x * 0.8);
@@ -351,7 +354,9 @@ export class Match {
   /* ---------- bola parada / reinícios ---------- */
   handleRestart() {
     const r = this.restart; const b = this.ball;
-    b.x = r.x; b.y = r.y; b.z = 0;
+    // depois do gol a bola fica na rede durante a comemoração e só então volta ao centro
+    if (r.net && r.wait > 6) { b.x = r.net.x; b.y = r.net.y; } else { b.x = r.x; b.y = r.y; }
+    b.z = 0;
     r.wait -= DT;
     if (r.wait > 0) return;
     const T = this.teams[r.side];
@@ -645,7 +650,7 @@ export class Match {
     if (outcome === 'goal') ey = W / 2 + (this.rng.next() - .5) * 2 * (GOAL_HALF - 0.4);
     else if (outcome === 'save') ey = W / 2 + (this.rng.next() - .5) * 2 * (GOAL_HALF - 0.8);
     else ey = W / 2 + (this.rng.chance(.5) ? 1 : -1) * (GOAL_HALF + 0.8 + this.rng.next() * 5);
-    let ex = gx, eyy = ey;
+    let ex = outcome === 'goal' ? gx + (h.side === 0 ? 1.4 : -1.4) : gx, eyy = ey;
     if (outcome === 'block') { ex = blocked.x; eyy = blocked.y; }
     if (outcome === 'save' && gk) { ex = gx + (h.side === 0 ? -0.8 : 0.8); }
     if (outcome === 'goal' || outcome === 'save') this.stats[h.side].onTarget++;
