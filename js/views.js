@@ -768,9 +768,30 @@
   /* ==================== RANKINGS ==================== */
   V.rankings = (el, p, q) => {
     let tab = q.tab || 'xp', gameId = q.game || '2048';
-    const tabs = [['xp', 'XP global', 'zap'], ['prestige', 'Prestígio', 'sparkles'], ['wins', 'Vitórias', 'trophy'], ['comp', 'Competitivo', 'medal'], ['game', 'Por jogo', 'gamepad-2'], ['friends', 'Amigos', 'users']];
+    const tabs = [['xp', 'XP global', 'zap'], ['prestige', 'Prestígio', 'sparkles'], ['wins', 'Vitórias', 'trophy'], ['comp', 'Competitivo', 'medal'], ['game', 'Por jogo', 'gamepad-2'], ['cl', 'Club Legacy', 'shield-half'], ['friends', 'Amigos', 'users']];
+    let clRows = null;
     const everyone = () => [...(AH.online?.enabled ? AH.online.board() : AH.players).filter(x => !S.state.blocked.includes(x.id)), S.user];
+    // Club Legacy: ranking global da nuvem; sem nuvem, você e seus amigos
+    const clList = () => {
+      if (clRows) return clRows;
+      const people = [S.user, ...S.state.friends.map(S.player).filter(Boolean)];
+      return people.map(x => ({ x, sum: x.persistent?.['club-legacy']?.summary || (x === S.user ? persistentSummary('club-legacy') : null) })).filter(r => r.sum)
+        .map(r => ({ id: r.x.id, username: r.x.username, coach: r.sum.company, club: r.sum.club, titles: r.sum.trophies?.length || 0, wins: r.sum.record?.[0] || 0, score: r.sum.score || 0, me: r.x === S.user }))
+        .sort((a, b) => b.score - a.score);
+    };
+    const drawCl = () => {
+      const rows = clList();
+      el.querySelector('#rkBody').innerHTML = `<div class="card"><div class="list">${rows.map((r, i) => {
+        const pl = r.me ? S.user : S.player(r.id);
+        return `<a class="list-item ${r.me ? 'rank-me' : ''}" href="${r.me ? '#/profile' : pl ? '#/user/' + pl.id : '#/rankings?tab=cl'}"><span class="rank-pos">${i < 3 ? ic('medal', `style="color:${['#f2b316', '#9aa5b8', '#d1834c'][i]}"`) : i + 1}</span>${pl ? avatar(pl, 'md') : ''}
+          <div class="li-main"><b>${esc(r.coach || '—')} ${r.me ? '<span class="tag tag-primary">Você</span>' : ''}</b><small>@${esc(r.username || '?')} · ${esc(r.club || 'sem clube')}</small></div>
+          <div style="text-align:right;font-weight:700;min-width:110px;font-size:.9rem">${fmt(r.score)} pts<br><small class="faint">${r.titles} troféu(s) · ${fmt(r.wins)} vitórias</small></div></a>`;
+      }).join('') || U.empty('shield-half', 'Ninguém no ranking ainda', 'Comece uma carreira no Club Legacy para aparecer aqui.')}</div></div>
+      <p class="faint" style="margin-top:10px">${clRows ? 'Ranking global de todos os treinadores do Arcade Social.' : 'Você e seus amigos. O ranking global aparece com a nuvem ligada e a tabela club_legacy_saves criada.'} Pontuação: vitórias, títulos e conquistas.</p>`;
+      U.refreshIcons();
+    };
     const draw = () => {
+      if (tab === 'cl') return drawCl();
       let list, metric;
       const lvlScore = x => x.prestige * 100 + x.level;
       if (tab === 'xp') { list = everyone().sort((a, b) => b.totalXp - a.totalXp); metric = x => fmt(x.totalXp) + ' XP'; }
@@ -804,6 +825,8 @@
     });
     draw();
     if (AH.online?.enabled) AH.online.loadBoard().then(() => { if (el.isConnected) draw(); });
+    if (AH.cloud?.enabled) AH.cloud.client.from('club_legacy_saves').select('id, username, coach, club, titles, wins, score').order('score', { ascending: false }).limit(50)
+      .then(({ data, error }) => { if (error || !data) return; clRows = data.map(r => ({ ...r, id: 'u_' + r.id, me: 'u_' + r.id === S.user?.id })); if (el.isConnected && tab === 'cl') draw(); });
   };
 
   /* ==================== AMIGOS ==================== */
@@ -919,6 +942,18 @@
   const anyGame = id => S.game(id) || (AH.persistentGames || []).find(g => g.id === id);
   const gameHref = id => S.game(id) ? `#/game/${id}` : '#/persistent';
 
+  // comparação lado a lado com a minha carreira no mesmo jogo
+  function careerCompare(g, theirs) {
+    const mine = S.user?.persistent?.[g.id]?.summary || persistentSummary(g.id);
+    if (!mine || g.id !== 'club-legacy') return '';
+    const rows = [['Pontuação', mine.score ?? 0, theirs.score ?? 0], ['Vitórias', mine.record?.[0] ?? 0, theirs.record?.[0] ?? 0], ['Empates', mine.record?.[1] ?? 0, theirs.record?.[1] ?? 0], ['Derrotas', mine.record?.[2] ?? 0, theirs.record?.[2] ?? 0, true],
+      ['Troféus', mine.trophies?.length ?? 0, theirs.trophies?.length ?? 0], ['Conquistas', mine.achievements ?? 0, theirs.achievements ?? 0], ['Temporadas', mine.seasons ?? 0, theirs.seasons ?? 0], ['Reputação', mine.rep ?? 0, theirs.rep ?? 0]];
+    const cls = (a, b, low) => a === b ? '' : (low ? a < b : a > b) ? 'style="color:var(--success,#22c55e);font-weight:700"' : '';
+    return `<div style="margin-top:14px"><small class="faint">${ic('git-compare')} Comparar com a minha carreira</small>
+      <div class="table-scroll"><table class="stat-table" style="margin-top:6px"><thead><tr><th></th><th>Você (${esc(mine.company || '')})</th><th>${esc(theirs.company || '')}</th></tr></thead><tbody>
+      ${rows.map(([l, a, b, low]) => `<tr><td>${l}</td><td ${cls(a, b, low)}>${fmt(a)}</td><td ${cls(b, a, low)}>${fmt(b)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+
   function persistentProfile(p, isMe) {
     if (isMe) S.syncPersistentSummaries();
     const cards = AH.persistentGames.map(g => {
@@ -928,7 +963,7 @@
       return `<div class="card persist-prof">
         <div class="row" style="gap:12px;margin-bottom:14px"><span class="pm-ic" style="--c1:${g.c1};--c2:${g.c2}">${ic(g.icon)}</span>
           <div style="flex:1;min-width:0"><small class="faint">${esc(g.name)}</small><h3 style="display:flex;align-items:center;gap:8px"><span class="co-dot" style="background:${sum.color || 'var(--primary)'}"></span>${esc(sum.company)}</h3>
-            <small class="faint">${sum.home ? `Sede em ${esc(sum.home)}` : ''}${sum.since ? ` · desde ${dateBR(sum.since)}` : ''}</small></div>
+            <small class="faint">${sum.home ? (g.id === 'club-legacy' ? esc(sum.home) : `Sede em ${esc(sum.home)}`) : ''}${sum.since ? ` · desde ${dateBR(sum.since)}` : ''}</small></div>
           ${isMe ? `<a class="btn btn-primary" href="${g.href}">${ic('play')} Continuar</a>` : ''}</div>
         <div class="kv">
           ${sum.stats ? sum.stats.map(([l, v]) => `<div class="stat-box"><small>${esc(l)}</small><b>${esc(typeof v === 'number' ? fmt(v) : v)}</b></div>`).join('') : `
@@ -943,7 +978,9 @@
           ${sum.achievements != null ? `<div class="stat-box"><small>Conquistas</small><b>${fmt(sum.achievements)}/${fmt(sum.achievementsTotal)}</b></div>` : ''}`}
           <div class="stat-box"><small>Tempo jogado</small><b>${fmtDur(time)}</b></div>
           ${ps ? `<div class="stat-box"><small>Eventos relatados</small><b>${fmt(ps.events || 0)}</b></div>` : ''}
-        </div></div>`;
+        </div>
+        ${sum.trophies?.length ? `<div style="margin-top:12px"><small class="faint">Troféus</small><div class="row-wrap" style="margin-top:6px">${sum.trophies.slice().reverse().map(([n, y]) => `<span class="tag tag-warning">${ic('trophy')} ${esc(n)} ${y}</span>`).join('')}</div></div>` : ''}
+        ${!isMe ? careerCompare(g, sum) : ''}</div>`;
     }).join('');
     return `<div class="section">${sectionHead('building-2', 'Jogos de Gerenciamento', isMe ? `<a class="link-more" href="#/persistent">Ver jogos ${ic('chevron-right')}</a>` : '')}${cards}</div>`;
   }

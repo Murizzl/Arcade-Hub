@@ -147,6 +147,37 @@ drop policy if exists "dono atualiza o proprio save" on public.rail_atlas_saves;
 create policy "dono atualiza o proprio save" on public.rail_atlas_saves
   for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
+-- =========================================================
+-- Club Legacy: carreira na nuvem + colunas públicas do ranking
+-- =========================================================
+create table if not exists public.club_legacy_saves (
+  id          uuid primary key references auth.users on delete cascade,
+  username    text,
+  coach       text,
+  club        text,
+  league      text,
+  seasons     int not null default 1,
+  matches     int not null default 0,
+  wins        int not null default 0,
+  titles      int not null default 0,
+  achievements int not null default 0,
+  score       int not null default 0,
+  trophies    jsonb not null default '[]',
+  data        text not null,              -- save compactado (gzip + base64)
+  updated_at  timestamptz not null default now()
+);
+create index if not exists club_legacy_saves_rank on public.club_legacy_saves (score desc);
+alter table public.club_legacy_saves enable row level security;
+drop policy if exists "ranking club legacy visivel" on public.club_legacy_saves;
+create policy "ranking club legacy visivel" on public.club_legacy_saves
+  for select to authenticated using (true);
+drop policy if exists "dono grava a propria carreira" on public.club_legacy_saves;
+create policy "dono grava a propria carreira" on public.club_legacy_saves
+  for insert to authenticated with check (auth.uid() = id);
+drop policy if exists "dono atualiza a propria carreira" on public.club_legacy_saves;
+create policy "dono atualiza a propria carreira" on public.club_legacy_saves
+  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
 -- Eventos relatados pelos jogos (cada ID conta uma única vez)
 create table if not exists public.persistent_events (
   id          text primary key,
@@ -191,6 +222,8 @@ begin
     when 'club-legacy:league_title:foreign' then 120
     when 'club-legacy:cup_title:common' then 80
     when 'club-legacy:continental_title:common' then 150
+    when 'club-legacy:achievement_unlocked:achievement' then 20
+    when 'club-legacy:weekly_challenge:common' then 50
     else 0 end;
   v_xp := v_base;
   insert into persistent_events (id, user_id, game_id, event_type, kind, xp) values (p_event_id, v_uid, p_game_id, p_event_type, p_kind, v_xp);

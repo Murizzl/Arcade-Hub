@@ -10,6 +10,8 @@ import { Arcade } from './arcade.js';
 import * as M from './management.js';
 import * as Cups from './cups.js';
 import * as Y from './youth.js';
+import * as Social from './social.js';
+import { Cloud } from './cloud.js';
 
 const SAVE_KEY = 'clublegacy.save.v1';
 export let DB = null;   // dados configuráveis (JSON)
@@ -30,8 +32,10 @@ export function save() {
   if (!S) return;
   S.idc = getIdCounter();
   S.savedAt = Date.now();
+  Social.check();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { console.warn('Falha ao salvar', e); }
-  Arcade.publish(S);
+  const summary = Arcade.publish(S, publicExtra());
+  Cloud.schedule(S, summary);
 }
 export function load() {
   try {
@@ -44,6 +48,21 @@ export function load() {
     return S;
   } catch (e) { return null; }
 }
+// dados públicos da carreira (perfil, ranking e comparação no Arcade Social)
+function publicExtra() {
+  const me = myClub();
+  return {
+    score: Social.coachScore(S), club: me ? me.short : null, league: me ? leagueShort(me.division) : null,
+    trophies: S.coach.titles.map(t => [t.name, t.year]).slice(-20), achievements: Object.keys(S.ach || {}).length, achievementsTotal: Social.ACHIEVEMENTS.length,
+    record: [S.coach.w, S.coach.d, S.coach.l], seasons: S.season, rep: Math.round(S.coach.rep)
+  };
+}
+// substitui o save local por uma carreira vinda da nuvem
+export function adopt(state) {
+  S = state; setIdCounter(S.idc || 0); M.migrate(S);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* */ }
+}
+
 export function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 export function deleteSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* */ } S = null; }
 
@@ -432,6 +451,7 @@ function userMatchDone(f, m, r) {
     if (S.seasonWins <= 15) Arcade.report('match_win', `${S.seed}-${f.id}`);
   }
   if (S.matchesPlayed % 5 === 0) Arcade.report('five_matches', `${S.seed}-${S.matchesPlayed}`);
+  Social.afterUserMatch(f, r, side);
   checkFired();
 }
 
@@ -514,6 +534,7 @@ export function acceptSale(msg) {
   moveTo(p, b.id);
   b.balance -= o.fee; me.balance += o.fee;
   ledger(`Venda de ${p.name}`, o.fee);
+  if (o.fee >= 20) S.bigSale = true;
   msg.done = 'aceita';
   addNews(`${me.short} aceita proposta ${o.fee >= 10 ? 'milionária ' : ''}por ${p.name}`, `${p.name} se transfere para o ${b.short} por ${money(o.fee)}.`, 'banknote');
   save();
@@ -563,6 +584,7 @@ export function completeSigning(p, fee, wage, years, bonus = 0) {
   moveTo(p, me.id);
   p.wage = wage; p.contract = years; p.morale = 80;
   if (fee) ledger(`Contratação de ${p.name}`, -fee);
+  if (fee >= 20) S.bigBuy = true;
   if (bonus) ledger(`Luvas de ${p.name}`, -bonus);
   addNews(`${me.short} contrata ${p.name}`, `${p.name} (${p.ovr}, ${p.age} anos) chega ${from ? `do ${from.short} por ${money(fee)}` : 'sem custos de transferência'}.`, 'pen-line');
   save();

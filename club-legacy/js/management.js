@@ -364,6 +364,7 @@ function clauseRaids(rng, me) {
   const b = rng.pick(buyers);
   C.moveTo(p, b.id); b.balance -= p.clause; me.balance += p.clause;
   C.ledger(`Multa rescisória de ${p.name}`, p.clause);
+  if (p.clause >= 20) s_().bigSale = true;
   logTransfer(p, me.id, b.id, p.clause, 'multa');
   C.inbox('Mercado', `${b.short} pagou a multa de ${p.name}`, `O ${b.name} depositou ${money(p.clause)} e ${p.name} deixou o clube. Multas baixas deixam o elenco vulnerável.`, 'offer');
   C.addNews(`${b.short} paga multa e tira ${p.name} do ${me.short}`, `Negócio de ${money(p.clause)}.`, 'banknote');

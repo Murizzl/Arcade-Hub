@@ -35,16 +35,17 @@ export const Arcade = {
     if (seconds >= 5) this.report('playtime', 'pt' + Date.now().toString(36), 'common', { seconds: Math.min(120, Math.round(seconds)) });
   },
   // resumo público da carreira, exibido no perfil do Arcade Social
-  publish(S) {
-    if (!S) return;
+  publish(S, extra = {}) {
+    if (!S) return null;
     const c = S.coach, club = c.clubId ? S.clubs[c.clubId] : null;
     const best = c.titles.find(t => /Continental/.test(t.name)) || c.titles.find(t => /Série A|Argentina|Portugal/.test(t.name)) || c.titles[0];
     const summary = {
       company: `${c.first} ${c.last}`, color: club?.colors[0] || '#a3e635',
       home: club ? `${club.name} · ${({ A: 'Série A', B: 'Série B', ARG: 'Liga Argentina', POR: 'Liga Portugal' })[club.division] || club.division}` : 'Sem clube',
-      stats: [['Clube atual', club ? club.short : '—'], ['Temporadas', S.season], ['Partidas', c.matches], ['Vitórias', c.w], ['Troféus', c.titles.length], ['Maior conquista', best ? `${best.name} ${best.year}` : '—']],
-      username: this.profile()?.username
+      stats: [['Clube atual', club ? club.short : '—'], ['Temporadas', S.season], ['Partidas', c.matches], ['Vitórias', c.w], ['Troféus', c.titles.length], ['Conquistas', `${extra.achievements ?? 0}/${extra.achievementsTotal ?? 0}`], ['Pontuação', extra.score ?? 0], ['Maior conquista', best ? `${best.name} ${best.year}` : '—']],
+      username: this.profile()?.username, ...extra
     };
     try { localStorage.setItem(`arcadehub.persistent.${GAME_ID}.summary`, JSON.stringify({ ...summary, t: Date.now() })); } catch (e) { /* */ }
+    return summary;
   }
 };

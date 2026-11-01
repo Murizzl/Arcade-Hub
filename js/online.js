@@ -29,7 +29,8 @@
       totalXp: row.total_xp || 0, wins: row.wins || 0, losses: d.losses || 0, mmr: row.mmr || 1000,
       joined: row.created_at, bio: d.bio || '', lastSeen: Date.parse(row.updated_at) || Date.now(),
       stats: d.stats || {}, favorites: d.favorites || [], achCount: Object.keys(d.achievements || {}).length,
-      title: d.title, cardTheme: d.cardTheme, cardImage: d.cardImage, sharePlaying: d.privacy?.sharePlaying !== false
+      title: d.title, cardTheme: d.cardTheme, cardImage: d.cardImage, sharePlaying: d.privacy?.sharePlaying !== false,
+      persistent: d.persistent || {}, playtime: d.playtime || {}, xpByGame: d.xpByGame || {}
     });
     applyPresence(p);
     cache.set(id, p);

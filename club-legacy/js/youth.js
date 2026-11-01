@@ -37,6 +37,7 @@ export function promote(p) {
   me.squad.push(p.id);
   p.wage = Math.max(0.01, p.wage); p.contract = 3; p.role = 'prospect';
   numberSquad(C.squadOf(me));
+  S().promotedYouth = (S().promotedYouth || 0) + 1;
   C.addNews(`${me.short} promove ${p.name} da base`, `${p.name}, ${p.age} anos, sobe ao time principal.`, 'sprout');
   C.save();
   return { ok: true };

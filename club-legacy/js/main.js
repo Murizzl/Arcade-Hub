@@ -11,6 +11,8 @@ import { Arcade } from './arcade.js';
 import * as M from './management.js';
 import * as Cups from './cups.js';
 import * as Y from './youth.js';
+import * as Social from './social.js';
+import { Cloud } from './cloud.js';
 
 const app = document.getElementById('app');
 const modalEl = document.getElementById('modal');
@@ -49,16 +51,39 @@ const energyBar = v => `<span class="energy ${v < 50 ? 'vlow' : v < 70 ? 'low' :
 const statusTags = p => `${p.injury ? `<span class="tag tag-red" title="${esc(p.injuryType || 'Lesão')}">${ic('cross')} ${p.injury}d</span>` : ''}${p.loan ? `<span class="tag tag-blue">${ic('repeat')} ${p.loan.to === S().coach.clubId ? 'Emprestado' : 'Cedido'}</span>` : ''}${p.precontract ? '<span class="tag tag-lime">Pré-contrato</span>' : ''}${p.wantsOut ? '<span class="tag tag-red">Quer sair</span>' : ''}${p.forLoan ? '<span class="tag">Para empréstimo</span>' : ''}${p.suspended ? '<span class="tag tag-red">Suspenso</span>' : ''}${p.forSale ? `<span class="tag tag-yellow">${ic('tag')} À venda</span>` : ''}${p.contract <= 1 ? '<span class="tag">Fim de contrato</span>' : ''}`;
 
 /* ---------- boot ---------- */
+// sincronia com a nuvem do Arcade Social: a carreira mais recente vence (com confirmação)
+async function cloudBoot() {
+  if (!(await Cloud.init())) return;
+  const remote = await Cloud.pull();
+  if (Cloud.status === 'missing') return;
+  const localAt = S()?.savedAt || 0;
+  if (remote && remote.savedAt > localAt + 5000) {
+    const r = remote.state, club = r.coach.clubId ? r.clubs[r.coach.clubId] : null;
+    modal(`<div class="modal-head"><h2>${ic('cloud-download')} Carreira na nuvem</h2></div>
+      <p>Encontramos uma carreira mais recente salva na sua conta do Arcade Social:</p>
+      <div class="card" style="margin:10px 0"><b>${esc(r.coach.first)} ${esc(r.coach.last)}</b> · ${club ? esc(club.name) : 'sem clube'}<br><span class="faint small">Temporada ${r.year} · ${r.coach.w}V ${r.coach.d}E ${r.coach.l}D · salva em ${new Date(remote.savedAt).toLocaleString('pt-BR')}</span></div>
+      ${S() ? `<p class="faint small">A carreira deste navegador (${esc(S().coach.first)} ${esc(S().coach.last)}, temporada ${S().year}) é mais antiga e será substituída.</p>` : ''}
+      <div class="modal-foot"><button class="btn btn-ghost" data-close>Manter a deste aparelho</button><button class="btn btn-primary" id="cloudUse">${ic('cloud-download')} Continuar da nuvem</button></div>`, { locked: true });
+    modalEl.querySelector('#cloudUse').onclick = () => { C.adopt(remote.state); closeModal(); view = 'central'; renderShell(); toast('Carreira carregada da nuvem.', true, 'cloud'); };
+    return;
+  }
+  if (S() && (!remote || localAt > remote.savedAt + 5000)) { C.save(); await Cloud.flush(); }
+}
+
 async function boot() {
   try {
     await C.loadData();
     C.load();
     document.getElementById('boot').remove();
     if (S()) renderShell(); else renderStart();
+    cloudBoot();
   } catch (e) {
     console.error(e);
     document.getElementById('boot').innerHTML = `<p>Não foi possível carregar os dados do jogo.<br><small class="faint">Abra por um servidor HTTP local (ex.: <code>python -m http.server</code>).</small></p>`;
   }
+  // ao sair ou esconder a aba, envia o que falta para a nuvem
+  document.addEventListener('visibilitychange', () => { if (document.hidden) Cloud.flush(); });
+  window.addEventListener('pagehide', () => Cloud.flush());
   // tempo de jogo para o perfil do Arcade Social (blocos de 1 minuto)
   let last = Date.now();
   setInterval(() => { if (document.hidden) { last = Date.now(); return; } const s = (Date.now() - last) / 1000; last = Date.now(); Arcade.playtime(s); }, 60000);
@@ -342,6 +367,9 @@ function vCentral() {
       </div>
     </div>
     <div class="grid" style="align-content:start">
+      ${(() => { const w = Social.weekly(); return w ? `<div class="card" style="border-color:#3c5a24"><div class="card-head"><h3>${ic('users')} Desafio da semana</h3><span class="right faint">${esc(w.week)}</span></div>
+        <p style="margin:0 0 8px"><b>${esc(w.name)}</b></p><div class="row" style="gap:8px"><div class="meter" style="flex:1"><i style="width:${Math.min(100, w.progress / w.goal * 100)}%"></i></div><b>${Math.min(w.progress, w.goal)}/${w.goal}</b></div>
+        <p class="faint small" style="margin:8px 0 0">${w.done ? '<span class="pos">Concluído! Recompensa enviada ao Arcade Social.</span>' : 'Mesmo desafio para toda a comunidade nesta semana · +50 XP no perfil.'}</p></div>` : ''; })()}
       <div class="card"><div class="card-head"><h3>${ic('inbox')} Mensagens</h3><button class="btn btn-sm btn-ghost right" data-act="readall">Marcar como lidas</button></div>
         ${unreadMsgs.map(msgHtml).join('') || '<p class="faint">Caixa de entrada vazia.</p>'}
       </div>
@@ -978,7 +1006,12 @@ function vCareer() {
       <div class="card"><div class="card-head"><h3>${ic('briefcase')} Histórico de clubes</h3></div><table class="t"><thead><tr><th>Clube</th><th>Período</th><th class="num">V</th><th class="num">E</th><th class="num">D</th><th>Saída</th></tr></thead><tbody>
         ${co.history.slice().reverse().map(h => `<tr><td>${crest(s.clubs[h.club], 18)} ${esc(s.clubs[h.club]?.short || h.club)}</td><td>${h.from}–${h.to || 'atual'}</td><td class="num">${h.w}</td><td class="num">${h.d}</td><td class="num">${h.l}</td><td class="faint small">${esc(h.left || '')}</td></tr>`).join('')}</tbody></table></div>
       ${me && me.history.length ? `<div class="card"><div class="card-head"><h3>${ic('line-chart')} Campanhas do ${esc(me.short)}</h3></div>${me.history.slice().reverse().map(h => `<div class="li"><b>${h.year}</b><span class="grow">${esc(C.leagueShort(h.division))}</span><b>${h.pos}º</b></div>`).join('')}</div>` : ''}
-      <div class="card"><div class="card-head"><h3>${ic('sparkles')} Arcade Social</h3></div>${Arcade.profile() ? `<p class="small">Conectado como <b>${esc(Arcade.profile().username)}</b>. Vitórias, temporadas e títulos são relatados ao hub, que valida e concede o XP.</p>` : '<p class="small muted">Entre no Arcade Hub para que suas conquistas rendam XP no perfil global.</p>'}
+      <div class="card"><div class="card-head"><h3>${ic('award')} Conquistas</h3><span class="right faint">${Object.keys(s.ach || {}).length}/${Social.ACHIEVEMENTS.length} · 20 XP cada</span></div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">${Social.ACHIEVEMENTS.map(a => { const got = s.ach?.[a.id]; return `<div class="msg ${got ? 'unread' : ''}" style="margin:0;padding:10px;opacity:${got ? 1 : 0.5}" title="${esc(a.desc)}"><div class="grow"><b class="small">${ic(got ? a.icon : 'lock', got ? 'lime' : '')} ${esc(a.name)}</b><p class="faint small" style="margin:2px 0 0">${esc(a.desc)}</p>${got ? `<small class="pos">${got.year}</small>` : ''}</div></div>`; }).join('')}</div></div>
+      <div class="card"><div class="card-head"><h3>${ic('bar-chart-3')} Ranking global de treinadores</h3><span class="right faint">pontuação ${Social.coachScore(s)}</span></div><div id="rankBox"><p class="faint small">${Cloud.enabled ? 'Carregando…' : 'Entre no Arcade Hub para aparecer no ranking global.'}</p></div>
+        <p class="faint small" style="margin:8px 0 0">Pontuação = 3 por vitória, 1 por empate, títulos (50 a 150) e 10 por conquista.</p></div>
+      <div class="card"><div class="card-head"><h3>${ic('sparkles')} Arcade Social</h3><span class="right tag ${Cloud.status === 'ok' ? 'tag-lime' : ''}">${ic(Cloud.enabled ? 'cloud' : 'cloud-off')} ${Cloud.enabled ? (Cloud.status === 'missing' ? 'Nuvem sem tabela' : 'Salvo na nuvem') : 'Só neste aparelho'}</span></div>
+        ${Cloud.status === 'missing' ? '<p class="small warn">Você está logado, mas o banco ainda não tem a tabela <code>club_legacy_saves</code>: rode <code>supabase/schema.sql</code> no Supabase. Por enquanto a carreira fica só neste navegador.</p>' : ''}${Arcade.profile() ? `<p class="small">Conectado como <b>${esc(Arcade.profile().username)}</b>. Vitórias, temporadas e títulos são relatados ao hub, que valida e concede o XP.</p>` : '<p class="small muted">Entre no Arcade Hub para que suas conquistas rendam XP no perfil global.</p>'}
         <div class="row-wrap">${xpRules().map(([l, v]) => `<span class="tag">${esc(l)} · +${v} XP</span>`).join('')}</div></div>
     </div>
   </div>`;
@@ -993,7 +1026,17 @@ function xpRules() {
    Ações
    ========================================================= */
 const VIEWS = { central: vCentral, squad: vSquad, tactics: vTactics, calendar: vCalendar, comps: vComps, transfers: vTransfers, training: vTraining, finance: vFinance, board: vBoard, career: vCareer };
+async function loadRanking(main) {
+  const box = main.querySelector('#rankBox'); if (!box || !Cloud.enabled) return;
+  const rows = await Cloud.ranking(15);
+  if (!box.isConnected) return;
+  if (!rows) { box.innerHTML = `<p class="faint small">${Cloud.status === 'missing' ? 'Ranking indisponível até a tabela existir no banco.' : 'Não foi possível carregar o ranking agora.'}</p>`; return; }
+  box.innerHTML = rows.map((r, i) => `<div class="li ${r.me ? 'me' : ''}" style="${r.me ? 'background:rgba(163,230,53,.08)' : ''}"><span class="faint" style="width:22px">${i + 1}º</span><span class="grow"><b>${esc(r.coach || '—')}</b> <span class="faint small">@${esc(r.username || '?')} · ${esc(r.club || 'sem clube')}</span></span><span class="small">${r.titles} 🏆 · ${r.wins}V</span><b style="min-width:48px;text-align:right">${r.score}</b></div>`).join('') || '<p class="faint small">Ninguém no ranking ainda.</p>';
+  icons();
+}
+
 const AFTER = {
+  career: loadRanking,
   tactics: afterTactics,
   transfers: main => main.querySelectorAll('[data-mk]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'change', () => { const k = el.dataset.mk; ui.mk[k] = el.type === 'number' ? (+el.value || 0) : el.value; renderView(); })),
   training: main => main.querySelectorAll('[data-plan]').forEach(el => el.addEventListener('change', () => { S().players[el.dataset.plan].plan = el.value; C.save(); toast('Plano atualizado.'); }))
