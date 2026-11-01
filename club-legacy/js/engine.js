@@ -436,7 +436,8 @@ export class Match {
       if (od > (front ? 2.4 : 1.6)) continue;
       if (!this.rng.chance(DT * (front ? 1.7 : 0.55) * pr.tackle)) continue;
       const foulP = (Math.abs(this.goalX(h.side) - h.x) < 16.5 ? 0.022 : 0.062) + (O.tactics.press === 'high' ? 0.035 : 0) + (o.a.def < 55 ? 0.03 : 0) + (o.energy < 50 ? 0.03 : 0);
-      if (this.rng.chance(foulP)) return this.foul(o, h);
+      const careful = o.yellow ? 0.55 : 1; // já advertido, entra com mais cuidado
+      if (this.rng.chance(foulP * careful)) return this.foul(o, h);
       const win = clamp(0.4 + (o.a.def * o.eff - h.a.dri * h.eff) / 240, 0.2, 0.7);
       if (this.rng.chance(win)) {
         o.r.tackles++; this.stats[o.side].tackles++; h.r.lost++;
@@ -710,8 +711,9 @@ export class Match {
     // cartões
     const fwdF = this.fX(h.side, h.x);
     let card = null;
-    if (this.rng.chance(0.012 + (fwdF > 0.75 ? 0.02 : 0))) card = 'red';
-    else if (this.rng.chance(0.16 + (fwdF > 0.7 ? 0.08 : 0))) card = o.yellow ? 'red2' : 'yellow';
+    // vermelho direto é raro (falta para impedir chance clara); amarelo mais comum perto da área
+    if (this.rng.chance(0.002 + (fwdF > 0.8 ? 0.006 : 0))) card = 'red';
+    else if (this.rng.chance((0.13 + (fwdF > 0.7 ? 0.06 : 0)) * (o.yellow ? 0.45 : 1))) card = o.yellow ? 'red2' : 'yellow';
     this.say(`Falta de ${o.p.name} em ${h.p.name}.`, o.side, 'foul');
     if (card) {
       if (card === 'yellow') { o.yellow = 1; this.stats[o.side].yellows++; }
