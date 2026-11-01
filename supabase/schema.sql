@@ -181,6 +181,13 @@ begin
     when 'rail-atlas:cargo_delivered:international' then 8
     when 'rail-atlas:cargo_delivered:special' then 12
     when 'rail-atlas:achievement_unlocked:achievement' then 20
+    when 'club-legacy:first_win:first' then 20
+    when 'club-legacy:match_win:common' then 3
+    when 'club-legacy:five_matches:common' then 10
+    when 'club-legacy:season_complete:common' then 40
+    when 'club-legacy:promotion:common' then 60
+    when 'club-legacy:league_title:serie_b' then 100
+    when 'club-legacy:league_title:serie_a' then 150
     else 0 end;
   v_xp := v_base;
   insert into persistent_events (id, user_id, game_id, event_type, kind, xp) values (p_event_id, v_uid, p_game_id, p_event_type, p_kind, v_xp);
