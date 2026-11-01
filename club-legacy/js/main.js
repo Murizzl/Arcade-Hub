@@ -2,10 +2,10 @@
    Club Legacy — interface e navegação da carreira.
    ========================================================= */
 import { esc, ic, money, clamp, POS_LABEL, POS_GROUP, POS_ORDER, dateOf, fmtDate } from './util.js';
-import { ATTRS, GK_ATTRS, ATTR_LABEL, ATTR_SHORT, PLANS, ratingAt } from './players.js';
-import { STYLES, PRESS, LINES, MENTALITY } from './engine.js';
+import { ATTRS, GK_ATTRS, ATTR_LABEL, ATTR_SHORT, PLANS, FOCUS, ratingAt } from './players.js';
+import { STYLES, PRESS, LINES, MENTALITY, INSTR, instrFor } from './engine.js';
 import * as C from './career.js';
-import { crest, avatar, LOOK } from './art.js';
+import { crest, avatar, LOOK, CREST_SHAPES, CREST_PATTERNS, CREST_EMBLEMS } from './art.js';
 import { openMatch, resultModalHtml } from './match.js';
 import { Arcade } from './arcade.js';
 import * as M from './management.js';
@@ -180,7 +180,9 @@ function wizCreate() {
       </div>
       <div class="opt-group"><small>Cor principal</small>${sw(0)}</div>
       <div class="opt-group"><small>Cor secundária</small>${sw(1)}</div>
-      <div class="opt-group"><small>Escudo</small><div class="seg">${[['shield', 'Clássico'], ['round', 'Redondo'], ['diamond', 'Losango']].map(([v, t]) => `<button class="${k.crest === v ? 'on' : ''}" data-ccrest="${v}">${t}</button>`).join('')}</div></div>
+      <div class="opt-group"><small>Escudo</small><div class="seg">${CREST_SHAPES.map(([v, t]) => `<button class="${k.crest === v ? 'on' : ''}" data-ccrest="${v}">${t}</button>`).join('')}</div></div>
+      <div class="opt-group"><small>Padrão</small><div class="seg">${CREST_PATTERNS.map(([v, t]) => `<button class="${(k.pattern || 'plain') === v ? 'on' : ''}" data-cpat="${v}">${t}</button>`).join('')}</div></div>
+      <div class="opt-group"><small>Emblema</small><div class="seg">${CREST_EMBLEMS.map(([v, t]) => `<button class="${(k.emblem || 'none') === v ? 'on' : ''}" data-cem="${v}">${t}</button>`).join('')}</div></div>
       <div class="opt-group"><small>Divisão inicial</small><div class="seg"><button class="${k.division === 'B' ? 'on' : ''}" data-cdiv="B">Série B (recomendado)</button><button class="${k.division === 'A' ? 'on' : ''}" data-cdiv="A">Série A</button></div>
         <span class="faint small">Clube novo começa com elenco modesto (${k.division === 'A' ? 'força 66, R$ 16 mi' : 'força 59, R$ 6 mi'}) e ocupa a vaga de um clube da divisão.</span></div>
       <label class="field">Substitui o clube<select class="input" id="kRepl">${repl.map(c => `<option value="${c.id}" ${k.replaces === c.id ? 'selected' : ''}>${esc(c.name)} (força ${c.rating})</option>`).join('')}</select></label>
@@ -210,6 +212,8 @@ function bindWizard() {
     if (t.dataset.wclub) { W.clubId = t.dataset.wclub; return renderWizard(); }
     if (t.dataset.ccolor) { W.custom.colors[+t.dataset.ccolor] = t.dataset.v; W.custom.kitText = isLight(W.custom.colors[0]) ? '#111827' : '#ffffff'; return renderWizard(); }
     if (t.dataset.ccrest) { W.custom.crest = t.dataset.ccrest; return renderWizard(); }
+    if (t.dataset.cpat) { W.custom.pattern = t.dataset.cpat; return renderWizard(); }
+    if (t.dataset.cem) { W.custom.emblem = t.dataset.cem; return renderWizard(); }
     if (t.dataset.cdiv) { W.custom.division = t.dataset.cdiv; W.custom.replaces = ''; return renderWizard(); }
   };
 }
@@ -222,7 +226,7 @@ function startCareer(custom) {
   if (custom) {
     const k = W.custom;
     if (!k.name || k.name.length < 3) return toast('Dê um nome ao clube (mínimo 3 letras).', false);
-    customClub = { name: k.name, short: k.short || k.name.split(' ').slice(0, 2).join(' '), abbr: (k.abbr || k.name.replace(/[^A-Za-zÀ-ú]/g, '').slice(0, 3)).toUpperCase(), city: k.city || 'São Paulo', state: k.state || 'SP', stadium: k.stadium || `Arena ${k.city || 'Municipal'}`, colors: k.colors.slice(), kitText: k.kitText, crest: k.crest, division: k.division, replaces: k.replaces || undefined };
+    customClub = { name: k.name, short: k.short || k.name.split(' ').slice(0, 2).join(' '), abbr: (k.abbr || k.name.replace(/[^A-Za-zÀ-ú]/g, '').slice(0, 3)).toUpperCase(), city: k.city || 'São Paulo', state: k.state || 'SP', stadium: k.stadium || `Arena ${k.city || 'Municipal'}`, colors: k.colors.slice(), kitText: k.kitText, crest: k.crest, pattern: k.pattern || 'plain', emblem: k.emblem || 'none', division: k.division, replaces: k.replaces || undefined };
   }
   progress('Gerando elencos e calendário…', 0.5);
   setTimeout(() => {
@@ -431,7 +435,11 @@ function playerModal(id) {
         ${p.injury ? `<div class="li"><span class="grow faint">Lesão</span><b class="neg">${esc(p.injuryType || 'Lesão')} · ${p.injury} dias${p.treated ? ' (em tratamento)' : ''}</b></div>` : ''}
         <div class="li"><span class="grow faint">Condição física</span><b>${Math.round(p.cond)}%</b></div>
         <div class="li"><span class="grow faint">Moral</span><b>${Math.round(p.morale)}</b></div>
-        <div class="li"><span class="grow faint">Jogos · Gols · Assist.</span><b>${p.st.apps} · ${p.st.goals} · ${p.st.assists}</b></div>
+        <div class="grid g4" style="gap:6px;margin:8px 0;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px">
+          ${[['Jogos', p.st.apps], ['Minutos', p.st.mins], ['Gols', p.st.goals], ['Assist.', p.st.assists], ['Nota média', p.st.apps ? p.st.rating.toFixed(2) : '–'], ['Melhor em campo', p.st.motm], ['Cartões', `${p.st.yc}🟨 ${p.st.rc}🟥`], ['Copas (J/G)', `${p.cst?.apps || 0}/${p.cst?.goals || 0}`],
+             ['Gols/90', p.st.mins ? (p.st.goals / p.st.mins * 90).toFixed(2) : '–'], ['Part. em gols', p.st.goals + p.st.assists], ['Carreira (J)', (p.hist || []).reduce((a, h) => a + h.apps, 0) + p.st.apps], ['Carreira (G)', (p.hist || []).reduce((a, h) => a + h.goals, 0) + p.st.goals]]
+            .map(([l, v]) => `<div class="stat"><small>${l}</small><b style="font-size:15px">${v}</b></div>`).join('')}
+        </div>
         <div class="li"><span class="grow faint">Nota média</span><b>${p.st.apps ? p.st.rating.toFixed(2) : '–'}</b></div>
         <div class="li"><span class="grow faint">Overall por posição</span><span class="small">${['CB', 'CM', 'AM', 'ST', 'LW'].filter(r => r !== p.pos).map(r => `${POS_LABEL[r]} ${ratingAt(p, r)}`).join(' · ')}</span></div>
         ${mine ? `<label class="field" style="margin-top:8px">Plano de treinamento<select class="input" id="pPlan">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${p.plan === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>` : ''}
@@ -470,7 +478,7 @@ function playerActions(p, mine) {
 
 function identityModal() {
   const me = C.myClub();
-  const k = { colors: me.colors.slice(), away: (me.away || [me.colors[1], me.colors[0]]).slice(), kitText: me.kitText, crest: me.crest };
+  const k = { colors: me.colors.slice(), away: (me.away || [me.colors[1], me.colors[0]]).slice(), kitText: me.kitText, crest: me.crest, pattern: me.pattern || 'plain', emblem: me.emblem || 'none' };
   const pal = ['#a3e635', '#16a34a', '#0ea5e9', '#1d4ed8', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#facc15', '#f8fafc', '#111827', '#475569', '#7f1d1d', '#0f766e'];
   const render = () => {
     const prev = { ...me, ...k };
@@ -481,13 +489,17 @@ function identityModal() {
           <small class="faint">Titular · Reserva</small></div>
         <div class="grid grow" style="gap:10px">
           ${[['Cor principal', 'colors', 0], ['Cor secundária', 'colors', 1], ['Reserva: camisa', 'away', 0], ['Reserva: detalhes', 'away', 1], ['Número (titular)', 'kitText', -1]].map(([l, key, i]) => `<div class="opt-group"><small>${l}</small><div class="swatches">${pal.map(v => `<button class="sw ${(i < 0 ? k[key] : k[key][i]) === v ? 'on' : ''}" style="background:${v}" data-kc="${key}" data-ki="${i}" data-v="${v}"></button>`).join('')}</div></div>`).join('')}
-          <div class="opt-group"><small>Escudo</small><div class="seg">${[['shield', 'Clássico'], ['round', 'Redondo'], ['diamond', 'Losango']].map(([v, t]) => `<button class="${k.crest === v ? 'on' : ''}" data-kcrest="${v}">${t}</button>`).join('')}</div></div>
+          <div class="opt-group"><small>Formato do escudo</small><div class="seg">${CREST_SHAPES.map(([v, t]) => `<button class="${k.crest === v ? 'on' : ''}" data-kcrest="${v}">${t}</button>`).join('')}</div></div>
+          <div class="opt-group"><small>Padrão</small><div class="seg">${CREST_PATTERNS.map(([v, t]) => `<button class="${k.pattern === v ? 'on' : ''}" data-kpat="${v}">${t}</button>`).join('')}</div></div>
+          <div class="opt-group"><small>Emblema</small><div class="seg">${CREST_EMBLEMS.map(([v, t]) => `<button class="${k.emblem === v ? 'on' : ''}" data-kem="${v}">${t}</button>`).join('')}</div></div>
         </div></div>
       <div class="modal-foot"><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="kSave">${ic('check')} Salvar identidade</button></div>`);
     modalEl.onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.kc) { if (+b.dataset.ki < 0) k[b.dataset.kc] = b.dataset.v; else k[b.dataset.kc][+b.dataset.ki] = b.dataset.v; return render(); }
       if (b.dataset.kcrest) { k.crest = b.dataset.kcrest; return render(); }
+      if (b.dataset.kpat) { k.pattern = b.dataset.kpat; return render(); }
+      if (b.dataset.kem) { k.emblem = b.dataset.kem; return render(); }
       if (b.id === 'kSave') { Object.assign(me, k); C.save(); closeModal(); toast('Nova identidade do clube salva.', true, 'palette'); return refresh(); }
       if (b.dataset.close !== undefined || e.target === modalEl) closeModal();
     };
@@ -518,26 +530,67 @@ function renewModal(id) { negotiationModal(S().players[id], 'renew', 0); }
 function negotiationModal(p, type, fee) {
   const sess = M.startTalks(p, type, fee);
   if (sess.error) return toast(sess.error, false);
-  const d = sess.dem, me = C.myClub();
-  const offer = sess.last || { wage: d.wage, bonus: Math.round(d.bonus * 0.6 * 100) / 100, years: d.years[0] + 1 > d.years[1] ? d.years[1] : d.years[0] + 1, clause: Math.round(d.clauseMax * 1.3 * 10) / 10, role: d.role };
-  const title = { sign: `Contrato de ${p.name}`, renew: `Renovação com ${p.name}`, pre: `Pré-contrato com ${p.name}` }[type];
-  let agreed = false, reply = '';
+  const s = S(), d = sess.dem, me = C.myClub(), from = p.club ? s.clubs[p.club] : null;
+  const offer = sess.last || { wage: d.wage, bonus: Math.round(d.bonus * 0.6 * 100) / 100, years: Math.min(d.years[1], d.years[0] + 1), clause: Math.round(d.clauseMax * 1.3 * 10) / 10, role: d.role };
+  const title = { sign: 'Contratação', renew: 'Renovação', pre: 'Pré-contrato' }[type];
+  const chat = [{ who: 'agent', text: `Meu cliente espera algo perto de ${money(d.wage)}/mês, luvas de ${money(d.bonus)}, ${d.years[0]}–${d.years[1]} temporadas e papel de ${M.ROLES[d.role].toLowerCase()}.` }];
+  let agreed = false;
+  const mood = () => sess.patience >= 3 ? ['😊', 'Aberto a conversar'] : sess.patience === 2 ? ['😐', 'Impaciente'] : sess.patience === 1 ? ['😠', 'Última chance'] : ['🚪', 'Encerrou'];
+  const read = () => ({ wage: (+modalEl.querySelector('#nWage').value || 0) / 1000, bonus: Math.max(0, +modalEl.querySelector('#nBonus').value || 0), years: +modalEl.querySelector('#nYears').value, clause: Math.max(0.5, +modalEl.querySelector('#nClause').value || 0), role: modalEl.querySelector('#nRole').value });
+  // indicadores ao vivo de cada termo
+  const live = () => {
+    const o = read(), ev = M.evaluateOffer(sess, o);
+    const tag = (ok, warn, txt) => `<span class="tag ${ok ? 'tag-lime' : warn ? 'tag-yellow' : 'tag-red'}">${txt}</span>`;
+    const set = (id, html) => { const el = modalEl.querySelector(id); if (el) el.innerHTML = html; };
+    set('#iWage', tag(ev.w >= 0.98, ev.w >= 0.9, `${Math.round(ev.w * 100)}% do pedido`));
+    set('#iBonus', tag(ev.b >= 0.9, ev.b >= 0.6, ev.b >= 0.9 ? 'Satisfaz' : ev.b >= 0.6 ? 'Abaixo' : 'Muito baixo'));
+    set('#iYears', tag(ev.y >= 1, false, ev.y >= 1 ? 'Dentro do desejado' : `Quer ${d.years[0]}–${d.years[1]}`));
+    set('#iClause', tag(ev.cf >= 1, ev.cf >= 0.8, ev.cf >= 1 ? 'Aceitável' : 'Alta demais'));
+    set('#iRole', tag(ev.roleDiff >= 0, false, ev.roleDiff > 0 ? 'Gera promessa' : ev.roleDiff === 0 ? 'Esperado' : 'Abaixo do esperado'));
+    const chance = clamp(Math.round((ev.total - 0.8) / 0.19 * 100), 0, 100);
+    set('#iChance', `<div class="row" style="gap:8px"><b style="font-size:22px">${chance}%</b><div class="meter ${chance < 40 ? 'bad' : chance < 80 ? 'warn' : ''}" style="flex:1"><i style="width:${chance}%"></i></div></div>`);
+    const payAfter = C.payroll(me) - (type === 'renew' ? p.wage : 0) + o.wage;
+    const total = fee + o.bonus + o.wage * 12 * o.years;
+    set('#iCost', `<div class="li small"><span class="grow faint">Agora (transferência + luvas)</span><b>${money(fee + o.bonus)}</b></div>
+      <div class="li small"><span class="grow faint">Salários no contrato (${o.years} temp.)</span><b>${money(o.wage * 12 * o.years)}</b></div>
+      <div class="li small"><span class="grow faint">Custo total</span><b>${money(total)}</b></div>
+      <div class="li small"><span class="grow faint">Folha depois</span><b class="${payAfter > me.wageBudget ? 'neg' : ''}">${money(payAfter)} / ${money(me.wageBudget)}</b></div>
+      <div class="li small"><span class="grow faint">Caixa depois</span><b class="${me.balance - fee - o.bonus < 0 ? 'neg' : ''}">${money(me.balance - fee - o.bonus)}</b></div>`);
+  };
   const render = () => {
-    modal(`<div class="modal-head"><h2>${ic('file-signature')} ${esc(title)}</h2><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
-      <p class="muted small">${fee ? `Transferência acertada por <b>${money(fee)}</b>. ` : type === 'pre' ? 'Ele chega de graça ao fim da temporada. ' : type === 'sign' ? 'Agente livre: sem custo de transferência. ' : ''}O agente sinaliza cerca de <b>${money(d.wage)}</b>/mês, luvas perto de <b>${money(d.bonus)}</b>, ${d.years[0]}–${d.years[1]} temporadas e papel de <b>${M.ROLES[d.role].toLowerCase()}</b>.</p>
-      <div class="grid g2">
-        <label class="field">Salário mensal (R$ mil)<input class="input" id="nWage" type="number" min="1" value="${Math.round(offer.wage * 1000)}"></label>
-        <label class="field">Luvas (R$ mi)<input class="input" id="nBonus" type="number" min="0" step="0.05" value="${offer.bonus}"></label>
-        <label class="field">Duração<select class="input" id="nYears">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === offer.years ? 'selected' : ''}>${y} temporada(s)</option>`).join('')}</select></label>
-        <label class="field">Multa rescisória (R$ mi)<input class="input" id="nClause" type="number" min="0.5" step="0.5" value="${offer.clause}"></label>
-        <label class="field" style="grid-column:1/-1">Papel prometido<select class="input" id="nRole">${Object.entries(M.ROLES).map(([k, v]) => `<option value="${k}" ${k === offer.role ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+    const [face, moodTxt] = mood();
+    modal(`<div class="modal-head">${from ? crest(from, 40) : `<span class="tag">${ic('user')} Livre</span>`}<div><h2>${title}: ${esc(p.name)}</h2><small class="muted">${POS_LABEL[p.pos]} · ${p.age} anos · ${esc(p.nat)} · OVR ${p.ovr} · potencial ${potEst(p)}</small></div><button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button></div>
+      <div class="grid" style="grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:16px" id="negGrid">
+        <div>
+          <div class="card" style="padding:12px;margin-bottom:10px;background:var(--bg-2)"><div class="row"><span style="font-size:30px">${face}</span><div class="grow"><b>Agente</b> <span class="faint small">· ${moodTxt}</span><div class="meter ${sess.patience <= 1 ? 'bad' : sess.patience === 2 ? 'warn' : ''}" style="margin-top:6px"><i style="width:${sess.patience / 3 * 100}%"></i></div></div></div></div>
+          <div class="grid" style="gap:10px">
+            <label class="field"><span class="row">Salário mensal (R$ mil)<span class="right" id="iWage"></span></span><input class="input" id="nWage" type="number" min="1" value="${Math.round(offer.wage * 1000)}" ${agreed ? 'disabled' : ''}></label>
+            <label class="field"><span class="row">Luvas (R$ mi)<span class="right" id="iBonus"></span></span><input class="input" id="nBonus" type="number" min="0" step="0.05" value="${offer.bonus}" ${agreed ? 'disabled' : ''}></label>
+            <div class="grid g2" style="gap:10px">
+              <label class="field"><span class="row">Duração<span class="right" id="iYears"></span></span><select class="input" id="nYears" ${agreed ? 'disabled' : ''}>${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === offer.years ? 'selected' : ''}>${y} temporada(s)</option>`).join('')}</select></label>
+              <label class="field"><span class="row">Multa (R$ mi)<span class="right" id="iClause"></span></span><input class="input" id="nClause" type="number" min="0.5" step="0.5" value="${offer.clause}" ${agreed ? 'disabled' : ''}></label>
+            </div>
+            <label class="field"><span class="row">Papel prometido<span class="right" id="iRole"></span></span><select class="input" id="nRole" ${agreed ? 'disabled' : ''}>${Object.entries(M.ROLES).map(([k, v]) => `<option value="${k}" ${k === offer.role ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+          </div>
+        </div>
+        <div>
+          <small class="faint">Chance de aceitar</small><div id="iChance" style="margin:4px 0 12px"></div>
+          <small class="faint">Custos</small><div id="iCost" style="margin-bottom:12px"></div>
+          <small class="faint">Conversa</small>
+          <div style="max-height:170px;overflow:auto;display:grid;gap:6px;margin-top:4px">${chat.map(c => `<div class="msg ${c.who === 'agent' ? 'unread' : ''}" style="margin:0;padding:8px"><div class="small"><b>${c.who === 'agent' ? 'Agente' : 'Você'}:</b> ${esc(c.text)}</div></div>`).join('')}</div>
+        </div>
       </div>
-      <p class="faint small">Multa alta protege o clube, mas o jogador quer uma saída possível. Prometer um papel maior agrada agora, mas ele cobrará os minutos. Folha atual ${money(C.payroll(me))} de ${money(me.wageBudget)}.</p>
-      <div class="row" style="gap:8px"><small class="faint">Paciência do agente</small><div class="meter ${sess.patience <= 1 ? 'bad' : sess.patience === 2 ? 'warn' : ''}" style="flex:1"><i style="width:${sess.patience / 3 * 100}%"></i></div></div>
-      ${reply ? `<div class="msg ${agreed ? 'unread' : ''}" style="margin-top:10px"><div class="grow small">${esc(reply)}</div></div>` : ''}
-      <div class="modal-foot"><button class="btn btn-ghost" data-close>Desistir</button>${agreed ? `<button class="btn btn-primary" id="nSign">${ic('check')} Assinar</button>` : `<button class="btn btn-primary" id="nGo" ${sess.patience <= 0 ? 'disabled' : ''}>${ic('send')} Enviar proposta</button>`}</div>`);
-    const read = () => ({ wage: (+modalEl.querySelector('#nWage').value || 0) / 1000, bonus: Math.max(0, +modalEl.querySelector('#nBonus').value || 0), years: +modalEl.querySelector('#nYears').value, clause: Math.max(0.5, +modalEl.querySelector('#nClause').value || 0), role: modalEl.querySelector('#nRole').value });
-    modalEl.querySelector('#nGo')?.addEventListener('click', () => { Object.assign(offer, read()); const r = M.propose(sess, offer); reply = r.msg; agreed = r.kind === 'accept'; render(); });
+      <div class="modal-foot"><button class="btn btn-ghost" data-close>Desistir</button>${agreed ? `<button class="btn btn-primary" id="nSign">${ic('pen-line')} Assinar contrato</button>` : `<button class="btn btn-primary" id="nGo" ${sess.patience <= 0 ? 'disabled' : ''}>${ic('send')} Enviar proposta</button>`}</div>`, { wide: true });
+    modalEl.querySelectorAll('#negGrid input, #negGrid select').forEach(el => el.addEventListener('input', live));
+    live();
+    modalEl.querySelector('#nGo')?.addEventListener('click', () => {
+      Object.assign(offer, read());
+      chat.push({ who: 'me', text: `${money(offer.wage)}/mês, luvas ${money(offer.bonus)}, ${offer.years} temp., multa ${money(offer.clause)}, ${M.ROLES[offer.role].toLowerCase()}.` });
+      const r = M.propose(sess, offer);
+      chat.push({ who: 'agent', text: r.msg });
+      agreed = r.kind === 'accept';
+      render();
+    });
     modalEl.querySelector('#nSign')?.addEventListener('click', () => { const r = M.finalize(sess, offer); if (!r.ok) return toast(r.msg, false); closeModal(); toast(type === 'renew' ? `${p.name} renovou até ${S().year + p.contract}.` : type === 'pre' ? 'Pré-contrato assinado.' : `${p.name} é o novo reforço!`, true, 'pen-line'); refresh(); });
   };
   render();
@@ -575,7 +628,7 @@ function vTactics() {
     const bad = p && (p.injury || p.suspended);
     const r = p ? ratingAt(p, s.r) : 0;
     return `<div class="slot ${ui.tSlot === i ? 'picked' : ''} ${p ? '' : 'empty'}" style="top:${top}%;left:${left}%" data-slot="${i}" draggable="true">
-      <span class="rl">${POS_LABEL[s.r]}</span><span class="dot">${p ? p.num : '+'}</span><span class="nm">${p ? esc(p.name.split(' ').slice(-1)[0]) : 'vazio'} ${p ? `· ${r}` : ''}</span>${bad ? `<span class="warnd" title="Indisponível">${ic('alert-triangle')}</span>` : ''}</div>`;
+      <span class="rl">${POS_LABEL[s.r]}${INSTR[t.instr?.[i]]?.roles.includes(s.r) ? ` · ${INSTR[t.instr[i]].short}` : ''}</span><span class="dot">${p ? p.num : '+'}</span><span class="nm">${p ? esc(p.name.split(' ').slice(-1)[0]) : 'vazio'} ${p ? `· ${r}` : ''}</span>${bad ? `<span class="warnd" title="Indisponível">${ic('alert-triangle')}</span>` : ''}</div>`;
   }).join('');
   const listRow = p => {
     const inL = inLine.has(p.id), inB = inBench.has(p.id);
@@ -589,6 +642,14 @@ function vTactics() {
     <div class="card">
       <div class="opt-group" style="margin-bottom:10px"><small>Formação</small>${seg('formation', Object.keys(C.DB.formations).map(f => [f, f]))}</div>
       <div class="pitch-board" id="board"><div class="box top"></div><div class="box bot"></div>${slotsHtml}</div>
+      ${ui.tSlot != null ? (() => {
+        const role = slots[ui.tSlot].r, cur = t.instr?.[ui.tSlot], opts = instrFor(role);
+        const pl = P[t.lineup[ui.tSlot]];
+        return `<div class="card" style="margin-top:12px;background:var(--bg-2)"><div class="card-head"><h3>${ic('crosshair')} Instrução: ${POS_LABEL[role]}${pl ? ` · ${esc(pl.name)}` : ''}</h3></div>
+          ${opts.length ? `<div class="seg"><button class="${!cur || !INSTR[cur]?.roles.includes(role) ? 'on' : ''}" data-instr="">Padrão</button>${opts.map(([k, v]) => `<button class="${cur === k ? 'on' : ''}" data-instr="${k}">${v.label}</button>`).join('')}</div>
+          <p class="faint small" style="margin:8px 0 0">${esc(INSTR[cur]?.roles.includes(role) ? INSTR[cur].desc : 'Segue a função da posição e as instruções gerais do time.')}</p>` : '<p class="faint small">Sem instruções específicas para esta posição.</p>'}
+          <p class="faint small" style="margin:6px 0 0">Clique em outro jogador da lista para trocá-lo de posto, ou em outro posto para inverter.</p></div>`;
+      })() : '<p class="faint small" style="margin:10px 0 0">Dica: selecione um posto no campo para dar uma instrução individual (falso 9, ponta por dentro, lateral que apoia, regista…).</p>'}
     </div>
     <div class="grid" style="align-content:start">
       <div class="card grid" style="gap:12px">
@@ -815,17 +876,28 @@ function contractModal(p, fee) { negotiationModal(p, 'sign', fee); }
    ========================================================= */
 function vTraining() {
   const s = S(), me = C.myClub();
-  s.training ||= { intensity: 1 };
-  const sq = C.squadOf(me).sort((a, b) => a.age - b.age);
-  return `<div class="page-head"><div><h1>Treinamentos</h1><p>A evolução considera idade, potencial, minutos jogados, moral e o plano de cada atleta.</p></div></div>
+  s.training ||= { intensity: 1, focus: 'balanced' };
+  s.training.focus ||= 'balanced';
+  const sq = C.squadOf(me).sort((a, b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos) || b.ovr - a.ovr);
+  const delta = p => p.ovr - (p.ovrStart ?? p.ovr);
+  const gains = p => Object.entries(p.gains || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="tag ${v > 0 ? 'tag-lime' : 'tag-red'}">${v > 0 ? '+' : ''}${v} ${ATTR_SHORT[k]}</span>`).join(' ');
+  const best = sq.slice().sort((a, b) => delta(b) - delta(a) || b.xp - a.xp).slice(0, 5);
+  const needMins = sq.filter(p => p.age <= 23 && p.pot - p.ovr >= 6 && p.st.mins < 450).slice(0, 5);
+  const focus = FOCUS[s.training.focus];
+  return `<div class="page-head"><div><h1>Treinamentos</h1><p>Evolução diária: idade, potencial, minutos, moral, intensidade e o plano de cada atleta.</p></div></div>
   <div class="grid g3" style="margin-bottom:14px">
     <div class="card"><div class="card-head"><h3>${ic('gauge')} Intensidade</h3></div><div class="seg">${[[0.7, 'Leve'], [1, 'Normal'], [1.3, 'Intensa']].map(([v, l]) => `<button class="${s.training.intensity === v ? 'on' : ''}" data-intensity="${v}">${l}</button>`).join('')}</div>
       <p class="faint small">${s.training.intensity > 1 ? 'Mais evolução, recuperação física mais lenta.' : s.training.intensity < 1 ? 'Recuperação plena, evolução menor.' : 'Equilíbrio entre evolução e recuperação.'}</p></div>
-    <div class="card stat"><small>Jovens (≤ 21)</small><b>${sq.filter(p => p.age <= 21).length}</b><span class="faint small">${S().coach.style === 'youth' ? 'Treinador formador: +15% de evolução' : 'Mais minutos = mais evolução'}</span></div>
+    <div class="card"><div class="card-head"><h3>${ic('target')} Foco coletivo</h3></div><div class="seg">${Object.entries(FOCUS).map(([k, v]) => `<button class="${s.training.focus === k ? 'on' : ''}" data-focus="${k}">${v.label}</button>`).join('')}</div>
+      <p class="faint small">${esc(focus.desc)} Vale para quem está no plano automático.</p></div>
     <div class="card"><div class="card-head"><h3>${ic('cross')} Departamento médico</h3><span class="right faint">${sq.filter(p => p.injury).length} lesionado(s)</span></div>${sq.filter(p => p.injury).map(p => `<div class="li small"><span class="grow"><b>${esc(p.name)}</b><br><span class="faint">${esc(p.injuryType || 'Lesão')} · ${p.injury} dias</span></span>${p.treated ? '<span class="tag">Em tratamento</span>' : `<button class="btn btn-sm" data-treat="${p.id}">Tratar (${money(M.treatCost(p))})</button>`}</div>`).join('') || '<p class="faint small">Elenco saudável.</p>'}</div>
   </div>
-  <div class="card" style="padding:6px"><div class="table-wrap"><table class="t"><thead><tr><th>Pos</th><th>Nome</th><th class="num">Idade</th><th class="num">OVR</th><th class="num">Pot. est.</th><th class="num">Min.</th><th>Progresso</th><th>Plano individual</th></tr></thead><tbody>
-    ${sq.map(p => `<tr><td>${posB(p.pos)}</td><td><b>${esc(p.name)}</b></td><td class="num">${p.age}</td><td class="num">${ovrB(p.ovr)}</td><td class="num faint">${potEst(p)}</td><td class="num">${p.st.mins}</td><td><span class="meter" style="width:80px;display:inline-block"><i style="width:${Math.round(Math.max(0, p.xp) * 100)}%"></i></span></td><td><select class="input" style="height:30px;width:auto" data-plan="${p.id}">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${p.plan === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></td></tr>`).join('')}
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card"><div class="card-head"><h3>${ic('trending-up')} Quem mais evoluiu na temporada</h3></div>${best.map(p => `<div class="li click" data-player="${p.id}" style="cursor:pointer">${posB(p.pos)}<span class="grow"><b>${esc(p.name)}</b> <span class="faint small">${p.age} anos</span><br>${gains(p) || '<span class="faint small">sem ganhos ainda</span>'}</span><b class="${delta(p) > 0 ? 'pos' : delta(p) < 0 ? 'neg' : 'faint'}">${delta(p) > 0 ? '+' : ''}${delta(p)}</b>${ovrB(p.ovr)}</div>`).join('')}</div>
+    <div class="card"><div class="card-head"><h3>${ic('clock')} Jovens precisando de minutos</h3></div>${needMins.map(p => `<div class="li click" data-player="${p.id}" style="cursor:pointer">${posB(p.pos)}<span class="grow"><b>${esc(p.name)}</b> <span class="faint small">${p.age} anos · ${p.st.mins} min</span></span><span class="small">pot. ${potEst(p)}</span>${ovrB(p.ovr)}</div>`).join('') || '<p class="faint small">Todos os jovens promissores estão jogando. Minutos aceleram a evolução — empréstimo também ajuda.</p>'}</div>
+  </div>
+  <div class="card" style="padding:6px"><div class="table-wrap"><table class="t"><thead><tr><th>Pos</th><th>Nome</th><th class="num">Idade</th><th class="num">OVR</th><th class="num">Δ temp.</th><th class="num">Pot. est.</th><th class="num">Min.</th><th>Próximo ponto</th><th>Ganhos</th><th>Plano individual</th></tr></thead><tbody>
+    ${sq.map(p => `<tr><td>${posB(p.pos)}</td><td><b>${esc(p.name)}</b></td><td class="num">${p.age}</td><td class="num">${ovrB(p.ovr)}</td><td class="num ${delta(p) > 0 ? 'pos' : delta(p) < 0 ? 'neg' : 'faint'}">${delta(p) > 0 ? '+' : ''}${delta(p)}</td><td class="num faint">${potEst(p)}</td><td class="num">${p.st.mins}</td><td><span class="meter" style="width:80px;display:inline-block"><i style="width:${Math.round(Math.max(0, p.xp) * 100)}%"></i></span></td><td>${gains(p)}</td><td><select class="input" style="height:30px;width:auto" data-plan="${p.id}">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${p.plan === k ? 'selected' : ''}>${k === 'auto' && s.training.focus !== 'balanced' ? `Automático (${focus.label.toLowerCase()})` : v.label}</option>`).join('')}</select></td></tr>`).join('')}
   </tbody></table></div></div>`;
 }
 
@@ -998,7 +1070,7 @@ const ACT = {
 
 document.addEventListener('click', e => {
   if (view === 'wizard' && app.contains(e.target) && !e.target.closest('[data-act]')) return; // o assistente trata os próprios cliques
-  const t = e.target.closest('[data-act],[data-sqtab],[data-promote],[data-yrelease],[data-identity],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
+  const t = e.target.closest('[data-act],[data-focus],[data-instr],[data-sqtab],[data-promote],[data-yrelease],[data-identity],[data-nav],[data-player],[data-sort],[data-close],[data-treat],[data-forloan],[data-scout],[data-pre],[data-loan],[data-clause],[data-board],[data-tac],[data-slot],[data-pick],[data-bench],[data-comp],[data-round],[data-fx],[data-mktab],[data-bid],[data-renew],[data-sale],[data-release],[data-offer-yes],[data-offer-no],[data-intensity],[data-msg]');
   if (!t || document.getElementById('match').contains(t)) return;
   const d = t.dataset;
   if (d.act) return ACT[d.act]?.(t);
@@ -1035,6 +1107,11 @@ document.addEventListener('click', e => {
     return playerModal(d.player);
   }
   if (d.sort) { if (ui.squadSort === d.sort) ui.squadDir *= -1; else { ui.squadSort = d.sort; ui.squadDir = 1; } return renderView(); }
+  if (d.instr !== undefined && view === 'tactics' && ui.tSlot != null) {
+    const me = C.myClub(); me.tactics.instr ||= {};
+    if (d.instr) me.tactics.instr[ui.tSlot] = d.instr; else delete me.tactics.instr[ui.tSlot];
+    C.save(); return renderView();
+  }
   if (d.tac) {
     const me = C.myClub(); const k = d.tac; let v = d.v;
     if (k === 'mentality') v = +v;
@@ -1067,6 +1144,7 @@ document.addEventListener('click', e => {
   if (d.fx) { const f = Object.values(S().leagues).flatMap(l => l.fixtures).find(x => x.id === d.fx); if (f?.user) showResult(f); else if (f) toast(`${S().clubs[f.home].short} ${f.score[0]} x ${f.score[1]} ${S().clubs[f.away].short}`); return; }
   if (d.mktab) { ui.mk.tab = d.mktab; return renderView(); }
   if (d.intensity) { S().training.intensity = +d.intensity; C.save(); return renderView(); }
+  if (d.focus) { S().training.focus = d.focus; C.save(); return renderView(); }
 });
 
 // troca de formação: mantém os mesmos titulares, redistribuídos pelos novos postos

@@ -1,14 +1,60 @@
 /* Arte procedural: escudos dos clubes e avatar 2D do treinador (SVG). */
 import { esc } from './util.js';
 
+// Brasões: formato + padrão + emblema. Sem escolha explícita, deriva de forma estável do id do clube.
+export const CREST_SHAPES = [['shield', 'Clássico'], ['round', 'Redondo'], ['diamond', 'Losango'], ['heater', 'Gótico'], ['hex', 'Hexagonal'], ['badge', 'Brasão']];
+export const CREST_PATTERNS = [['plain', 'Liso'], ['stripes', 'Listras'], ['sash', 'Faixa'], ['halves', 'Metades'], ['chevron', 'Chevron'], ['hoops', 'Aros'], ['quarters', 'Quartos']];
+export const CREST_EMBLEMS = [['none', 'Nenhum'], ['star', 'Estrela'], ['ball', 'Bola'], ['crown', 'Coroa'], ['wings', 'Asas'], ['anchor', 'Âncora'], ['bolt', 'Raio']];
+const SHAPE_PATH = {
+  shield: 'M50 4 L92 16 V48 C92 74 72 90 50 97 C28 90 8 74 8 48 V16 Z',
+  round: 'M50 4 A46 46 0 1 1 49.9 4 Z',
+  diamond: 'M50 3 L95 50 L50 97 L5 50 Z',
+  heater: 'M10 6 H90 V40 C90 70 72 88 50 97 C28 88 10 70 10 40 Z',
+  hex: 'M50 3 L91 26 V74 L50 97 L9 74 V26 Z',
+  badge: 'M50 3 L62 12 L80 10 L86 28 L96 40 L90 58 L92 76 L74 84 L60 96 L50 90 L40 96 L26 84 L8 76 L10 58 L4 40 L14 28 L20 10 L38 12 Z'
+};
+const hashId = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+function patternSvg(pat, a, b, id) {
+  switch (pat) {
+    case 'stripes': return [0, 1, 2, 3, 4, 5, 6].filter(i => i % 2).map(i => `<rect x="${i * 14.3}" y="0" width="14.3" height="100" fill="${b}"/>`).join('');
+    case 'sash': return `<path d="M-10 20 L20 -10 L110 80 L80 110 Z" fill="${b}"/>`;
+    case 'halves': return `<rect x="50" y="0" width="50" height="100" fill="${b}"/>`;
+    case 'chevron': return `<path d="M0 30 L50 62 L100 30 V52 L50 84 L0 52 Z" fill="${b}"/>`;
+    case 'hoops': return [1, 3, 5].map(i => `<rect x="0" y="${i * 14.3}" width="100" height="14.3" fill="${b}"/>`).join('');
+    case 'quarters': return `<rect x="50" y="0" width="50" height="50" fill="${b}"/><rect x="0" y="50" width="50" height="50" fill="${b}"/>`;
+    default: return '';
+  }
+}
+function emblemSvg(em, color) {
+  const g = (d) => `<path d="${d}" fill="${color}" stroke="rgba(0,0,0,.35)" stroke-width="1"/>`;
+  switch (em) {
+    case 'star': return g('M50 12 L54 23 L66 23 L56 30 L60 41 L50 34 L40 41 L44 30 L34 23 L46 23 Z');
+    case 'ball': return `<circle cx="50" cy="27" r="11" fill="#fff" stroke="#111" stroke-width="1.5"/><path d="M50 21 L55 25 L53 31 L47 31 L45 25 Z" fill="#111"/>`;
+    case 'crown': return g('M36 34 L36 20 L43 27 L50 16 L57 27 L64 20 L64 34 Z');
+    case 'wings': return g('M50 30 C42 18 30 18 24 22 C32 24 36 28 38 32 Z') + g('M50 30 C58 18 70 18 76 22 C68 24 64 28 62 32 Z');
+    case 'anchor': return `<g fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round"><path d="M50 15 V40"/><path d="M42 21 H58"/><path d="M38 33 C40 40 46 42 50 42 C54 42 60 40 62 33"/></g>`;
+    case 'bolt': return g('M54 12 L40 32 L49 32 L45 44 L60 24 L51 24 Z');
+    default: return '';
+  }
+}
 export function crest(c, size = 40) {
   const [a, b] = c.colors; const t = c.kitText || '#fff';
   const ab = esc(c.abbr || '?');
-  let shape;
-  if (c.crest === 'round') shape = `<circle cx="50" cy="50" r="46" fill="${a}" stroke="${b}" stroke-width="6"/><path d="M50 4 A46 46 0 0 1 50 96 Z" fill="${b}" opacity=".35"/>`;
-  else if (c.crest === 'diamond') shape = `<path d="M50 3 L95 50 L50 97 L5 50 Z" fill="${a}" stroke="${b}" stroke-width="6" stroke-linejoin="round"/><path d="M50 3 L95 50 L50 50 Z" fill="${b}" opacity=".35"/>`;
-  else shape = `<path d="M50 4 L92 16 V48 C92 74 72 90 50 97 C28 90 8 74 8 48 V16 Z" fill="${a}" stroke="${b}" stroke-width="6" stroke-linejoin="round"/><path d="M50 4 L92 16 V48 C92 60 88 70 82 78 L50 4" fill="${b}" opacity=".3"/>`;
-  return `<svg class="crest" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">${shape}<text x="50" y="${c.crest === 'diamond' ? 58 : 60}" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="${ab.length > 3 ? 20 : 25}" fill="${t}" stroke="rgba(0,0,0,.35)" stroke-width=".8">${ab}</text></svg>`;
+  const h = hashId(c.id || c.abbr || c.name);
+  const shape = SHAPE_PATH[c.crest] ? c.crest : 'shield';
+  const pat = c.pattern || CREST_PATTERNS[h % CREST_PATTERNS.length][0];
+  const em = c.emblem || CREST_EMBLEMS[(h >> 3) % CREST_EMBLEMS.length][0];
+  const uid = `cr${h.toString(36)}${shape}${pat}`;
+  const hasEm = em !== 'none';
+  return `<svg class="crest" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
+    <defs><clipPath id="${uid}"><path d="${SHAPE_PATH[shape]}"/></clipPath></defs>
+    <g clip-path="url(#${uid})"><rect width="100" height="100" fill="${a}"/>${patternSvg(pat, a, b, uid)}</g>
+    <path d="${SHAPE_PATH[shape]}" fill="none" stroke="${b}" stroke-width="6" stroke-linejoin="round"/>
+    <path d="${SHAPE_PATH[shape]}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5" transform="translate(50 50) scale(.86) translate(-50 -50)"/>
+    ${hasEm ? emblemSvg(em, b === a ? t : (pat === 'plain' ? b : t)) : ''}
+    <rect x="22" y="${hasEm ? 46 : 38}" width="56" height="24" rx="6" fill="rgba(0,0,0,.28)"/>
+    <text x="50" y="${hasEm ? 64 : 56}" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="${ab.length > 3 ? 17 : 21}" fill="#fff">${ab}</text>
+  </svg>`;
 }
 
 export const LOOK = {

@@ -108,7 +108,7 @@ export function numberSquad(squad) {
 }
 
 // treino diário: jovens com potencial evoluem mais; minutos e moral ajudam
-export function trainPlayer(p, intensity, rngVal) {
+export function trainPlayer(p, intensity, rngVal, focusAttrs = null) {
   if (p.injury > 0) return;
   const ageF = p.age <= 21 ? 1.5 : p.age <= 24 ? 1.1 : p.age <= 28 ? 0.6 : p.age <= 31 ? 0.15 : -0.35;
   const room = (p.pot - p.ovr) / 10;
@@ -118,13 +118,23 @@ export function trainPlayer(p, intensity, rngVal) {
   p.xp += gain * 0.11;
   if (p.xp >= 1 || p.xp <= -1) {
     const step = p.xp >= 1 ? 1 : -1; p.xp -= step;
-    const focus = planAttrs(p);
-    const k = focus[Math.floor(rngVal * focus.length) % focus.length];
+    const focus = p.plan === 'auto' && focusAttrs ? focusAttrs.filter(a => p.pos === 'GK' ? true : !['div', 'han', 'ref'].includes(a)) : planAttrs(p);
+    const k = focus[Math.floor(rngVal * focus.length) % focus.length] || planAttrs(p)[0];
     p.a[k] = clamp(p.a[k] + step, 10, 97);
+    (p.gains ||= {})[k] = (p.gains[k] || 0) + step;
     p.ovr = overall(p);
     if (p.ovr > p.pot) p.pot = p.ovr;
   }
 }
+
+// foco coletivo do treino (vale para quem está no plano automático)
+export const FOCUS = {
+  balanced: { label: 'Equilibrado', attrs: null, desc: 'Cada um treina o que a posição pede.' },
+  attack:   { label: 'Ataque', attrs: ['sho', 'dri', 'pos'], desc: 'Finalização, drible e movimentação.' },
+  defense:  { label: 'Defesa', attrs: ['def', 'pos', 'phy'], desc: 'Marcação, posicionamento e força.' },
+  physical: { label: 'Físico', attrs: ['pac', 'sta', 'phy'], desc: 'Velocidade e fôlego para pressionar.' },
+  technical:{ label: 'Técnica', attrs: ['pas', 'dri'], desc: 'Passe e controle para jogos de posse.' }
+};
 
 export const PLANS = {
   auto: { label: 'Automático (pela posição)' },

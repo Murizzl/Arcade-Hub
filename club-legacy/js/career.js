@@ -4,7 +4,7 @@
    Todo o estado mora em `S` (serializável) e é salvo em pontos seguros.
    ========================================================= */
 import { RNG, hashSeed, clamp, dateOf, fmtDate, money } from './util.js';
-import { makeSquad, makePlayer, numberSquad, ratingAt, marketValue, wageFor, trainPlayer, seasonAging, setIdCounter, getIdCounter } from './players.js';
+import { makeSquad, makePlayer, numberSquad, ratingAt, marketValue, wageFor, trainPlayer, seasonAging, setIdCounter, getIdCounter, FOCUS } from './players.js';
 import { Match } from './engine.js';
 import { Arcade } from './arcade.js';
 import * as M from './management.js';
@@ -131,7 +131,7 @@ function setupSeason(rng = new RNG(hashSeed(S.seed, S.year))) {
     rng.shuffle(ids);
     S.leagues[L.id] = { id: L.id, fixtures: roundRobin(ids, L.id) };
   }
-  for (const c of Object.values(S.clubs)) for (const p of squadOf(c)) { p.st = { apps: 0, goals: 0, assists: 0, mins: 0, rating: 0, yc: 0, rc: 0, motm: 0 }; p.cst = { apps: 0, goals: 0, assists: 0 }; }
+  for (const c of Object.values(S.clubs)) for (const p of squadOf(c)) { p.st = { apps: 0, goals: 0, assists: 0, mins: 0, rating: 0, yc: 0, rc: 0, motm: 0 }; p.cst = { apps: 0, goals: 0, assists: 0 }; p.ovrStart = p.ovr; p.gains = {}; }
   Cups.setupCups(rng);
   setBoard();
 }
@@ -241,7 +241,7 @@ function dailyUpdate(rng) {
       p.cond = Math.min(100, p.cond + (p.injury ? 3 : 7 * (S.training?.intensity === 1.3 && c.id === S.coach.clubId ? 0.8 : 1)));
       if (p.injury > 0) { p.injury--; if (!p.injury && c.id === S.coach.clubId) inbox('Departamento médico', `${p.name} está recuperado`, `${p.name} voltou a treinar normalmente e está disponível.`, 'medical'); }
       const mine = c.id === S.coach.clubId;
-      trainPlayer(p, intensity * (mine && S.coach.style === 'youth' && p.age <= 21 ? 1.15 : 1), rng.next());
+      trainPlayer(p, intensity * (mine && S.coach.style === 'youth' && p.age <= 21 ? 1.15 : 1), rng.next(), mine ? FOCUS[S.training?.focus || 'balanced']?.attrs : null);
       const base = mine && S.coach.style === 'motivator' ? 76 : 70;
       p.morale = clamp(p.morale + (base - p.morale) * (mine && S.coach.style === 'motivator' ? 0.035 : 0.02), 20, 100);
     }
@@ -299,7 +299,7 @@ export function sideFor(c, isUser, tactics) {
     for (const p of rest) { if (bench.length >= 9) break; if (!bench.includes(p)) bench.push(p); }
   }
   const avgMorale = squadOf(c).reduce((s, p) => s + p.morale, 0) / Math.max(1, c.squad.length) / 100;
-  return { club: c, lineup, bench: bench.slice(0, 9), tactics: { formation: t.formation, mentality: t.mentality, style: t.style, press: t.press, line: t.line }, ai: !isUser, morale: 0.7 + avgMorale * 0.5 };
+  return { club: c, lineup, bench: bench.slice(0, 9), tactics: { formation: t.formation, mentality: t.mentality, style: t.style, press: t.press, line: t.line, instr: isUser ? (t.instr || {}) : {} }, ai: !isUser, morale: 0.7 + avgMorale * 0.5 };
 }
 
 export function autoLineup(c) {

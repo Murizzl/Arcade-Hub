@@ -32,6 +32,33 @@ export const PRESS = {
   high:   { label: 'Alta',   n: 3, r: 26, drain: 1.2, tackle: 1.4 }
 };
 export const LINES = { low: { label: 'Recuada', v: -.05 }, normal: { label: 'Normal', v: 0 }, high: { label: 'Alta', v: .055 } };
+// Instruções individuais por posição (estilo FIFA). Cada uma ajusta posicionamento e decisões:
+// ax/dx: deslocamento no ataque/defesa (fração do campo), inside/wide: corredor, run: infiltração,
+// shoot: limiar de finalização (negativo = chuta mais), cross: cruzamentos, prog: passes verticais,
+// hold: não sobe, drain: gasto de energia, box: chega na área, overlap: lateral sempre apoia
+export const INSTR = {
+  finisher:  { label: 'Finalizador',        short: 'FIN', roles: ['ST'], desc: 'Fica entre os zagueiros e só pensa no gol.', shoot: -0.012 },
+  false9:    { label: 'Falso 9',            short: 'F9',  roles: ['ST'], desc: 'Recua para armar, puxa um zagueiro e abre espaço para pontas e meias.', ax: -0.05, shoot: 0, prog: 0.8, drop: true },
+  target:    { label: 'Pivô',               short: 'PIV', roles: ['ST'], desc: 'Segura a bola de costas e ganha pelo alto; atrai cruzamentos.', ax: -0.02, aerial: true, cross: 1.4 },
+  runner:    { label: 'Infiltrador',        short: 'INF', roles: ['ST', 'LW', 'RW'], desc: 'Vive nas costas da defesa (mais impedimentos, mais chances claras).', run: 0.35 },
+  shadow:    { label: 'Atacante sombra',    short: 'SOM', roles: ['AM', 'ST'], desc: 'Chega de trás como segundo atacante.', ax: 0.06, box: 0.5, shoot: -0.01 },
+  playmaker: { label: 'Armador',            short: 'ARM', roles: ['AM', 'CM'], desc: 'Fica atrás da bola e procura o passe decisivo.', ax: -0.03, prog: 0.8, shoot: 0.015 },
+  roamer:    { label: 'Meia livre',         short: 'LIV', roles: ['AM'], desc: 'Flutua pelo campo procurando espaços.', roam: true, ax: 0.02 },
+  inside:    { label: 'Ponta por dentro',   short: 'PPD', roles: ['LW', 'RW'], desc: 'Corta para o meio e finaliza com a perna boa.', inside: 0.55, shoot: -0.015, cross: 0.5 },
+  wide:      { label: 'Ponta aberto',       short: 'ABE', roles: ['LW', 'RW'], desc: 'Colado na linha lateral, cruza muito.', wide: true, cross: 1.8 },
+  falseWing: { label: 'Falso ponta',        short: 'FPT', roles: ['LW', 'RW'], desc: 'Começa aberto e vem para o meio armar; abre o corredor para o lateral.', inside: 0.75, ax: -0.06, prog: 0.5 },
+  boxToBox:  { label: 'Box-to-box',         short: 'B2B', roles: ['CM'], desc: 'Ataca e defende o tempo todo (cansa mais).', ax: 0.06, dx: -0.03, box: 0.35, drain: 1.15 },
+  holding:   { label: 'Volante que segura', short: 'SEG', roles: ['DM', 'CM'], desc: 'Não passa da linha da bola; protege a zaga.', hold: true, dx: -0.02 },
+  regista:   { label: 'Regista',            short: 'REG', roles: ['DM'], desc: 'Armador recuado: lançamentos longos desde trás.', hold: true, prog: 1, long: true },
+  overlap:   { label: 'Lateral que apoia',  short: 'APO', roles: ['LB', 'RB'], desc: 'Passa o ponta por fora em quase todo ataque (cansa mais).', overlap: true, drain: 1.1 },
+  stayBack:  { label: 'Lateral fixo',       short: 'FIX', roles: ['LB', 'RB', 'CB'], desc: 'Não sobe; mais segurança atrás.', hold: true, dx: -0.02 },
+  inverted:  { label: 'Lateral invertido',  short: 'INV', roles: ['LB', 'RB'], desc: 'Fecha no meio-campo na construção.', inside: 0.6, ax: 0.05, prog: 0.4 },
+  stopper:   { label: 'Zagueiro que sai',   short: 'STP', roles: ['CB'], desc: 'Sai para pressionar o atacante; arriscado.', dx: 0.03, press: true },
+  ballPlayer:{ label: 'Zagueiro construtor',short: 'CON', roles: ['CB'], desc: 'Conduz e acha passes verticais desde trás.', prog: 0.7, long: true },
+  sweeperGk: { label: 'Goleiro líbero',     short: 'LIB', roles: ['GK'], desc: 'Joga adiantado e sai da área para cortar lançamentos.', gkHigh: true }
+};
+export const instrFor = role => Object.entries(INSTR).filter(([, v]) => v.roles.includes(role));
+
 export const MENTALITY = { '-2': 'Muito defensiva', '-1': 'Defensiva', '0': 'Equilibrada', '1': 'Ofensiva', '2': 'Muito ofensiva' };
 
 const ATTR_K = 0.6;
@@ -98,7 +125,7 @@ export class Match {
   makeTeam(s, side) {
     const T = {
       side, club: s.club, tactics: { ...s.tactics }, ai: !!s.ai, home: side === 0,
-      slots: this.F[s.tactics.formation], on: [], bench: s.bench.slice(), subs: 0, used: [], off: [],
+      slots: this.F[s.tactics.formation], on: [], bench: s.bench.slice(), subs: 0, used: [], off: [], instr: { ...(s.tactics.instr || {}) },
       aiClock: 0, morale: s.morale ?? 1, aiBase: s.ai ? { ...s.tactics } : null
     };
     s.lineup.forEach((p, i) => T.on.push(this.mp(p, side, i, T.slots[i].r)));
@@ -126,6 +153,9 @@ export class Match {
     const s = Math.floor(this.t * CLOCK); return { m: base + Math.floor(s / 60), extra: 0, text: `${String(base + Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` };
   }
   minuteLabel() { const ex = this.t >= HALF ? Math.floor((this.t - HALF) * CLOCK / 60) + 1 : 0; return ex ? `${(this.half) * 45}+${ex}'` : `${this.minute()}'`; }
+
+  // instrução válida para o posto e a função atuais
+  ins(p) { const k = this.teams[p.side].instr[p.slot]; const v = k && INSTR[k]; return v && v.roles.includes(p.role) ? v : null; }
 
   /* ---------- coordenadas relativas ao ataque de cada lado ---------- */
   fX(s, x) { return s === 0 ? x / L : 1 - x / L; }
@@ -300,6 +330,7 @@ export class Match {
     }
     if (tac.formation && tac.formation !== T.tactics.formation && this.F[tac.formation]) {
       T.tactics.formation = tac.formation; T.slots = this.F[tac.formation];
+      if (tac.instr) T.instr = { ...tac.instr };
       this.reassignSlots(T);
       changes.push(`formação ${tac.formation}`);
     }
@@ -441,7 +472,8 @@ export class Match {
     if (h.role !== 'GK' && d < 33) {
       const xg = this.xgAt(h);
       const roleK = h.role === 'ST' ? 0.015 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.022 : h.role === 'CM' ? -0.01 : 0;
-      const thr = 0.07 + roleK - m * 0.005 - (h.a.sho - 60) / 2000;
+      const iH = this.ins(h);
+      const thr = 0.07 + roleK + (iH?.shoot || 0) - m * 0.005 - (h.a.sho - 60) / 2000;
       // altruísmo: rola para um companheiro com chance claramente melhor
       if (xg > thr * 0.6) {
         const alt = this.betterPlaced(h, xg);
@@ -450,7 +482,7 @@ export class Match {
       if ((xg > thr && this.rng.chance(0.45 + m * 0.05)) || (d < 27 && this.rng.chance(0.008 + h.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
     }
     // 2) cruzamento das pontas
-    if (h.role !== 'GK' && fx > 0.73 && (fy < 0.2 || fy > 0.8) && this.rng.chance(0.4 * st.cross)) {
+    if (h.role !== 'GK' && fx > 0.73 && (fy < 0.2 || fy > 0.8) && this.rng.chance(0.4 * st.cross * (this.ins(h)?.cross || 1))) {
       if (this.cross(h, false)) return;
     }
     // 3) passe
@@ -524,6 +556,11 @@ export class Match {
       if (prog < -5 && st !== STYLES.possession) score -= 0.2;
       // visão: bons passadores enxergam o companheiro em impedimento
       if (tf > 0.5 && tf > offL + 0.006 && tf > hf && this.rng.chance(0.35 + h.a.pas / 300)) score -= 3;
+      const iP = this.ins(h);
+      if (iP?.prog && prog > 8) score += prog * 0.012 * iP.prog;
+      if (iP?.long && len > 30) score += (len - 30) * 0.03;
+      const iT = this.ins(t);
+      if (iT?.aerial && isFwdRole(t.role) && tf > 0.7) score += 0.15;
       score += this.rng.next() * 0.35;
       opts.push({ t, score, len, prog });
     }
@@ -593,7 +630,7 @@ export class Match {
     // alvo do cruzamento: sorteio ponderado por físico e posicionamento (não sempre o centroavante)
     let target = null;
     if (inBox.length) {
-      const wts = inBox.map(m => Math.pow((m.a.phy + m.a.pos) / 100, 3));
+      const wts = inBox.map(m => Math.pow((m.a.phy + m.a.pos) / 100, 3) * (this.ins(m)?.aerial ? 2.5 : 1));
       let r = this.rng.next() * wts.reduce((a, b) => a + b, 0);
       target = inBox.find((m, i) => (r -= wts[i]) <= 0) || inBox[0];
     }
@@ -886,6 +923,7 @@ export class Match {
       // linha do último defensor adversário (referência simples de impedimento)
       const O = this.teams[1 - s];
       const offLine = this.offsideLine(s);
+      const hasF9 = T.on.some(p => !p.off && this.ins(p)?.drop);
       const wideK = Math.pow(st.wide, 0.35);
       for (const p of T.on) {
         if (p.off) continue;
@@ -903,7 +941,7 @@ export class Match {
         const wob = Math.sin(this.total * 0.35 + p.wob) * 0.012;
         p.dive = 0;
         if (p.role === 'GK') {
-          tx = 0.035 + clamp((bx - 0.5) * 0.06, -0.02, 0.03);
+          tx = 0.035 + clamp((bx - 0.5) * 0.06, -0.02, 0.03) + (this.ins(p)?.gkHigh ? 0.04 + Math.max(0, bx - 0.5) * 0.1 : 0);
           ty = 0.5 + (by - 0.5) * 0.28;
           if (fl && fl.kind === 'shot' && fl.from.side !== s) { // goleiro reage à finalização (mergulho)
             const save = fl.res.outcome === 'save';
@@ -934,12 +972,26 @@ export class Match {
           // meias chegam de trás na área em parte das jogadas
           if ((p.role === 'CM' || p.role === 'AM') && owner && owner.side === s && bx > 0.62 && Math.sin(this.total * 0.37 + p.wob * 3) > 0.45) { tx = Math.min(offLine - 0.01, 0.86); ty = 0.5 + (sl.y - 0.5) * 0.5; }
           // laterais apoiam por fora quando a bola está no seu lado
-          if ((p.role === 'LB' || p.role === 'RB') && bx > 0.5 && ((sl.y < 0.5 && by < 0.45) || (sl.y > 0.5 && by > 0.55))) {
+          const iA = this.ins(p);
+          if ((p.role === 'LB' || p.role === 'RB') && !iA?.hold && !iA?.inside && bx > 0.5 && (iA?.overlap || (sl.y < 0.5 && by < 0.45) || (sl.y > 0.5 && by > 0.55))) {
             tx += 0.16 * (st.wide > 1 ? 1.4 : 1); ty = sl.y < 0.5 ? 0.06 : 0.94;
+          }
+          // com falso 9, pontas e meias atacam o espaço que ele abre
+          if (hasF9 && !iA?.drop && owner && owner.side === s && bx > 0.45 && (p.role === 'LW' || p.role === 'RW' || p.role === 'AM' || p.role === 'CM') && Math.sin(this.total * 0.4 + p.wob * 2.3) > -0.3) { tx = offLine - (p.role === 'CM' ? 0.03 : 0.005); ty = 0.5 + (sl.y - 0.5) * 0.45; }
+          if (iA) {
+            if (iA.hold) tx = Math.min(tx, Math.max(sl.x + 0.03, bx - 0.08));
+            tx += iA.ax || 0;
+            if (iA.drop) tx = Math.min(tx, offLine - 0.07);
+            if (iA.inside) ty = ty * (1 - iA.inside) + (0.5 + (sl.y - 0.5) * 0.35) * iA.inside;
+            if (iA.wide) ty = sl.y < 0.5 ? 0.04 : 0.96;
+            if (iA.run && owner && owner.side === s && bx > 0.3 && Math.sin(this.total * 0.45 + p.wob * 2) > 0.7 - iA.run * 2) tx = offLine + 0.04;
+            if (iA.box && owner && owner.side === s && bx > 0.55 && Math.sin(this.total * 0.37 + p.wob * 3) > 0.45 - iA.box) { tx = Math.min(offLine - 0.01, 0.87); ty = 0.5 + (sl.y - 0.5) * 0.4; }
+            if (iA.roam) { ty += Math.sin(this.total * 0.21 + p.wob) * 0.18; tx += Math.cos(this.total * 0.17 + p.wob) * 0.05; }
           }
         } else {
           tx = sl.x * 0.9 + (bx - 0.5) * 0.38 - 0.02 + push * 0.6 + (isDefRole(p.role) ? lineV : lineV * 0.5) + wob;
           ty = 0.5 + (sl.y - 0.5) * 0.82 + (by - 0.5) * 0.3;
+          tx += this.ins(p)?.dx || 0;
           tx = Math.max(tx, isDefRole(p.role) ? 0.07 : 0.13); // linha não afunda dentro do gol
           if (bx < 0.36) { // bloco baixo: fecha o corredor entre a bola e o gol
             const k = (0.36 - bx) / 0.36;
@@ -967,6 +1019,7 @@ export class Match {
           picked.push(bp);
           if (i === 0 ? bd < 32 : bd < pr.r) { bp.tx = tx; bp.ty = ty; bp.pressing = true; }
         }
+        for (const p of T.on) if (!p.off && !p.pressing && this.ins(p)?.press && dist(p.x, p.y, tx, ty) < 14) { p.tx = tx; p.ty = ty; p.pressing = true; }
       }
       // restante: marcação aproximada do adversário mais próximo
       if (!att && owner) for (const p of T.on) {
@@ -1026,7 +1079,7 @@ export class Match {
           p.x += dx / d * step; p.y += dy / d * step;
         }
 
-        const drain = DT * CLOCK * (0.0035 + 0.0013 * sp) * (1.45 - p.a.sta / 100) * drainK;
+        const drain = DT * CLOCK * (0.0035 + 0.0013 * sp) * (1.45 - p.a.sta / 100) * drainK * (this.ins(p)?.drain || 1);
         p.energy = Math.max(20, p.energy - drain);
       }
     }
