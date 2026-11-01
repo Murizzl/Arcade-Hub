@@ -38,10 +38,10 @@ export const Arcade = {
   publish(S) {
     if (!S) return;
     const c = S.coach, club = c.clubId ? S.clubs[c.clubId] : null;
-    const best = c.titles.find(t => /Série A/.test(t.name)) || c.titles[0];
+    const best = c.titles.find(t => /Continental/.test(t.name)) || c.titles.find(t => /Série A|Argentina|Portugal/.test(t.name)) || c.titles[0];
     const summary = {
       company: `${c.first} ${c.last}`, color: club?.colors[0] || '#a3e635',
-      home: club ? `${club.name} · ${club.division === 'A' ? 'Série A' : 'Série B'}` : 'Sem clube',
+      home: club ? `${club.name} · ${({ A: 'Série A', B: 'Série B', ARG: 'Liga Argentina', POR: 'Liga Portugal' })[club.division] || club.division}` : 'Sem clube',
       stats: [['Clube atual', club ? club.short : '—'], ['Temporadas', S.season], ['Partidas', c.matches], ['Vitórias', c.w], ['Troféus', c.titles.length], ['Maior conquista', best ? `${best.name} ${best.year}` : '—']],
       username: this.profile()?.username
     };

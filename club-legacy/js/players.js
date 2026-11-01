@@ -64,9 +64,10 @@ export function makePlayer(rng, names, pos, target, opts = {}) {
   const foreign = rng.chance(opts.foreignChance ?? 0.12) ? rng.pick(names.foreign) : null;
   const useNick = !foreign && rng.chance(0.14);
   const name = useNick ? rng.pick(names.nick) : `${rng.pick(names.first)} ${rng.pick(names.last)}`;
+  const home = names.nat || ['Brasil', 'BR'];
   const p = {
     id: 'p' + (++uid).toString(36),
-    name, nat: foreign ? foreign[0] : 'Brasil', natCode: foreign ? foreign[1] : 'BR',
+    name, nat: foreign ? foreign[0] : home[0], natCode: foreign ? foreign[1] : home[1],
     age, pos, a, num: 0,
     morale: 70, cond: 100, injury: 0, suspended: 0, yellowAcc: 0,
     contract: rng.int(1, 4), forSale: false, plan: 'auto',

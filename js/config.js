@@ -41,8 +41,10 @@ AH.config = {
       five_matches: { common: 10 },
       season_complete: { common: 40 },
       promotion: { common: 60 },
-      league_title: { serie_b: 100, serie_a: 150 },
-      labels: { first_win: 'Primeira vitória da carreira', match_win: 'Vitória (até 15 por temporada)', five_matches: 'A cada 5 partidas', season_complete: 'Temporada completa', promotion: 'Acesso à Série A', league_title: 'Título da Série B / Série A' }
+      league_title: { serie_b: 100, serie_a: 150, foreign: 120 },
+      cup_title: { common: 80 },
+      continental_title: { common: 150 },
+      labels: { first_win: 'Primeira vitória da carreira', match_win: 'Vitória (até 15 por temporada)', five_matches: 'A cada 5 partidas', season_complete: 'Temporada completa', promotion: 'Acesso à Série A', league_title: 'Título da Série B / Série A / liga estrangeira', cup_title: 'Copa Nacional', continental_title: 'Copa Continental (conquista internacional)' }
     }
   },
   // XP extra proporcional ao desempenho na partida (soma às regras acima).

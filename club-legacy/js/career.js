@@ -8,6 +8,8 @@ import { makeSquad, makePlayer, numberSquad, ratingAt, marketValue, wageFor, tra
 import { Match } from './engine.js';
 import { Arcade } from './arcade.js';
 import * as M from './management.js';
+import * as Cups from './cups.js';
+import * as Y from './youth.js';
 
 const SAVE_KEY = 'clublegacy.save.v1';
 export let DB = null;   // dados configuráveis (JSON)
@@ -38,6 +40,7 @@ export function load() {
     S = JSON.parse(raw);
     setIdCounter(S.idc || 0);
     M.migrate(S);
+    if (myClub()) Y.ensureYouth(myClub());
     return S;
   } catch (e) { return null; }
 }
@@ -81,7 +84,7 @@ export function newCareer({ coach, clubId, customClub }) {
     clubId = 'usr';
   }
   for (const d of defs) {
-    const squad = makeSquad(rng, DB.names, d);
+    const squad = makeSquad(rng, namesFor(d.country), d);
     squad.forEach(p => { players[p.id] = p; p.club = d.id; });
     clubs[d.id] = {
       ...d, squad: squad.map(p => p.id), balance: d.budget, wageBudget: d.wageBudget,
@@ -108,6 +111,7 @@ export function newCareer({ coach, clubId, customClub }) {
   setupSeason(rng);
   const me = myClub();
   autoLineup(me);
+  Y.ensureYouth(me, rng);
   addNews(`${coach.first} ${coach.last} é o novo treinador do ${me.name}`, `A diretoria apresentou o novo comandante para a temporada ${S.year} da ${leagueName(me.division)}.`, 'user-plus');
   inbox('Diretoria', `Bem-vindo ao ${me.short}`, `Nossa meta para ${S.year}: ${S.board.objective.text}. Orçamento de transferências: ${money(me.balance)}. Folha salarial máxima: ${money(me.wageBudget)}/mês.`, 'board');
   save();
@@ -115,6 +119,9 @@ export function newCareer({ coach, clubId, customClub }) {
 }
 
 export const leagueName = id => DB.leagues.find(l => l.id === id).name;
+export const leagueShort = id => DB.leagues.find(l => l.id === id)?.short || id;
+// nomes gerados conforme o país do clube
+export const namesFor = country => (country && DB.namesBy?.[country]) ? DB.namesBy[country] : DB.names;
 export const leagueCfg = id => DB.leagues.find(l => l.id === id);
 
 /* ---------- temporada ---------- */
@@ -124,7 +131,8 @@ function setupSeason(rng = new RNG(hashSeed(S.seed, S.year))) {
     rng.shuffle(ids);
     S.leagues[L.id] = { id: L.id, fixtures: roundRobin(ids, L.id) };
   }
-  for (const c of Object.values(S.clubs)) for (const p of squadOf(c)) p.st = { apps: 0, goals: 0, assists: 0, mins: 0, rating: 0, yc: 0, rc: 0, motm: 0 };
+  for (const c of Object.values(S.clubs)) for (const p of squadOf(c)) { p.st = { apps: 0, goals: 0, assists: 0, mins: 0, rating: 0, yc: 0, rc: 0, motm: 0 }; p.cst = { apps: 0, goals: 0, assists: 0 }; }
+  Cups.setupCups(rng);
   setBoard();
 }
 
@@ -165,9 +173,11 @@ export function table(lg) {
 export const position = (clubId) => table(leagueOf(clubId)).findIndex(r => r.id === clubId) + 1;
 
 export function fixturesOf(clubId) { return S.leagues[leagueOf(clubId)].fixtures.filter(f => f.home === clubId || f.away === clubId).sort((a, b) => a.day - b.day); }
-export function nextFixture(clubId = S.coach.clubId) { return clubId ? fixturesOf(clubId).find(f => !f.played) : null; }
+// liga + copas, em ordem de data
+export function allFixturesOf(clubId) { return [...fixturesOf(clubId), ...Cups.cupFixturesOf(clubId)].sort((a, b) => a.day - b.day); }
+export function nextFixture(clubId = S.coach.clubId) { return clubId ? allFixturesOf(clubId).find(f => !f.played) : null; }
 export function todayFixture() { const f = nextFixture(); return f && f.day === S.day ? f : null; }
-export function lastRoundDay() { return Math.max(...Object.values(S.leagues).flatMap(l => l.fixtures.map(f => f.day))); }
+export function lastRoundDay() { return Math.max(Cups.lastCupDay(), ...Object.values(S.leagues).flatMap(l => l.fixtures.map(f => f.day))); }
 
 /* ---------- diretoria ---------- */
 function clubRating(c) {
@@ -181,7 +191,9 @@ function setBoard() {
   const ranked = Object.values(S.clubs).filter(c => c.division === lg).sort((a, b) => clubRating(b) - clubRating(a));
   const exp = ranked.findIndex(c => c.id === me.id) + 1;
   let objective;
-  if (lg === 'A') objective = exp <= 2 ? { kind: 'title', pos: 1, text: 'Conquistar o título da Série A' } : exp <= 6 ? { kind: 'top', pos: 4, text: 'Terminar entre os quatro primeiros' } : exp <= 12 ? { kind: 'top', pos: 10, text: 'Terminar na primeira metade da tabela' } : { kind: 'top', pos: 16, text: 'Evitar o rebaixamento' };
+  const L = leagueCfg(lg), n = ranked.length;
+  if (L.relegate) objective = exp <= 2 ? { kind: 'title', pos: 1, text: `Conquistar o título da ${L.short}` } : exp <= 6 ? { kind: 'top', pos: 4, text: 'Terminar entre os quatro primeiros' } : exp <= 12 ? { kind: 'top', pos: 10, text: 'Terminar na primeira metade da tabela' } : { kind: 'top', pos: n - L.relegate, text: 'Evitar o rebaixamento' };
+  else if (!L.promote) objective = exp <= 2 ? { kind: 'title', pos: 1, text: `Conquistar o título da ${L.short}` } : exp <= 5 ? { kind: 'top', pos: 4, text: 'Terminar entre os quatro primeiros' } : exp <= 10 ? { kind: 'top', pos: Math.round(n / 2), text: 'Terminar na primeira metade da tabela' } : { kind: 'top', pos: n - 3, text: 'Fugir das últimas posições' };
   else objective = exp <= 6 ? { kind: 'top', pos: 4, text: 'Conquistar o acesso à Série A' } : exp <= 12 ? { kind: 'top', pos: 8, text: 'Brigar pelo acesso (top 8)' } : { kind: 'top', pos: 16, text: 'Fazer uma campanha segura na Série B' };
   S.board = { confidence: S.board?.confidence ?? 60, objective, expected: exp, youth: true };
 }
@@ -239,6 +251,7 @@ function dailyUpdate(rng) {
   // propostas por jogadores à venda do usuário
   if (me && M.windowState().open) incomingOffers(rng, me);
   M.daily(rng);
+  Y.youthDaily(rng);
   // clubes da IA completam elencos com agentes livres
   if (S.day % 10 === 0) aiMarket(rng);
 }
@@ -305,9 +318,10 @@ export function createMatch(f, { record = false, assistant = true } = {}) {
 }
 
 // simula todos os jogos da IA de um dia (mesmo motor, sem gráficos)
+const dayFixtures = day => [...Object.values(S.leagues).flatMap(L => L.fixtures), ...Cups.cupFixtures()].filter(f => f.day === day);
 export function playAIFixturesOn(day, exceptId) {
   const out = [];
-  for (const L of Object.values(S.leagues)) for (const f of L.fixtures) {
+  for (const f of dayFixtures(day)) {
     if (f.day !== day || f.played || f.id === exceptId) continue;
     if (S.coach.clubId && (f.home === S.coach.clubId || f.away === S.coach.clubId)) continue;
     const m = createMatch(f);
@@ -315,18 +329,20 @@ export function playAIFixturesOn(day, exceptId) {
     commitResult(f, m, false);
     out.push(f);
   }
+  Cups.progress();
   return out;
 }
 
 export async function playAIFixturesAsync(day, onProgress) {
   const list = [];
-  for (const L of Object.values(S.leagues)) for (const f of L.fixtures) if (f.day === day && !f.played && !(S.coach.clubId && (f.home === S.coach.clubId || f.away === S.coach.clubId))) list.push(f);
+  for (const f of dayFixtures(day)) if (!f.played && !(S.coach.clubId && (f.home === S.coach.clubId || f.away === S.coach.clubId))) list.push(f);
   let i = 0;
   for (const f of list) {
     const m = createMatch(f); m.runToEnd(); commitResult(f, m, false);
     onProgress?.(++i, list.length);
     await new Promise(r => setTimeout(r));
   }
+  Cups.progress();
 }
 
 // grava o resultado UMA vez (o id da partida garante que não se repete)
@@ -334,6 +350,10 @@ export function commitResult(f, m, isUser) {
   if (f.played) return null;
   const r = m.result();
   f.played = true; f.score = r.score;
+  if (f.comp) {
+    if (r.score[0] === r.score[1]) { const so = Cups.shootout(f, m); f.pens = so.score; f.winner = so.score[0] > so.score[1] ? f.home : f.away; }
+    else f.winner = r.score[0] > r.score[1] ? f.home : f.away;
+  }
   f.goals = r.events.filter(e => e.type === 'goal').map(e => ({ side: e.side, name: e.name, min: e.min, player: e.player }));
   const H = S.clubs[f.home], A = S.clubs[f.away];
   // estatísticas individuais e efeitos pós-jogo
@@ -344,9 +364,12 @@ export function commitResult(f, m, isUser) {
     for (const mp of T.used) {
       const p = S.players[mp.p.id]; if (!p) continue;
       const rt = r.ratings.find(x => x.id === p.id);
-      p.st.apps++; p.st.mins += rt?.mins || 0;
-      p.st.goals += mp.r.goals; p.st.assists += mp.r.assists;
-      p.st.rating = Math.round(((p.st.rating * (p.st.apps - 1)) + (rt?.rating || 6)) / p.st.apps * 100) / 100;
+      if (f.comp) { p.cst ||= { apps: 0, goals: 0, assists: 0 }; p.cst.apps++; p.cst.goals += mp.r.goals; p.cst.assists += mp.r.assists; }
+      else {
+        p.st.apps++; p.st.mins += rt?.mins || 0;
+        p.st.goals += mp.r.goals; p.st.assists += mp.r.assists;
+        p.st.rating = Math.round(((p.st.rating * (p.st.apps - 1)) + (rt?.rating || 6)) / p.st.apps * 100) / 100;
+      }
       p.cond = Math.round(mp.energy);
       p.morale = clamp(p.morale + (won ? 6 : lost ? -5 : 1) + ((rt?.rating || 6) - 6.5) * 3, 15, 100);
       if (mp.yellow) { p.st.yc++; p.yellowAcc++; if (p.yellowAcc >= 3) { p.suspended = 1; p.yellowAcc = 0; } }
@@ -390,7 +413,8 @@ function userMatchDone(f, m, r) {
   if (res === 'w' && late.length && gf - ga === 1) addNews(`${me.short} vence nos acréscimos`, `Gol de ${late[late.length - 1].name} aos ${late[late.length - 1].min} garantiu a vitória por ${gf} a ${ga} sobre o ${opp.short}.`, 'timer');
   else if (res === 'w' && gf - ga >= 3) addNews(`Goleada: ${me.short} ${gf} x ${ga} ${opp.short}`, `Atuação dominante da equipe de ${co.first} ${co.last}.`, 'flame');
   else if (res === 'l' && ga - gf >= 3) addNews(`${me.short} é goleado pelo ${opp.short}`, `Derrota por ${ga} a ${gf} preocupa a torcida.`, 'trending-down');
-  else addNews(`${S.clubs[f.home].short} ${f.score[0]} x ${f.score[1]} ${S.clubs[f.away].short}`, `${f.round}ª rodada da ${leagueName(me.division)}. Melhor em campo: ${r.motm?.name || '—'}.`, 'goal');
+  else addNews(`${S.clubs[f.home].short} ${f.score[0]} x ${f.score[1]} ${S.clubs[f.away].short}${f.pens ? ` (${f.pens[0]}–${f.pens[1]} pên.)` : ''}`, `${f.comp ? Cups.compName(f) : `${f.round}ª rodada da ${leagueName(me.division)}`}. Melhor em campo: ${r.motm?.name || '—'}.`, 'goal');
+  if (f.comp && f.pens) addNews(f.winner === me.id ? `${me.short} avança nos pênaltis` : `${me.short} cai nos pênaltis`, `${Cups.compName(f)}: ${f.pens[0]} a ${f.pens[1]} na disputa.`, f.winner === me.id ? 'party-popper' : 'frown');
   const braces = {};
   r.events.filter(e => e.type === 'goal' && e.side === side).forEach(e => { braces[e.player] = (braces[e.player] || 0) + 1; });
   for (const [pid, n] of Object.entries(braces)) {
@@ -461,6 +485,7 @@ export function acceptJob(clubId) {
   S.board = { confidence: 60 };
   setBoard();
   autoLineup(myClub());
+  Y.ensureYouth(myClub());
   addNews(`${co.first} ${co.last} assume o ${S.clubs[clubId].short}`, `Novo desafio na ${leagueName(S.clubs[clubId].division)}. Meta: ${S.board.objective.text}.`, 'handshake');
   save();
 }
@@ -596,8 +621,9 @@ function endSeason() {
       if (r.id === S.coach.clubId) ledger(`Premiação: ${i + 1}º na ${L.short}`, prize);
     });
     const champ = S.clubs[t[0].id];
-    champ.titles = (champ.titles || 0) + (L.id === 'A' ? 1 : 0);
+    champ.titles = (champ.titles || 0) + (L.division === 1 ? 1 : 0);
     champ.trophies.push({ year: S.year, name: L.name });
+    Cups.honour(L.name, t[0].id, t[1].id);
     if (L.relegate) summary.relegated = t.slice(-L.relegate).map(r => r.id);
     if (L.promote) summary.promoted = t.slice(0, L.promote).map(r => r.id);
   }
@@ -619,8 +645,8 @@ function endSeason() {
     Arcade.report('season_complete', `${S.seed}-${S.year}`);
     if (pos === 1) {
       S.coach.titles.push({ year: S.year, name: leagueName(lg), club: me.id });
-      addNews(lg === 'A' ? `${me.short} é campeão da Série A!` : `${me.short} é campeão da Série B!`, `${S.coach.first} ${S.coach.last} conquista ${S.coach.titles.length === 1 ? 'o primeiro título da carreira' : `o ${S.coach.titles.length}º título da carreira`}.`, 'trophy');
-      Arcade.report('league_title', `${S.seed}-${S.year}-${lg}`, lg === 'A' ? 'serie_a' : 'serie_b');
+      addNews(`${me.short} é campeão da ${leagueShort(lg)}!`, `${S.coach.first} ${S.coach.last} conquista ${S.coach.titles.length === 1 ? 'o primeiro título da carreira' : `o ${S.coach.titles.length}º título da carreira`}.`, 'trophy');
+      Arcade.report('league_title', `${S.seed}-${S.year}-${lg}`, lg === 'A' ? 'serie_a' : lg === 'B' ? 'serie_b' : 'foreign');
     }
     if (summary.promoted.includes(me.id)) { addNews(`${me.short} conquista o acesso à Série A!`, 'Festa da torcida: o clube volta à elite.', 'arrow-up-circle'); Arcade.report('promotion', `${S.seed}-${S.year}`); }
     if (summary.relegated.includes(me.id)) addNews(`${me.short} é rebaixado para a Série B`, 'Temporada para esquecer.', 'arrow-down-circle');
@@ -629,7 +655,11 @@ function endSeason() {
   summary.relegated.forEach(id => { S.clubs[id].division = 'B'; S.clubs[id].prestige = Math.max(1, S.clubs[id].prestige - (S.clubs[id].prestige >= 3 ? 1 : 0)); });
   summary.promoted.forEach(id => { S.clubs[id].division = 'A'; });
 
+  // histórico por temporada de cada jogador (antes de zerar as estatísticas)
+  for (const p of Object.values(S.players)) if (p.club && (p.st?.apps || p.cst?.apps)) (p.hist ||= []).push({ y: S.year, club: p.club, apps: p.st.apps, goals: p.st.goals, assists: p.st.assists, rating: p.st.rating, mins: p.st.mins, capps: p.cst?.apps || 0, cgoals: p.cst?.goals || 0 });
+  for (const c of Object.values(S.clubs)) if (c.id !== S.coach.clubId) { const L = summary.tables[c.division]; if (L) c.history.push({ year: S.year, division: c.division, pos: L.findIndex(r => r.id === c.id) + 1 }); }
   M.seasonEnd();
+  Y.youthSeasonEnd(rng);
   // evolução, aposentadorias, contratos e novas gerações
   for (const c of Object.values(S.clubs)) {
     for (const p of squadOf(c)) {
@@ -653,7 +683,7 @@ function endSeason() {
     let guard = 0;
     while (c.squad.length < 22 && guard++ < 12) {
       const pos = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'LW', 'RW', 'ST'].find(x => squadOf(c).filter(p => p.pos === x).length < (x === 'GK' ? 2 : x === 'CB' || x === 'CM' ? 3 : 1)) || rng.pick(['CM', 'ST', 'CB', 'LW']);
-      const p = makePlayer(rng, DB.names, pos, c.rating - 12 + rng.int(0, 6), { age: rng.int(17, 19) });
+      const p = makePlayer(rng, namesFor(c.country), pos, c.rating - 12 + rng.int(0, 6), { age: rng.int(17, 19) });
       p.pot = clamp(p.pot + rng.int(2, 10) + ((c.youthLevel || 1) - 1) * 3, p.ovr, 94);
       p.club = c.id; S.players[p.id] = p; c.squad.push(p.id);
       if (c.id === S.coach.clubId) inbox('Categorias de base', `Promovido da base: ${p.name}`, `${p.name}, ${p.age} anos, ${p.pos}. Potencial estimado: ${p.pot - 3}–${p.pot + 3}.`, 'youth');

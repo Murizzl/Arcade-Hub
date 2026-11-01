@@ -27,7 +27,8 @@
    "style": "possession",
    "formation": "4-3-3",
    "titles": 9,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "gua",
@@ -56,7 +57,8 @@
    "style": "highpress",
    "formation": "4-2-3-1",
    "titles": 8,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "mnr",
@@ -85,7 +87,8 @@
    "style": "balanced",
    "formation": "4-4-2",
    "titles": 5,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "gpo",
@@ -114,7 +117,8 @@
    "style": "counter",
    "formation": "4-2-3-1",
    "titles": 6,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "lrc",
@@ -143,7 +147,8 @@
    "style": "direct",
    "formation": "4-4-2",
    "titles": 2,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "bat",
@@ -172,7 +177,8 @@
    "style": "wings",
    "formation": "4-3-3",
    "titles": 2,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "pin",
@@ -201,7 +207,8 @@
    "style": "possession",
    "formation": "4-1-4-1",
    "titles": 1,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "cer",
@@ -230,7 +237,8 @@
    "style": "defensive",
    "formation": "5-3-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "lit",
@@ -259,7 +267,8 @@
    "style": "counter",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "rng",
@@ -288,7 +297,8 @@
    "style": "highpress",
    "formation": "3-5-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "ilh",
@@ -317,7 +327,8 @@
    "style": "balanced",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "cap",
@@ -346,7 +357,8 @@
    "style": "defensive",
    "formation": "4-1-4-1",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "ban",
@@ -375,7 +387,8 @@
    "style": "balanced",
    "formation": "4-2-3-1",
    "titles": 1,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "uns",
@@ -404,7 +417,8 @@
    "style": "possession",
    "formation": "4-3-3",
    "titles": 2,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "trp",
@@ -433,7 +447,8 @@
    "style": "highpress",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "pot",
@@ -462,7 +477,8 @@
    "style": "counter",
    "formation": "4-1-4-1",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "cpx",
@@ -491,7 +507,8 @@
    "style": "wings",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "arb",
@@ -520,7 +537,8 @@
    "style": "direct",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "mnt",
@@ -549,7 +567,8 @@
    "style": "defensive",
    "formation": "5-3-2",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "pnt",
@@ -578,7 +597,8 @@
    "style": "counter",
    "formation": "4-2-3-1",
    "titles": 0,
-   "division": "A"
+   "division": "A",
+   "country": "BR"
   },
   {
    "id": "lag",
@@ -607,7 +627,8 @@
    "style": "balanced",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "ara",
@@ -636,7 +657,8 @@
    "style": "counter",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "par",
@@ -665,7 +687,8 @@
    "style": "defensive",
    "formation": "5-3-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "lud",
@@ -694,7 +717,8 @@
    "style": "wings",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "tam",
@@ -723,7 +747,8 @@
    "style": "direct",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "npr",
@@ -752,7 +777,8 @@
    "style": "possession",
    "formation": "4-2-3-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "bab",
@@ -781,7 +807,8 @@
    "style": "balanced",
    "formation": "4-1-4-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "ser",
@@ -810,7 +837,8 @@
    "style": "highpress",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "lrj",
@@ -839,7 +867,8 @@
    "style": "counter",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "tri",
@@ -868,7 +897,8 @@
    "style": "wings",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "sor",
@@ -897,7 +927,8 @@
    "style": "balanced",
    "formation": "4-2-3-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "mor",
@@ -926,7 +957,8 @@
    "style": "direct",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "mad",
@@ -955,7 +987,8 @@
    "style": "defensive",
    "formation": "5-3-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "eqd",
@@ -984,7 +1017,8 @@
    "style": "counter",
    "formation": "4-1-4-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "toc",
@@ -1013,7 +1047,8 @@
    "style": "balanced",
    "formation": "4-4-2",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "rrm",
@@ -1042,7 +1077,8 @@
    "style": "highpress",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "sgr",
@@ -1071,7 +1107,8 @@
    "style": "defensive",
    "formation": "4-1-4-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "pse",
@@ -1100,7 +1137,8 @@
    "style": "wings",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "aco",
@@ -1129,7 +1167,8 @@
    "style": "direct",
    "formation": "4-2-3-1",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
   },
   {
    "id": "ica",
@@ -1158,7 +1197,968 @@
    "style": "possession",
    "formation": "4-3-3",
    "titles": 0,
-   "division": "B"
+   "division": "B",
+   "country": "BR"
+  },
+  {
+   "id": "ar1",
+   "name": "Club Atlético Riberas",
+   "short": "Riberas",
+   "abbr": "RIB",
+   "city": "Buenos Aires",
+   "state": "AR",
+   "founded": 1890,
+   "colors": [
+    "#1d4ed8",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#1d4ed8"
+   ],
+   "crest": "shield",
+   "stadium": "Estadio La Ribera",
+   "capacity": 54000,
+   "prestige": 5,
+   "budget": 70,
+   "wageBudget": 6.0,
+   "rating": 72,
+   "style": "balanced",
+   "formation": "4-3-3",
+   "titles": 12,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar2",
+   "name": "Deportivo Plateado",
+   "short": "Plateado",
+   "abbr": "PLA",
+   "city": "Buenos Aires",
+   "state": "AR",
+   "founded": 1895,
+   "colors": [
+    "#dc2626",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#dc2626"
+   ],
+   "crest": "round",
+   "stadium": "Monumental del Sur",
+   "capacity": 62000,
+   "prestige": 5,
+   "budget": 66,
+   "wageBudget": 5.8,
+   "rating": 72,
+   "style": "possession",
+   "formation": "4-4-2",
+   "titles": 11,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar3",
+   "name": "Racing Pampeano",
+   "short": "Pampeano",
+   "abbr": "PAM",
+   "city": "Avellaneda",
+   "state": "AR",
+   "founded": 1900,
+   "colors": [
+    "#38bdf8",
+    "#ffffff"
+   ],
+   "kitText": "#0f172a",
+   "away": [
+    "#ffffff",
+    "#38bdf8"
+   ],
+   "crest": "diamond",
+   "stadium": "Cilindro Pampa",
+   "capacity": 45000,
+   "prestige": 4,
+   "budget": 40,
+   "wageBudget": 3.8,
+   "rating": 70,
+   "style": "highpress",
+   "formation": "4-2-3-1",
+   "titles": 6,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar4",
+   "name": "Independencia FC",
+   "short": "Independencia",
+   "abbr": "IND",
+   "city": "Avellaneda",
+   "state": "AR",
+   "founded": 1905,
+   "colors": [
+    "#b91c1c",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#b91c1c"
+   ],
+   "crest": "shield",
+   "stadium": "Estadio Libertad",
+   "capacity": 42000,
+   "prestige": 4,
+   "budget": 36,
+   "wageBudget": 3.5,
+   "rating": 70,
+   "style": "counter",
+   "formation": "4-1-4-1",
+   "titles": 5,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar5",
+   "name": "Rosario Central Norte",
+   "short": "Rosario Norte",
+   "abbr": "RNO",
+   "city": "Rosario",
+   "state": "AR",
+   "founded": 1910,
+   "colors": [
+    "#facc15",
+    "#1e3a8a"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#1e3a8a",
+    "#facc15"
+   ],
+   "crest": "round",
+   "stadium": "Gigante del Paraná",
+   "capacity": 41000,
+   "prestige": 3,
+   "budget": 26,
+   "wageBudget": 2.8,
+   "rating": 69,
+   "style": "defensive",
+   "formation": "3-5-2",
+   "titles": 3,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar6",
+   "name": "Newells del Litoral",
+   "short": "Litoral AR",
+   "abbr": "NLI",
+   "city": "Rosario",
+   "state": "AR",
+   "founded": 1915,
+   "colors": [
+    "#111827",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#dc2626",
+    "#111827"
+   ],
+   "crest": "diamond",
+   "stadium": "Coloso del Parque",
+   "capacity": 38000,
+   "prestige": 3,
+   "budget": 25,
+   "wageBudget": 2.7,
+   "rating": 68,
+   "style": "direct",
+   "formation": "5-3-2",
+   "titles": 2,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar7",
+   "name": "Estudiantes de la Costa",
+   "short": "Estudiantes",
+   "abbr": "EDC",
+   "city": "La Plata",
+   "state": "AR",
+   "founded": 1920,
+   "colors": [
+    "#ef4444",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#ef4444"
+   ],
+   "crest": "shield",
+   "stadium": "Estadio Uno Costa",
+   "capacity": 30000,
+   "prestige": 3,
+   "budget": 22,
+   "wageBudget": 2.4,
+   "rating": 68,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 2,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar8",
+   "name": "Gimnasia Platense",
+   "short": "Gimnasia",
+   "abbr": "GIP",
+   "city": "La Plata",
+   "state": "AR",
+   "founded": 1925,
+   "colors": [
+    "#1e3a8a",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#1e3a8a"
+   ],
+   "crest": "round",
+   "stadium": "Bosque Platense",
+   "capacity": 28000,
+   "prestige": 2,
+   "budget": 16,
+   "wageBudget": 1.9,
+   "rating": 67,
+   "style": "balanced",
+   "formation": "4-4-2",
+   "titles": 1,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar9",
+   "name": "Talleres Serranos",
+   "short": "Serranos",
+   "abbr": "TSE",
+   "city": "Córdoba",
+   "state": "AR",
+   "founded": 1930,
+   "colors": [
+    "#0c4a6e",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#0c4a6e"
+   ],
+   "crest": "diamond",
+   "stadium": "Estadio Sierras",
+   "capacity": 46000,
+   "prestige": 3,
+   "budget": 20,
+   "wageBudget": 2.2,
+   "rating": 68,
+   "style": "possession",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar10",
+   "name": "Belgrano Mediterráneo",
+   "short": "Mediterráneo",
+   "abbr": "BME",
+   "city": "Córdoba",
+   "state": "AR",
+   "founded": 1935,
+   "colors": [
+    "#7dd3fc",
+    "#111827"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#111827",
+    "#7dd3fc"
+   ],
+   "crest": "shield",
+   "stadium": "Gigante de Alberdi",
+   "capacity": 30000,
+   "prestige": 2,
+   "budget": 14,
+   "wageBudget": 1.7,
+   "rating": 66,
+   "style": "highpress",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar11",
+   "name": "Unión Santafesina",
+   "short": "Santafesina",
+   "abbr": "USF",
+   "city": "Santa Fe",
+   "state": "AR",
+   "founded": 1940,
+   "colors": [
+    "#dc2626",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#dc2626"
+   ],
+   "crest": "round",
+   "stadium": "15 de Abril",
+   "capacity": 27000,
+   "prestige": 2,
+   "budget": 12,
+   "wageBudget": 1.5,
+   "rating": 66,
+   "style": "counter",
+   "formation": "3-5-2",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar12",
+   "name": "Colón del Río",
+   "short": "Colón",
+   "abbr": "CDR",
+   "city": "Santa Fe",
+   "state": "AR",
+   "founded": 1945,
+   "colors": [
+    "#111827",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#dc2626",
+    "#111827"
+   ],
+   "crest": "diamond",
+   "stadium": "Cementerio Rojo",
+   "capacity": 32000,
+   "prestige": 2,
+   "budget": 12,
+   "wageBudget": 1.5,
+   "rating": 66,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar13",
+   "name": "Atlético Tucumano",
+   "short": "Tucumano",
+   "abbr": "ATU",
+   "city": "Tucumán",
+   "state": "AR",
+   "founded": 1950,
+   "colors": [
+    "#38bdf8",
+    "#f8fafc"
+   ],
+   "kitText": "#0f172a",
+   "away": [
+    "#f8fafc",
+    "#38bdf8"
+   ],
+   "crest": "shield",
+   "stadium": "Monumental Norte",
+   "capacity": 30000,
+   "prestige": 2,
+   "budget": 11,
+   "wageBudget": 1.4,
+   "rating": 65,
+   "style": "direct",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar14",
+   "name": "Godoy Andino",
+   "short": "Andino",
+   "abbr": "GAN",
+   "city": "Mendoza",
+   "state": "AR",
+   "founded": 1955,
+   "colors": [
+    "#1e40af",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#1e40af"
+   ],
+   "crest": "round",
+   "stadium": "Estadio Malvinas",
+   "capacity": 25000,
+   "prestige": 1,
+   "budget": 8,
+   "wageBudget": 1.1,
+   "rating": 65,
+   "style": "wings",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar15",
+   "name": "San Martín Cuyano",
+   "short": "Cuyano",
+   "abbr": "SMC",
+   "city": "San Juan",
+   "state": "AR",
+   "founded": 1960,
+   "colors": [
+    "#16a34a",
+    "#111827"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#111827",
+    "#16a34a"
+   ],
+   "crest": "diamond",
+   "stadium": "Estadio Hilario",
+   "capacity": 20000,
+   "prestige": 1,
+   "budget": 7,
+   "wageBudget": 1.0,
+   "rating": 64,
+   "style": "balanced",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "ar16",
+   "name": "Patagonia FC",
+   "short": "Patagonia",
+   "abbr": "PTG",
+   "city": "Neuquén",
+   "state": "AR",
+   "founded": 1965,
+   "colors": [
+    "#0f766e",
+    "#facc15"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#facc15",
+    "#0f766e"
+   ],
+   "crest": "shield",
+   "stadium": "Estadio del Viento",
+   "capacity": 16000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 63,
+   "style": "possession",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "ARG",
+   "country": "AR"
+  },
+  {
+   "id": "pt1",
+   "name": "Sporting Atlântico",
+   "short": "Atlântico PT",
+   "abbr": "SAT",
+   "city": "Lisboa",
+   "state": "PT",
+   "founded": 1890,
+   "colors": [
+    "#15803d",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#15803d"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Alvalade Novo",
+   "capacity": 50000,
+   "prestige": 5,
+   "budget": 72,
+   "wageBudget": 6.2,
+   "rating": 72,
+   "style": "balanced",
+   "formation": "4-3-3",
+   "titles": 18,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt2",
+   "name": "Benfiquista Lisboa",
+   "short": "Benfiquista",
+   "abbr": "BFL",
+   "city": "Lisboa",
+   "state": "PT",
+   "founded": 1895,
+   "colors": [
+    "#dc2626",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#dc2626"
+   ],
+   "crest": "round",
+   "stadium": "Estádio da Águia",
+   "capacity": 64000,
+   "prestige": 5,
+   "budget": 78,
+   "wageBudget": 6.6,
+   "rating": 72,
+   "style": "possession",
+   "formation": "4-4-2",
+   "titles": 25,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt3",
+   "name": "Porto Invicta FC",
+   "short": "Invicta",
+   "abbr": "INV",
+   "city": "Porto",
+   "state": "PT",
+   "founded": 1900,
+   "colors": [
+    "#1d4ed8",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#1d4ed8"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio do Dragão Azul",
+   "capacity": 50000,
+   "prestige": 5,
+   "budget": 70,
+   "wageBudget": 6.0,
+   "rating": 72,
+   "style": "highpress",
+   "formation": "4-2-3-1",
+   "titles": 22,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt4",
+   "name": "Braga Minhota",
+   "short": "Minhota",
+   "abbr": "BMI",
+   "city": "Braga",
+   "state": "PT",
+   "founded": 1905,
+   "colors": [
+    "#b91c1c",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#b91c1c"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio da Pedreira Velha",
+   "capacity": 30000,
+   "prestige": 4,
+   "budget": 30,
+   "wageBudget": 3.0,
+   "rating": 69,
+   "style": "counter",
+   "formation": "4-1-4-1",
+   "titles": 1,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt5",
+   "name": "Vitória Vimaranense",
+   "short": "Vimaranense",
+   "abbr": "VIV",
+   "city": "Guimarães",
+   "state": "PT",
+   "founded": 1910,
+   "colors": [
+    "#f8fafc",
+    "#111827"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#111827",
+    "#f8fafc"
+   ],
+   "crest": "round",
+   "stadium": "Estádio do Castelo",
+   "capacity": 30000,
+   "prestige": 3,
+   "budget": 20,
+   "wageBudget": 2.1,
+   "rating": 68,
+   "style": "defensive",
+   "formation": "3-5-2",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt6",
+   "name": "Boavista Axadrezado",
+   "short": "Axadrezado",
+   "abbr": "BAX",
+   "city": "Porto",
+   "state": "PT",
+   "founded": 1915,
+   "colors": [
+    "#111827",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#111827"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio do Bessa Novo",
+   "capacity": 28000,
+   "prestige": 3,
+   "budget": 14,
+   "wageBudget": 1.6,
+   "rating": 67,
+   "style": "direct",
+   "formation": "5-3-2",
+   "titles": 1,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt7",
+   "name": "Marítimo Insular",
+   "short": "Insular",
+   "abbr": "MAR",
+   "city": "Funchal",
+   "state": "PT",
+   "founded": 1920,
+   "colors": [
+    "#16a34a",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#dc2626",
+    "#16a34a"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio dos Barreiros",
+   "capacity": 10000,
+   "prestige": 2,
+   "budget": 10,
+   "wageBudget": 1.3,
+   "rating": 66,
+   "style": "wings",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt8",
+   "name": "Rio Ave Costeiro",
+   "short": "Costeiro",
+   "abbr": "RAC",
+   "city": "Vila do Conde",
+   "state": "PT",
+   "founded": 1925,
+   "colors": [
+    "#15803d",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#15803d"
+   ],
+   "crest": "round",
+   "stadium": "Estádio da Foz",
+   "capacity": 12000,
+   "prestige": 2,
+   "budget": 9,
+   "wageBudget": 1.2,
+   "rating": 66,
+   "style": "balanced",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt9",
+   "name": "Gil Vicente Galo",
+   "short": "Galo",
+   "abbr": "GVG",
+   "city": "Barcelos",
+   "state": "PT",
+   "founded": 1930,
+   "colors": [
+    "#dc2626",
+    "#1e3a8a"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#1e3a8a",
+    "#dc2626"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Cidade Galo",
+   "capacity": 12000,
+   "prestige": 2,
+   "budget": 8,
+   "wageBudget": 1.1,
+   "rating": 66,
+   "style": "possession",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt10",
+   "name": "Famalicão Minho",
+   "short": "Famalicão",
+   "abbr": "FMI",
+   "city": "Vila Nova de Famalicão",
+   "state": "PT",
+   "founded": 1935,
+   "colors": [
+    "#1e40af",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#1e40af"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio Municipal Minho",
+   "capacity": 5000,
+   "prestige": 2,
+   "budget": 8,
+   "wageBudget": 1.1,
+   "rating": 65,
+   "style": "highpress",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt11",
+   "name": "Estoril Riviera",
+   "short": "Riviera",
+   "abbr": "ERI",
+   "city": "Estoril",
+   "state": "PT",
+   "founded": 1940,
+   "colors": [
+    "#facc15",
+    "#1e3a8a"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#1e3a8a",
+    "#facc15"
+   ],
+   "crest": "round",
+   "stadium": "Estádio da Amoreira Nova",
+   "capacity": 8000,
+   "prestige": 2,
+   "budget": 7,
+   "wageBudget": 1.0,
+   "rating": 65,
+   "style": "counter",
+   "formation": "3-5-2",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt12",
+   "name": "Casa Pia Lisboeta",
+   "short": "Lisboeta",
+   "abbr": "CPL",
+   "city": "Lisboa",
+   "state": "PT",
+   "founded": 1945,
+   "colors": [
+    "#111827",
+    "#f8fafc"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#f8fafc",
+    "#111827"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Pina",
+   "capacity": 6000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 65,
+   "style": "defensive",
+   "formation": "5-3-2",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt13",
+   "name": "Arouca Serrano",
+   "short": "Arouca",
+   "abbr": "ARO",
+   "city": "Arouca",
+   "state": "PT",
+   "founded": 1950,
+   "colors": [
+    "#facc15",
+    "#1e3a8a"
+   ],
+   "kitText": "#111827",
+   "away": [
+    "#1e3a8a",
+    "#facc15"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio da Serra",
+   "capacity": 5000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 64,
+   "style": "direct",
+   "formation": "4-3-3",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt14",
+   "name": "Moreirense Cónego",
+   "short": "Moreirense",
+   "abbr": "MCO",
+   "city": "Moreira de Cónegos",
+   "state": "PT",
+   "founded": 1955,
+   "colors": [
+    "#16a34a",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#16a34a"
+   ],
+   "crest": "round",
+   "stadium": "Parque Cónego",
+   "capacity": 6000,
+   "prestige": 1,
+   "budget": 5,
+   "wageBudget": 0.8,
+   "rating": 64,
+   "style": "wings",
+   "formation": "4-4-2",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt15",
+   "name": "Chaves Flaviense",
+   "short": "Flaviense",
+   "abbr": "CFL",
+   "city": "Chaves",
+   "state": "PT",
+   "founded": 1960,
+   "colors": [
+    "#1e40af",
+    "#dc2626"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#dc2626",
+    "#1e40af"
+   ],
+   "crest": "diamond",
+   "stadium": "Estádio Municipal Flávio",
+   "capacity": 8000,
+   "prestige": 1,
+   "budget": 5,
+   "wageBudget": 0.8,
+   "rating": 63,
+   "style": "balanced",
+   "formation": "4-2-3-1",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
+  },
+  {
+   "id": "pt16",
+   "name": "Portimonense Algarvio",
+   "short": "Algarvio",
+   "abbr": "POA",
+   "city": "Portimão",
+   "state": "PT",
+   "founded": 1965,
+   "colors": [
+    "#111827",
+    "#ffffff"
+   ],
+   "kitText": "#ffffff",
+   "away": [
+    "#ffffff",
+    "#111827"
+   ],
+   "crest": "shield",
+   "stadium": "Estádio do Algarve Novo",
+   "capacity": 9000,
+   "prestige": 1,
+   "budget": 6,
+   "wageBudget": 0.9,
+   "rating": 63,
+   "style": "possession",
+   "formation": "4-1-4-1",
+   "titles": 0,
+   "division": "POR",
+   "country": "PT"
   }
  ],
  "names": {
@@ -1364,7 +2364,9 @@
    "promote": 0,
    "relegate": 4,
    "ticket": 4.5e-05,
-   "sponsorMonthly": 0.35
+   "sponsorMonthly": 0.35,
+   "country": "BR",
+   "relegateTo": "B"
   },
   {
    "id": "B",
@@ -1396,7 +2398,67 @@
    "promote": 4,
    "relegate": 0,
    "ticket": 3e-05,
-   "sponsorMonthly": 0.08
+   "sponsorMonthly": 0.08,
+   "country": "BR",
+   "promoteTo": "A"
+  },
+  {
+   "id": "ARG",
+   "name": "Liga Profesional Argentina",
+   "short": "Liga Argentina",
+   "division": 1,
+   "country": "AR",
+   "prizeByPosition": [
+    30,
+    24,
+    20,
+    17,
+    15,
+    13,
+    11,
+    10,
+    9,
+    8,
+    7,
+    6.5,
+    6,
+    5.5,
+    5,
+    4.5
+   ],
+   "promote": 0,
+   "relegate": 0,
+   "ticket": 3e-05,
+   "sponsorMonthly": 0.25
+  },
+  {
+   "id": "POR",
+   "name": "Liga Portugal",
+   "short": "Liga Portugal",
+   "division": 1,
+   "country": "PT",
+   "prizeByPosition": [
+    34,
+    27,
+    22,
+    18,
+    15,
+    13,
+    11,
+    10,
+    9,
+    8,
+    7,
+    6.5,
+    6,
+    5.5,
+    5,
+    4.5
+   ],
+   "promote": 0,
+   "relegate": 0,
+   "ticket": 4e-05,
+   "sponsorMonthly": 0.3
   }
  ],
  "country": {
@@ -1405,5 +2467,247 @@
   "seasonStart": "2027-04-10",
   "daysBetweenRounds": 7,
   "currency": "R$"
+ },
+ "countries": {
+  "BR": {
+   "name": "Brasil",
+   "continent": "América do Sul",
+   "flag": "🇧🇷"
+  },
+  "AR": {
+   "name": "Argentina",
+   "continent": "América do Sul",
+   "flag": "🇦🇷"
+  },
+  "PT": {
+   "name": "Portugal",
+   "continent": "Europa",
+   "flag": "🇵🇹"
+  }
+ },
+ "cups": [
+  {
+   "id": "CN",
+   "name": "Copa Nacional do Brasil",
+   "short": "Copa Nacional",
+   "type": "national",
+   "country": "BR",
+   "teams": 32,
+   "firstDay": 17,
+   "step": 28,
+   "prize": [
+    12,
+    7,
+    4,
+    2.5,
+    1.2,
+    0.6
+   ]
+  },
+  {
+   "id": "CC",
+   "name": "Copa Continental",
+   "short": "Continental",
+   "type": "continental",
+   "teams": 16,
+   "firstDay": 31,
+   "step": 35,
+   "qualify": {
+    "A": 6,
+    "ARG": 6,
+    "POR": 4
+   },
+   "prize": [
+    30,
+    15,
+    8,
+    4,
+    2
+   ]
+  }
+ ],
+ "namesBy": {
+  "AR": {
+   "nat": [
+    "Argentina",
+    "AR"
+   ],
+   "first": [
+    "Santiago",
+    "Mateo",
+    "Thiago",
+    "Benjamín",
+    "Joaquín",
+    "Tomás",
+    "Lautaro",
+    "Agustín",
+    "Nicolás",
+    "Franco",
+    "Facundo",
+    "Gonzalo",
+    "Ezequiel",
+    "Leandro",
+    "Maximiliano",
+    "Julián",
+    "Emiliano",
+    "Rodrigo",
+    "Lucas",
+    "Valentín",
+    "Ignacio",
+    "Cristian",
+    "Federico",
+    "Ramiro",
+    "Bruno"
+   ],
+   "last": [
+    "González",
+    "Rodríguez",
+    "Fernández",
+    "López",
+    "Martínez",
+    "García",
+    "Pérez",
+    "Romero",
+    "Sosa",
+    "Álvarez",
+    "Torres",
+    "Ruiz",
+    "Ramírez",
+    "Flores",
+    "Acosta",
+    "Benítez",
+    "Medina",
+    "Herrera",
+    "Suárez",
+    "Aguirre",
+    "Giménez",
+    "Molina",
+    "Castro",
+    "Ríos",
+    "Paredes"
+   ],
+   "nick": [
+    "Pipa",
+    "Chino",
+    "Toto",
+    "Kun",
+    "Pocho",
+    "Cuchu",
+    "Mono",
+    "Tano"
+   ],
+   "foreign": [
+    [
+     "Brasil",
+     "BR"
+    ],
+    [
+     "Uruguai",
+     "UY"
+    ],
+    [
+     "Paraguai",
+     "PY"
+    ],
+    [
+     "Colômbia",
+     "CO"
+    ],
+    [
+     "Chile",
+     "CL"
+    ]
+   ]
+  },
+  "PT": {
+   "nat": [
+    "Portugal",
+    "PT"
+   ],
+   "first": [
+    "João",
+    "Rui",
+    "Tiago",
+    "Diogo",
+    "Gonçalo",
+    "Rafael",
+    "Bernardo",
+    "Nuno",
+    "Pedro",
+    "Miguel",
+    "Ricardo",
+    "André",
+    "Francisco",
+    "Duarte",
+    "Tomás",
+    "Vasco",
+    "Bruno",
+    "Hugo",
+    "Fábio",
+    "Renato",
+    "Rúben",
+    "Vitinha",
+    "Martim",
+    "Afonso",
+    "Simão"
+   ],
+   "last": [
+    "Silva",
+    "Santos",
+    "Ferreira",
+    "Pereira",
+    "Oliveira",
+    "Costa",
+    "Rodrigues",
+    "Martins",
+    "Sousa",
+    "Fernandes",
+    "Gonçalves",
+    "Gomes",
+    "Lopes",
+    "Marques",
+    "Alves",
+    "Almeida",
+    "Ribeiro",
+    "Pinto",
+    "Carvalho",
+    "Teixeira",
+    "Moreira",
+    "Correia",
+    "Mendes",
+    "Nunes",
+    "Neves"
+   ],
+   "nick": [
+    "Zé",
+    "Quim",
+    "Tó",
+    "Chico",
+    "Nani",
+    "Jota"
+   ],
+   "foreign": [
+    [
+     "Brasil",
+     "BR"
+    ],
+    [
+     "Angola",
+     "AO"
+    ],
+    [
+     "Cabo Verde",
+     "CV"
+    ],
+    [
+     "Espanha",
+     "ES"
+    ],
+    [
+     "Moçambique",
+     "MZ"
+    ]
+   ]
+  }
  }
 }

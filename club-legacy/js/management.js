@@ -21,7 +21,8 @@ export function migrate(s) {
   s.scout ||= { tasks: [], known: {} };
   s.transfers ||= [];
   s.talkBlock ||= {};
-  for (const c of Object.values(s.clubs)) c.youthLevel ||= 1;
+  for (const c of Object.values(s.clubs)) { c.youthLevel ||= 1; c.country ||= 'BR'; }
+  s.honours ||= [];
 }
 
 /* ---------- janelas de transferência ---------- */
@@ -381,7 +382,7 @@ function aiTransfers(rng) {
     const byPos = {};
     for (const p of sq) (byPos[p.pos] ||= []).push(p);
     const weakest = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'LW', 'RW', 'ST'].map(pos => ({ pos, best: (byPos[pos] || []).reduce((m, p) => Math.max(m, p.ovr), 0) })).sort((a, b) => a.best - b.best)[0];
-    const pool = Object.values(s.players).filter(p => p.club && p.club !== buyer.id && p.club !== s.coach.clubId && !p.loan && !p.precontract && p.pos === weakest.pos && p.ovr >= weakest.best + 3 && p.age <= 31 && p.value * 1.25 <= buyer.balance * 0.6 && p.ovr <= weakest.best + 10);
+    const pool = Object.values(s.players).filter(p => p.club && !p.youth && p.club !== buyer.id && p.club !== s.coach.clubId && !p.loan && !p.precontract && p.pos === weakest.pos && p.ovr >= weakest.best + 3 && p.age <= 31 && p.value * 1.25 <= buyer.balance * 0.6 && p.ovr <= weakest.best + 10);
     if (!pool.length) continue;
     const p = pool.sort((a, b) => b.ovr - a.ovr)[Math.floor(rng.next() * Math.min(3, pool.length))];
     const seller = s.clubs[p.club];

@@ -11,6 +11,7 @@ import { PitchRenderer, kitsFor } from './render.js';
 import * as C from './career.js';
 import { crest } from './art.js';
 import { modal, closeModal, toast } from './main.js';
+import { compName } from './cups.js';
 
 // segundos simulados por segundo real (com CLOCK 2,5: 1x ≈ 7 min de partida, 8x ≈ 55 s)
 const SPEEDS = { 1: 5, 2: 10, 4: 20, 8: 40 };
@@ -361,7 +362,7 @@ export function resultModalHtml(f, S, extra = {}) {
   return `<div class="modal-head"><h2>${ic('flag')} Fim de jogo · ${res}</h2>${extra.posBefore ? '' : `<button class="btn btn-icon btn-ghost x" data-close>${ic('x')}</button>`}</div>
     <div class="versus" style="padding-top:0">
       <div class="team">${crest(H, 56)}<b>${esc(H.short)}</b></div>
-      <div class="vs"><b style="font-size:40px">${f.score[0]} – ${f.score[1]}</b>${f.round}ª rodada · ${(f.attendance || 0).toLocaleString('pt-BR')} torcedores</div>
+      <div class="vs"><b style="font-size:40px">${f.score[0]} – ${f.score[1]}</b>${f.pens ? `<span class="tag tag-yellow">Pênaltis ${f.pens[0]}–${f.pens[1]}</span><br>` : ''}${esc(compName(f))} · ${(f.attendance || 0).toLocaleString('pt-BR')} torcedores</div>
       <div class="team">${crest(A, 56)}<b>${esc(A.short)}</b></div>
     </div>
     <div class="grid g2" style="gap:14px">
