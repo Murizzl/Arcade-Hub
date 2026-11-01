@@ -27,7 +27,7 @@ export const STYLES = {
 export const PRESS = {
   low:    { label: 'Baixa',  n: 1, r: 10, drain: .85, tackle: .7 },
   normal: { label: 'Normal', n: 2, r: 17, drain: 1,   tackle: 1 },
-  high:   { label: 'Alta',   n: 3, r: 26, drain: 1.32, tackle: 1.4 }
+  high:   { label: 'Alta',   n: 3, r: 26, drain: 1.2, tackle: 1.4 }
 };
 export const LINES = { low: { label: 'Recuada', v: -.05 }, normal: { label: 'Normal', v: 0 }, high: { label: 'Alta', v: .055 } };
 export const MENTALITY = { '-2': 'Muito defensiva', '-1': 'Defensiva', '0': 'Equilibrada', '1': 'Ofensiva', '2': 'Muito ofensiva' };
@@ -72,7 +72,23 @@ export class Match {
     this.lastPass = null;
     this.restart = null;
     this.pendingReplay = null;
+    this.aiPrematch();
     this.kickoff(0, true);
+  }
+
+  // IA monta o plano de jogo conforme a força relativa (retranca contra favoritos, domínio contra mais fracos)
+  aiPrematch() {
+    const str = T => T.on.reduce((s, m) => s + m.ovr, 0) / T.on.length;
+    for (const T of this.teams) {
+      if (!T.ai) continue;
+      const O = this.teams[1 - T.side];
+      const gap = str(T) - str(O) + (T.home ? 1.5 : -1.5);
+      const b = T.aiBase;
+      if (gap <= -4) { b.mentality = Math.max(-2, b.mentality - 1); b.line = 'low'; if (b.style === 'possession' || b.style === 'balanced') b.style = 'counter'; T.plan = 'Fechado atrás, saindo no contra-ataque'; }
+      else if (gap >= 4) { b.mentality = Math.min(2, b.mentality + 1); if (b.press === 'low') b.press = 'normal'; T.plan = 'Propondo o jogo desde o início'; }
+      else T.plan = 'Jogo equilibrado';
+      T.tactics = { ...T.tactics, ...b };
+    }
   }
 
   makeTeam(s, side) {
@@ -122,9 +138,9 @@ export class Match {
   say(text, side = -1, kind = 'info') { this.log.push({ min: this.minuteLabel(), text, side, kind }); }
 
   /* ---------- reinícios ---------- */
-  kickoff(side, snap = false) {
+  kickoff(side, snap = false, celebrate = null) {
     this.ball.owner = null; this.ball.flight = null; this.ball.x = L / 2; this.ball.y = W / 2; this.ball.z = 0;
-    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : 7 };
+    this.restart = { kind: 'kickoff', side, x: L / 2, y: W / 2, wait: snap ? 1.5 : celebrate ? 13 : 7, celebrate };
     this.poss = side;
     if (snap) for (const T of this.teams) for (const m of T.on) {
       const s = T.slots[m.slot]; const fx = Math.min(0.47, s.x * 0.8);
@@ -222,17 +238,27 @@ export class Match {
     const diff = this.score[T.side] - this.score[1 - T.side];
     const min = this.minute();
     const base = T.aiBase;
-    let ment = base.mentality, press = base.press;
+    const O = this.teams[1 - T.side];
+    let ment = base.mentality, press = base.press, style = base.style;
+    // lê o esquema do adversário
+    if (O.tactics.mentality >= 1 && diff >= 0) style = 'counter';
+    else if (O.tactics.press === 'high' && style !== 'counter') style = 'direct';
+    else if (O.tactics.mentality <= -1 && diff <= 0) style = base.style === 'counter' ? 'possession' : base.style;
     if (min >= 55 && diff <= -2) { ment = 2; press = 'high'; }
     else if (min >= 60 && diff === -1) { ment = Math.max(1, base.mentality + 1); press = base.press === 'low' ? 'normal' : 'high'; }
     else if (min >= 78 && diff >= 1) { ment = Math.min(-1, base.mentality - 1); press = 'low'; }
     else if (min >= 70 && diff >= 2) { ment = -1; }
-    if (ment !== T.tactics.mentality || press !== T.tactics.press) {
-      const was = T.tactics.mentality;
-      T.tactics.mentality = ment; T.tactics.press = press;
-      this.tacticLog.push({ side: T.side, min: this.minuteLabel(), text: `${T.club.short}: mentalidade ${MENTALITY[ment].toLowerCase()}, pressão ${PRESS[press].label.toLowerCase()}` });
+    // superioridade / inferioridade numérica
+    if (T.on.length < O.on.length && diff >= 0) { ment = Math.min(ment, -1); press = 'low'; }
+    if (O.on.length < T.on.length && diff <= 0) ment = Math.max(ment, 1);
+    ment = clamp(ment, -2, 2);
+    if (ment !== T.tactics.mentality || press !== T.tactics.press || style !== T.tactics.style) {
+      const was = T.tactics.mentality, wasStyle = T.tactics.style;
+      T.tactics.mentality = ment; T.tactics.press = press; T.tactics.style = style;
+      this.tacticLog.push({ side: T.side, min: this.minuteLabel(), text: `${T.club.short}: mentalidade ${MENTALITY[ment].toLowerCase()}, pressão ${PRESS[press].label.toLowerCase()}, ${STYLES[style].label.toLowerCase()}` });
       if (ment > was) this.say(`${T.club.short} se lança ao ataque.`, T.side, 'tactic');
       else if (ment < was) this.say(`${T.club.short} recua para administrar o resultado.`, T.side, 'tactic');
+      if (style !== wasStyle) this.say(style === 'counter' ? `${T.club.short} espera o adversário e aposta no contra-ataque.` : style === 'direct' ? `${T.club.short} foge da pressão com bolas longas.` : `${T.club.short} passa a trabalhar mais a bola.`, T.side, 'tactic');
     }
   }
 
@@ -247,6 +273,8 @@ export class Match {
       if (!c.m.injured && c.m.energy > 66 && min < 80) continue;
       let role = c.m.role;
       if (diff < 0 && min >= 65 && (role === 'DM' || role === 'CB') && T.on.filter(x => x.role === 'CB').length > 2) role = 'ST';
+      else if (diff < 0 && min >= 70 && role === 'DM') role = 'AM';
+      else if (diff > 0 && min >= 75 && isFwdRole(role)) role = 'DM'; // segura o resultado
       const best = T.bench.filter(p => !p.injury).map(p => ({ p, r: ratingAt(p, role) })).sort((a, b) => b.r - a.r)[0];
       if (best && best.r >= c.m.ovr - 8) this.substitute(T.side, c.m.p.id, best.p.id);
     }
@@ -278,7 +306,9 @@ export class Match {
     const live = T.on.filter(m => !m.off);
     const slots = T.slots.map((s, i) => i);
     const order = [];
-    const free = new Set(slots);
+    // com expulsões, abre mão dos postos mais avançados
+    const drop = slots.filter(i => i > 0).sort((a, b) => T.slots[b].x - T.slots[a].x).slice(0, Math.max(0, T.slots.length - live.length));
+    const free = new Set(slots.filter(i => !drop.includes(i)));
     const gk = live.find(m => m.p.pos === 'GK') || live.find(m => m.role === 'GK');
     if (gk) { gk.slot = 0; gk.role = 'GK'; free.delete(0); }
     const rest = live.filter(m => m !== gk).sort((a, b) => b.p.ovr - a.p.ovr);
@@ -322,6 +352,7 @@ export class Match {
     let taker;
     if (r.kind === 'goalkick') taker = live.find(m => m.role === 'GK') || live[0];
     else if (r.kind === 'penalty') taker = live.filter(m => m.role !== 'GK').sort((a, c) => c.p.a.sho - a.p.a.sho)[0];
+    else if (r.kind === 'fkshot' || r.kind === 'fkcross') taker = live.filter(m => m.role !== 'GK').sort((a, c) => (c.p.a.sho + c.p.a.pas) - (a.p.a.sho + a.p.a.pas))[0];
     else if (r.kind === 'kickoff') taker = live.filter(m => isFwdRole(m.role)).sort((a, c) => dist(a.x, a.y, b.x, b.y) - dist(c.x, c.y, b.x, b.y))[0] || live[1];
     else taker = live.filter(m => r.kind === 'corner' ? m.role !== 'GK' : true).sort((a, c) => dist(a.x, a.y, b.x, b.y) - dist(c.x, c.y, b.x, b.y))[0];
     if (!taker) { this.restart = null; return; }
@@ -332,6 +363,11 @@ export class Match {
     this.restart = null;
     b.owner = taker; b.lastSide = r.side;
     if (r.kind === 'corner') return this.cross(taker, true);
+    if (r.kind === 'fkcross' && this.cross(taker, false)) return;
+    if (r.kind === 'fkshot' && this.rng.chance(0.75)) {
+      const d = dist(b.x, b.y, this.goalX(r.side), W / 2);
+      return this.shoot(taker, clamp(0.11 - (d - 17) * 0.006, 0.02, 0.1), 'freekick');
+    }
     if (r.kind === 'penalty') return this.shoot(taker, 0.76, 'penalty');
     taker.decide = r.kind === 'kickoff' ? 0.3 : r.kind === 'goalkick' ? 0.8 : 0.5;
   }
@@ -392,7 +428,8 @@ export class Match {
     // 1) finalização
     if (h.role !== 'GK' && d < 33) {
       const xg = this.xgAt(h);
-      const thr = 0.095 - m * 0.005 - (h.p.a.sho - 60) / 2000;
+      const roleK = h.role === 'ST' ? 0.012 : (h.role === 'LW' || h.role === 'RW' || h.role === 'AM') ? -0.022 : h.role === 'CM' ? -0.01 : 0;
+      const thr = 0.095 + roleK - m * 0.005 - (h.p.a.sho - 60) / 2000;
       if ((xg > thr && this.rng.chance(0.2 + m * 0.025)) || (d < 27 && this.rng.chance(0.008 + h.p.a.sho / 8000 + m * 0.004))) return this.shoot(h, xg);
     }
     // 2) cruzamento das pontas
@@ -429,6 +466,7 @@ export class Match {
     const T = this.teams[h.side], O = this.teams[1 - h.side];
     const st = STYLES[T.tactics.style], m = T.tactics.mentality;
     const hf = this.fX(h.side, h.x);
+    const offL = this.offsideLine(h.side);
     let best = null;
     const opts = [];
     for (const t of T.on) {
@@ -450,6 +488,8 @@ export class Match {
       if (tf > 0.65 && (tfy < 0.22 || tfy > 0.78)) score += 0.35 * (st.wide - 1);
       if (h.role === 'GK' && st === STYLES.short && isDefRole(t.role)) score += 0.5;
       if (prog < -5 && st !== STYLES.possession) score -= 0.2;
+      // visão: bons passadores enxergam o companheiro em impedimento
+      if (tf > 0.5 && tf > offL + 0.006 && tf > hf && this.rng.chance(0.55 + h.p.a.pas / 250)) score -= 3;
       score += this.rng.next() * 0.35;
       opts.push({ t, score, len, prog });
     }
@@ -483,7 +523,10 @@ export class Match {
     lane.sort((a, b) => a.s.u - b.s.u);
     let res = { kind: 'pass', to: t };
     let endX = ex, endY = ey;
-    for (const { o, s } of lane) {
+    // impedimento: receptor à frente do penúltimo adversário e da bola no momento do passe
+    const tf = this.fX(h.side, t.x);
+    if (tf > 0.5 && tf > this.offsideLine(h.side) + 0.006 && tf > this.fX(h.side, h.x)) res = { kind: 'offside', to: t, at: [t.x, t.y] };
+    if (res.kind === 'pass') for (const { o, s } of lane) {
       const p = (1 - s.d / 3.2) * 0.17 * ((o.p.a.def + o.p.a.pos) / 2 * o.eff / 72) * (1.3 - q / 110) * (long ? 1.15 : 1);
       if (this.rng.chance(p)) { res = { kind: 'intercept', by: o }; endX = s.cx; endY = s.cy; break; }
     }
@@ -501,13 +544,25 @@ export class Match {
     h.dribbling = false;
   }
 
+  offsideLine(s) {
+    let a = 0, b = 0; // as duas maiores posições adversárias (goleiro incluso), no referencial de quem ataca
+    for (const o of this.teams[1 - s].on) { if (o.off) continue; const f = this.fX(s, o.x); if (f > a) { b = a; a = f; } else if (f > b) b = f; }
+    return Math.max(0.5, b);
+  }
+
   cross(h, corner) {
     const T = this.teams[h.side], O = this.teams[1 - h.side];
     const gx = this.goalX(h.side);
     const inBox = T.on.filter(m => !m.off && m !== h && m.role !== 'GK' && Math.abs(m.x - gx) < 18 && Math.abs(m.y - W / 2) < 18);
     if (!inBox.length && !corner) return false;
     if (corner) this.stats[h.side].corners++;
-    const target = inBox.sort((a, b) => (b.p.a.phy + b.p.a.pos) - (a.p.a.phy + a.p.a.pos))[0];
+    // alvo do cruzamento: sorteio ponderado por físico e posicionamento (não sempre o centroavante)
+    let target = null;
+    if (inBox.length) {
+      const wts = inBox.map(m => Math.pow((m.p.a.phy + m.p.a.pos) / 100, 3));
+      let r = this.rng.next() * wts.reduce((a, b) => a + b, 0);
+      target = inBox.find((m, i) => (r -= wts[i]) <= 0) || inBox[0];
+    }
     const tx = target ? target.x : gx - (h.side === 0 ? 9 : -9);
     const ty = target ? target.y : W / 2 + (this.rng.next() - .5) * 10;
     const q = h.p.a.pas * h.eff;
@@ -547,7 +602,9 @@ export class Match {
       const s = segInfo(h.x, h.y, gx, W / 2, o.x, o.y);
       if (s.u > 0.05 && s.u < 0.9 && s.d < 1.2 && this.rng.chance(0.3 + o.p.a.def / 400)) { blocked = o; break; }
     }
-    const adj = clamp(xg * 1.15 * (0.68 + q / 165) * (1.28 - gkQ / 190), 0.003, 0.93);
+    if (kind === 'freekick' && this.rng.chance(0.24)) blocked = O.on.filter(o => !o.off && o.role !== 'GK').sort((a, c) => dist(a.x, a.y, h.x, h.y) - dist(c.x, c.y, h.x, h.y))[0] || false;
+    // finalizador e goleiro deslocam a chance, sem multiplicar a ponto de descolar do xG
+    const adj = clamp(xg * 1.45 * (0.75 + q / 300) * (1.2 - gkQ / 300), 0.003, 0.9);
     const onT = clamp(0.28 + q / 210 + xg * 0.63, 0.3, 0.92);
     const r = this.rng.next();
     let outcome;
@@ -566,9 +623,10 @@ export class Match {
     const D = dist(h.x, h.y, ex, eyy);
     this.ball.owner = null;
     this.ball.flight = { kind: 'shot', from: h, sx: h.x, sy: h.y, ex, ey: eyy, t: 0, dur: 0.12 + D / 27, arc: outcome === 'off' && this.rng.chance(.4) ? 2.5 : 0.6, res: { outcome, gk, blocked, xg, key, shotKind: kind } };
+    if (kind === 'freekick' && outcome !== 'block') this.ball.flight.arc = 2.6;
     h.dribbling = false;
     const big = xg >= 0.19;
-    this.say(kind === 'penalty' ? `${h.p.name} vai para a cobrança do pênalti…` : big ? `Grande chance para ${h.p.name}!` : `${h.p.name} arrisca a finalização.`, h.side, big ? 'chance' : 'shot');
+    this.say(kind === 'penalty' ? `${h.p.name} vai para a cobrança do pênalti…` : kind === 'freekick' ? `${h.p.name} cobra a falta direto para o gol!` : big ? `Grande chance para ${h.p.name}!` : `${h.p.name} arrisca a finalização.`, h.side, big ? 'chance' : 'shot');
     this.emit('shot', { side: h.side, player: h.p.id, name: h.p.name, xg, outcome, big });
     return true;
   }
@@ -588,7 +646,8 @@ export class Match {
       if (card === 'yellow') { o.yellow = 1; this.stats[o.side].yellows++; }
       else { this.stats[o.side].reds++; if (card === 'red2') this.stats[o.side].yellows++; this.sendOff(o); }
       this.say(card === 'yellow' ? `Cartão amarelo para ${o.p.name}.` : card === 'red2' ? `Segundo amarelo! ${o.p.name} expulso.` : `Cartão vermelho direto para ${o.p.name}!`, o.side, card === 'yellow' ? 'yellow' : 'red');
-      this.emit('card', { side: o.side, player: o.p.id, name: o.p.name, card: card === 'yellow' ? 'yellow' : 'red', second: card === 'red2' });
+      const cev = this.emit('card', { side: o.side, player: o.p.id, name: o.p.name, card: card === 'yellow' ? 'yellow' : 'red', second: card === 'red2' });
+      if (card !== 'yellow') this.captureReplay('red', cev);
     }
     // lesão
     if (this.rng.chance(0.03)) {
@@ -603,11 +662,17 @@ export class Match {
         if (best && HT.subs < 5) this.substitute(h.side, h.p.id, best.p.id);
       }
     }
+    const dGoal = dist(h.x, h.y, gx, W / 2);
     if (inBox && this.rng.chance(0.05)) {
       this.say(`Pênalti para o ${this.teams[h.side].club.short}!`, h.side, 'chance');
       this.emit('penalty', { side: h.side, name: h.p.name });
       this.setRestart('penalty', h.side, h.side === 0 ? L - 11 : 11, W / 2, 4);
-    } else this.setRestart('free', h.side, h.x, h.y, 2.5);
+    } else if (!inBox && dGoal < 30 && Math.abs(h.y - W / 2) < 18) {
+      this.say(`Falta perigosa para o ${this.teams[h.side].club.short}. Barreira formada.`, h.side, 'chance');
+      this.emit('freekick', { side: h.side });
+      this.setRestart('fkshot', h.side, h.x, h.y, 4);
+    } else if (!inBox && fwdF > 0.72) this.setRestart('fkcross', h.side, h.x, h.y, 3.5);
+    else this.setRestart('free', h.side, h.x, h.y, 2.5);
   }
 
   sendOff(m) {
@@ -623,6 +688,8 @@ export class Match {
       if (sub && T.subs < 5 && outfield) { this.substitute(m.side, outfield.p.id, sub.id); const n = T.on.find(x => x.p.id === sub.id); n.slot = 0; n.role = 'GK'; }
       else if (outfield) { outfield.slot = 0; outfield.role = 'GK'; }
     }
+    if (T.on.length >= 7) this.reassignSlots(T);
+    this.say(`${T.club.short} se reorganiza com ${T.on.length} jogadores.`, T.side, 'tactic');
   }
 
   /* ---------- bola em trânsito ---------- */
@@ -636,9 +703,26 @@ export class Match {
     b.z = 0;
     const res = f.res, from = f.from;
     if (f.kind === 'shot') return this.resolveShot(f);
+    if (res.kind === 'offside') {
+      this.ball.flight = null;
+      this.stats[from.side].offsides++;
+      this.say(`Impedimento! ${res.to.p.name} estava adiantado.`, from.side, 'foul');
+      this.emit('offside', { side: from.side, name: res.to.p.name, player: res.to.p.id });
+      return this.setRestart('free', 1 - from.side, res.at[0], res.at[1], 2.5);
+    }
     if (res.kind === 'pass') {
       const t = res.to;
       if (t.off) return this.looseBall(b.x, b.y, 0, 0, from.side);
+      // bola longa: disputa pelo alto
+      if (f.arc >= 3) {
+        const opp = this.nearestOpp({ x: b.x, y: b.y, side: t.side });
+        if (opp.o && opp.d < 2.6 && this.rng.chance(0.35 * (opp.o.p.a.phy * opp.o.eff) / (opp.o.p.a.phy * opp.o.eff + t.p.a.phy * t.eff))) {
+          opp.o.r.ints++; this.stats[opp.o.side].interceptions++; t.r.lost++;
+          this.ball.flight = null;
+          const dir = from.side === 0 ? -1 : 1;
+          return this.looseBall(b.x, b.y, dir * (6 + this.rng.next() * 8), (this.rng.next() - .5) * 12, opp.o.side);
+        }
+      }
       // controle: marcador colado pode roubar no domínio
       const opp = this.nearestOpp({ x: b.x, y: b.y, side: t.side });
       if (opp.o && opp.d < 1.6 && this.rng.chance(0.11 * opp.o.p.a.def / (opp.o.p.a.def + t.p.a.dri) * 2 * opp.o.eff)) {
@@ -689,7 +773,7 @@ export class Match {
       this.say(`GOOOL! ${h.p.name} marca para o ${T.club.short}!${key && key !== h ? ` Assistência de ${key.p.name}.` : ''}`, h.side, 'goal');
       const ev = this.emit('goal', { side: h.side, player: h.p.id, name: h.p.name, assist: key && key !== h ? key.p.id : null, assistName: key && key !== h ? key.p.name : null, score: this.score.slice(), xg, kind: shotKind });
       this.captureReplay('goal', ev);
-      this.kickoff(1 - h.side);
+      this.kickoff(1 - h.side, false, { side: h.side, scorer: h });
       T.transition = 0;
       return;
     }
@@ -711,7 +795,7 @@ export class Match {
       return this.looseBall(b.x, b.y, (this.rng.next() - .5) * 14, (this.rng.next() - .5) * 14, blocked.side);
     }
     this.say(`Para fora. ${h.p.name} não acerta o alvo.`, h.side, 'miss');
-    if (xg >= 0.22) this.captureReplay('miss', this.emit('miss', { side: h.side, name: h.p.name, xg }));
+    if (xg >= 0.22 || shotKind === 'penalty') this.captureReplay('miss', this.emit('miss', { side: h.side, name: h.p.name, xg }));
     this.setRestart('goalkick', 1 - h.side, h.side === 0 ? L - 5.5 : 5.5, W / 2 + (this.rng.next() - .5) * 10, 3);
   }
 
@@ -765,8 +849,7 @@ export class Match {
       const lineV = LINES[tac.line].v;
       // linha do último defensor adversário (referência simples de impedimento)
       const O = this.teams[1 - s];
-      let oppLine = 0.5;
-      for (const o of O.on) if (!o.off && o.role !== 'GK') { const f = this.fX(s, o.x); if (f > oppLine) oppLine = f; }
+      const offLine = this.offsideLine(s);
       const wideK = Math.pow(st.wide, 0.35);
       for (const p of T.on) {
         if (p.off) continue;
@@ -782,21 +865,40 @@ export class Match {
         const sl = T.slots[p.slot] || T.slots[1];
         let tx, ty;
         const wob = Math.sin(this.total * 0.35 + p.wob) * 0.012;
+        p.dive = 0;
         if (p.role === 'GK') {
           tx = 0.035 + clamp((bx - 0.5) * 0.06, -0.02, 0.03);
           ty = 0.5 + (by - 0.5) * 0.28;
-          if (fl && fl.kind === 'shot' && fl.from.side !== s) { // goleiro reage à finalização
+          if (fl && fl.kind === 'shot' && fl.from.side !== s) { // goleiro reage à finalização (mergulho)
             const save = fl.res.outcome === 'save';
-            ty = this.fY(s, save ? fl.ey : (fl.ey + W / 2) / 2);
+            const gyW = save ? fl.ey : (fl.ey + W / 2) / 2;
+            ty = this.fY(s, gyW);
             tx = 0.012;
+            if (Math.abs(gyW - p.y) > 1) p.dive = gyW > p.y ? 1 : -1;
           }
+        } else if (this.restart && this.restart.kind === 'kickoff' && this.restart.celebrate && this.restart.wait > 6) {
+          // comemoração: o autor corre para a bandeirinha, os companheiros vão atrás
+          const c = this.restart.celebrate;
+          if (c.side === s) {
+            const fx = 0.96, fy = this.fY(s, c.scorer.y) < 0.5 ? 0.05 : 0.95;
+            if (p === c.scorer) { tx = fx; ty = fy; }
+            else { const k = (p.wob % 1); tx = fx - 0.03 - k * 0.04; ty = fy + (fy < 0.5 ? 1 : -1) * (0.03 + k * 0.06); }
+          } else { tx = Math.min(0.42, sl.x * 0.8); ty = sl.y; }
         } else if (this.restart && this.restart.kind === 'kickoff') {
           tx = Math.min(0.46, sl.x * 0.78); ty = sl.y;
         } else if (att) {
           const k = sl.x < 0.3 ? 0.55 : 1;
           tx = sl.x + 0.07 * k + (bx - 0.45) * 0.42 * k + push * k + wob;
-          if (isFwdRole(p.role) || p.role === 'CM') tx = Math.min(tx, oppLine + 0.012);
+          if (isFwdRole(p.role) || p.role === 'CM') tx = Math.min(tx, offLine - 0.006);
           ty = 0.5 + (sl.y - 0.5) * 1.12 * wideK + (by - 0.5) * 0.15;
+          // infiltração: atacantes alternam corridas nas costas da defesa
+          if ((p.role === 'ST' || p.role === 'LW' || p.role === 'RW') && owner && owner.side === s && bx > 0.35 && Math.sin(this.total * 0.45 + p.wob * 2) > 0.8) tx = offLine + 0.04;
+          // meias chegam de trás na área em parte das jogadas
+          if ((p.role === 'CM' || p.role === 'AM') && owner && owner.side === s && bx > 0.62 && Math.sin(this.total * 0.37 + p.wob * 3) > 0.45) { tx = Math.min(offLine - 0.01, 0.86); ty = 0.5 + (sl.y - 0.5) * 0.5; }
+          // laterais apoiam por fora quando a bola está no seu lado
+          if ((p.role === 'LB' || p.role === 'RB') && bx > 0.5 && ((sl.y < 0.5 && by < 0.45) || (sl.y > 0.5 && by > 0.55))) {
+            tx += 0.16 * (st.wide > 1 ? 1.4 : 1); ty = sl.y < 0.5 ? 0.06 : 0.94;
+          }
         } else {
           tx = sl.x * 0.9 + (bx - 0.5) * 0.38 - 0.02 + push * 0.6 + (isDefRole(p.role) ? lineV : lineV * 0.5) + wob;
           ty = 0.5 + (sl.y - 0.5) * 0.82 + (by - 0.5) * 0.3;
@@ -839,6 +941,22 @@ export class Match {
           p.ty = p.ty * 0.55 + near.y * 0.45;
         }
       }
+      // linha defensiva única (permite a armadilha do impedimento)
+      if (!att && owner && !this.restart) {
+        const defs = T.on.filter(p => !p.off && isDefRole(p.role) && !p.pressing);
+        if (defs.length >= 2) {
+          const lx = defs.reduce((a, p) => a + this.fX(s, p.tx), 0) / defs.length;
+          for (const p of defs) p.tx = this.toX(s, this.fX(s, p.tx) * 0.25 + lx * 0.75);
+        }
+      }
+      // barreira na falta frontal
+      if (this.restart && this.restart.kind === 'fkshot' && this.restart.side !== s) {
+        const r = this.restart, gx = this.goalX(r.side);
+        const d = dist(r.x, r.y, gx, W / 2) || 1;
+        const wx = r.x + (gx - r.x) / d * 9.15, wy = r.y + (W / 2 - r.y) / d * 9.15;
+        T.on.filter(p => !p.off && p.role !== 'GK').sort((a, c) => dist(a.x, a.y, wx, wy) - dist(c.x, c.y, wx, wy)).slice(0, 4)
+          .forEach((p, i) => { p.tx = wx; p.ty = wy + (i - 1.5) * 0.9; });
+      }
       // goleiro com a bola segura: time se abre para a reposição
       if (this.restart && this.restart.side === s && this.restart.kind === 'corner') {
         const gx = this.goalX(s);
@@ -857,12 +975,12 @@ export class Match {
 
   movePlayers() {
     for (const T of this.teams) {
-      const drainK = PRESS[T.tactics.press].drain * (1 + Math.max(0, T.tactics.mentality) * 0.06);
+      const drainK = PRESS[T.tactics.press].drain * (1 + Math.max(0, T.tactics.mentality) * 0.03);
       for (const p of T.on) {
         p.px = p.x; p.py = p.y;
         if (p.off) continue;
         const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.sqrt(dx * dx + dy * dy);
-        const max = (5 + p.p.a.pac * 0.034) * p.eff * (p === this.ball.owner ? (p.blocked ? 0.3 : 0.8) : 1);
+        const max = (5 + p.p.a.pac * 0.034) * p.eff * (p === this.ball.owner ? (p.blocked ? 0.3 : 0.8) : 1) * (p.dive ? 1.9 : 1);
         let sp = 0;
         if (d > 0.35) {
           sp = d > 9 || p.pressing ? max : max * (0.45 + 0.55 * d / 9);
@@ -896,17 +1014,27 @@ export class Match {
   }
 
   /* ---------- encerramento e notas ---------- */
+  rate(m, T) {
+    const r = m.r, diff = this.score[T.side] - this.score[1 - T.side];
+    let v = 6.0 + r.goals * 1.05 + r.assists * 0.7 + r.key * 0.18 + Math.min(1, r.passesOk * 0.025) + r.tackles * 0.14 + r.ints * 0.1 + r.saves * 0.3 - r.conceded * (m.role === 'GK' ? 0.3 : 0) - r.lost * 0.035 - r.fouls * 0.05 + diff * 0.15;
+    if (isDefRole(m.role) || m.role === 'GK') v -= this.score[1 - T.side] * 0.12;
+    if (m.off && m.minOut) v -= 1.2;
+    return clamp(Math.round(v * 10) / 10, 3, 10);
+  }
+  // destaques ao vivo (aba do painel lateral)
+  liveRatings() {
+    const out = [];
+    for (const T of this.teams) for (const m of T.used) out.push({ m, side: T.side, rating: this.rate(m, T) });
+    return out.sort((a, b) => b.rating - a.rating);
+  }
+
   finish() {
     const ratings = [];
     for (const T of this.teams) {
-      const diff = this.score[T.side] - this.score[1 - T.side];
       for (const m of T.used) {
         const r = m.r;
         const min = (m.minOut ?? 90) - (m.minIn || 0);
-        let v = 6.0 + r.goals * 1.05 + r.assists * 0.7 + r.key * 0.18 + Math.min(1, r.passesOk * 0.025) + r.tackles * 0.14 + r.ints * 0.1 + r.saves * 0.3 - r.conceded * (m.role === 'GK' ? 0.3 : 0) - r.lost * 0.035 - r.fouls * 0.05 + diff * 0.15;
-        if (isDefRole(m.role) || m.role === 'GK') v -= this.score[1 - T.side] * 0.12;
-        if (m.off && m.minOut) v -= 1.2;
-        v = clamp(Math.round(v * 10) / 10, 3, 10);
+        const v = this.rate(m, T);
         m.rating = v; m.mins = Math.max(1, min);
         ratings.push({ id: m.p.id, side: T.side, name: m.p.name, num: m.p.num, role: m.role, rating: v, mins: m.mins, goals: r.goals, assists: r.assists, saves: r.saves, energy: Math.round(m.energy), yellow: m.yellow, red: m.off, injured: m.injured ? m.injuryDays : 0 });
       }

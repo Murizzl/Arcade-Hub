@@ -27,6 +27,10 @@ export function openMatch(f, { onCommit, onClose }) {
   let speed = 1, running = true, acc = 0, last = performance.now(), raf = 0, tab = 'log';
   let banner = null, labels = [], sel = null, committed = false, ffwd = false, lastLogLen = -1;
   let prevBall = { x: m.ball.x, y: m.ball.y, z: 0 };
+  let trail = [];
+  // plano de jogo do adversário anunciado antes do apito
+  const oppT = m.teams[1 - side];
+  if (oppT.plan) m.say(`${oppT.club.short} entra em campo: ${oppT.plan.toLowerCase()} (${oppT.tactics.formation}).`, 1 - side, 'tactic');
 
   root.hidden = false;
   root.innerHTML = `
@@ -37,7 +41,7 @@ export function openMatch(f, { onCommit, onClose }) {
     </div>
     <div class="match-body">
       <div class="field-wrap" id="fieldWrap"><canvas id="pitch"></canvas><div id="mBanner"></div></div>
-      <aside class="side-panel"><div class="tabs"><button data-mtab="log" class="on">Lances</button><button data-mtab="stats">Estatísticas</button><button data-mtab="team">Time</button></div><div class="pane" id="mPane"></div></aside>
+      <aside class="side-panel"><div class="tabs"><button data-mtab="log" class="on">Lances</button><button data-mtab="stats">Estatísticas</button><button data-mtab="stars">Destaques</button><button data-mtab="team">Time</button></div><div class="pane" id="mPane"></div></aside>
     </div>
     <div class="controls">
       <button class="btn btn-primary btn-icon" id="mPlay" title="Pausar / continuar">${ic('pause')}</button>
@@ -79,6 +83,12 @@ export function openMatch(f, { onCommit, onClose }) {
     } else if (ev.type === 'shot') {
       labels.push({ id: ev.player, until: m.total + 3 });
       if (ev.big && ev.outcome !== 'goal') { /* grande chance: destaque leve no lance */ }
+    } else if (ev.type === 'penalty') {
+      showBanner(`<div class="big" style="font-size:44px">PÊNALTI!</div><div class="who"><b>${esc(m.teams[ev.side].club.short)}</b><small>Falta em ${esc(ev.name)} dentro da área</small></div>`, 2600, 'card');
+    } else if (ev.type === 'freekick') {
+      showBanner(`<div class="big" style="font-size:30px">FALTA PERIGOSA</div>`, 1600, 'card');
+    } else if (ev.type === 'offside') {
+      labels.push({ id: ev.player, until: m.total + 3 });
     } else if (ev.type === 'halftime') { pause(); setTimeout(halftime, 60); }
     else if (ev.type === 'fulltime') { pause(); finish(); }
   };
@@ -117,13 +127,14 @@ export function openMatch(f, { onCommit, onClose }) {
     labels = labels.filter(l => l.until > m.total);
     const owner = m.ball.owner;
     for (const T of m.teams) for (const p of T.on) players.push({
-      x: p.px + (p.x - p.px) * a, y: p.py + (p.y - p.py) * a, side: T.side, num: p.p.num, gk: p.role === 'GK',
+      x: p.px + (p.x - p.px) * a, y: p.py + (p.y - p.py) * a, side: T.side, num: p.p.num, gk: p.role === 'GK', dive: p.dive ? p.dive * (T.side === 0 ? 1 : 1) : 0,
       ball: p === owner, sel: p.p.id === sel, label: (lb.has(p.p.id) || p.p.id === sel || (p === owner && m.ball.owner?.r && false)) ? p.p.name.split(' ').slice(-1)[0] : null
     });
     const b = m.ball;
     const ball = { x: prevBall.x + (b.x - prevBall.x) * a, y: prevBall.y + (b.y - prevBall.y) * a, z: prevBall.z + (b.z - prevBall.z) * a };
     const fl = b.flight;
-    R.draw({ players, ball, kits, pass: fl && fl.kind !== 'shot' ? { sx: fl.sx, sy: fl.sy, ex: fl.ex, ey: fl.ey } : null });
+    if (fl && fl.kind === 'shot') { trail.push({ x: ball.x, y: ball.y }); if (trail.length > 10) trail.shift(); } else if (trail.length) trail.shift();
+    R.draw({ players, ball, kits, trail, pass: fl && fl.kind !== 'shot' ? { sx: fl.sx, sy: fl.sy, ex: fl.ex, ey: fl.ey } : null });
   }
   let hudT = 0;
   function hud() {
@@ -140,7 +151,18 @@ export function openMatch(f, { onCommit, onClose }) {
     const el = root.querySelector('#mPane');
     if (tab === 'log') el.innerHTML = m.log.slice().reverse().slice(0, 120).map(l => `<div class="log-item ${l.kind}"><span class="m">${l.min}</span><span>${esc(l.text)}</span></div>`).join('') || '<p class="faint small">A bola vai rolar…</p>';
     else if (tab === 'stats') el.innerHTML = statsHtml(m.stats, m);
+    else if (tab === 'stars') el.innerHTML = starsHtml();
     else el.innerHTML = teamHtml();
+  }
+  // destaques individuais ao vivo: notas parciais calculadas pelo motor
+  function starsHtml() {
+    const live = m.liveRatings();
+    const rc = v => v >= 8 ? 'r4' : v >= 7 ? 'r3' : v >= 6 ? 'r2' : 'r1';
+    const row = x => { const r = x.m.r; const bits = [r.goals && `${r.goals} gol${r.goals > 1 ? 's' : ''}`, r.assists && `${r.assists} assist.`, r.key && `${r.key} passe${r.key > 1 ? 's' : ''}-chave`, r.saves && `${r.saves} defesa${r.saves > 1 ? 's' : ''}`, r.tackles && `${r.tackles} desarme${r.tackles > 1 ? 's' : ''}`, r.shots && `${r.shots} chute${r.shots > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+      return `<div class="sub-row"><span class="posb">${POS_LABEL[x.m.role]}</span><span class="grow small"><b>${esc(x.m.p.name)}</b><br><span class="faint">${esc(m.teams[x.side].club.short)}${bits ? ' · ' + bits : ''}</span></span><span class="rating ${rc(x.rating)}">${x.rating.toFixed(1)}</span></div>`; };
+    const mine = live.filter(x => x.side === side);
+    return `<small class="faint">Melhores em campo</small>${live.slice(0, 5).map(row).join('')}
+      <small class="faint" style="display:block;margin-top:10px">Seu time</small>${mine.map(row).join('')}`;
   }
   function teamHtml() {
     const T = m.teams[side];
@@ -221,23 +243,33 @@ export function openMatch(f, { onCommit, onClose }) {
   function replaysPanel(after) {
     const list = m.replays;
     modal(`<div class="modal-head"><h2>${ic('rotate-ccw')} Replays</h2><button class="btn btn-icon btn-ghost x" data-mclose>${ic('x')}</button></div>
-      ${list.length ? `<canvas class="replay-canvas" id="rpC"></canvas><div class="row-wrap" style="margin-top:10px">${list.map((r, i) => `<button class="btn btn-sm" data-rp="${i}">${r.kind === 'goal' ? '⚽' : r.kind === 'save' ? '🧤' : '❌'} ${esc(r.ev.min)} ${esc(r.ev.name || r.ev.shooter || '')}</button>`).join('')}</div>
-        <p class="faint small">Reprodução das posições gravadas pelo motor durante o lance.</p>` : '<p class="muted">Nenhum lance importante gravado ainda (gols, grandes defesas e chances claras aparecem aqui).</p>'}
+      ${list.length ? `<canvas class="replay-canvas" id="rpC"></canvas>
+        <div class="row-wrap" style="margin-top:8px"><button class="btn btn-sm" data-rpctl="pause">${ic('pause')} Pausar</button><div class="seg"><button data-rpspd="0.5">0,5x</button><button data-rpspd="1" class="on">1x</button><button data-rpspd="2">2x</button></div><div class="seg"><button data-rpcam="1" class="on">${ic('zoom-in')} Câmera</button><button data-rpcam="0">Campo todo</button></div></div>
+        <div class="row-wrap" style="margin-top:10px">${list.map((r, i) => `<button class="btn btn-sm" data-rp="${i}">${{ goal: '⚽', save: '🧤', red: '🟥', miss: '❌' }[r.kind] || '•'} ${esc(r.ev.min)} ${esc(r.ev.name || r.ev.shooter || '')}</button>`).join('')}</div>
+        <p class="faint small">Reprodução das posições gravadas pelo motor durante o lance — nada é inventado.</p>` : '<p class="muted">Nenhum lance importante gravado ainda (gols, grandes defesas, pênaltis e expulsões aparecem aqui).</p>'}
       <div class="modal-foot"><button class="btn" data-mclose>Fechar</button></div>`, { wide: true, locked: true });
     const el = document.getElementById('modal');
-    let rr = null, rpRaf = 0;
+    let rr = null, rpRaf = 0, rpSpeed = 1, rpCam = true, rpPaused = false, cur = -1, k = 0, lastT = 0, cam = null;
+    // protagonista do lance (número + lado) para exibir o nome
+    const who = rp => { const id = rp.ev.player; for (const T of m.teams) for (const x of T.used) if (x.p.id === id) return { side: T.side, num: x.p.num, name: x.p.name.split(' ').slice(-1)[0] }; return null; };
     const play = i => {
       cancelAnimationFrame(rpRaf);
       const rp = list[i], c = el.querySelector('#rpC');
       rr = rr || new PitchRenderer(c); rr.resize();
-      const t0 = performance.now(), dur = 0.5 / 1.6; // cada quadro = 0,5 s simulados, exibido a 1,6x
+      cur = i; k = 0; lastT = performance.now(); cam = null;
+      const star = who(rp);
       const loop = now => {
-        const k = (now - t0) / 1000 / dur;
+        const dt = (now - lastT) / 1000; lastT = now;
+        if (!rpPaused) k += dt * 3.2 * rpSpeed; // cada quadro = 0,5 s simulados
         const i0 = Math.min(rp.frames.length - 1, Math.floor(k)), i1 = Math.min(rp.frames.length - 1, i0 + 1), a = Math.min(1, k - i0);
         const f0 = rp.frames[i0], f1 = rp.frames[i1];
-        const players = f0.p.map((p, j) => { const q = f1.p[j] && f1.p[j][3] === p[3] && f1.p[j][2] === p[2] ? f1.p[j] : p; return { x: p[0] + (q[0] - p[0]) * a, y: p[1] + (q[1] - p[1]) * a, side: p[2], num: p[3], gk: false }; });
-        rr.draw({ players, kits, ball: { x: f0.b[0] + (f1.b[0] - f0.b[0]) * a, y: f0.b[1] + (f1.b[1] - f0.b[1]) * a, z: f0.b[2] + (f1.b[2] - f0.b[2]) * a } });
-        if (k < rp.frames.length + 2) rpRaf = requestAnimationFrame(loop);
+        const players = f0.p.map((p, j) => { const q = f1.p[j] && f1.p[j][3] === p[3] && f1.p[j][2] === p[2] ? f1.p[j] : p; return { x: p[0] + (q[0] - p[0]) * a, y: p[1] + (q[1] - p[1]) * a, side: p[2], num: p[3], gk: false, label: star && p[2] === star.side && p[3] === star.num ? star.name : null }; });
+        const ball = { x: f0.b[0] + (f1.b[0] - f0.b[0]) * a, y: f0.b[1] + (f1.b[1] - f0.b[1]) * a, z: f0.b[2] + (f1.b[2] - f0.b[2]) * a };
+        // câmera suave que acompanha a bola
+        cam = cam ? { x: cam.x + (ball.x - cam.x) * 0.08, y: cam.y + (ball.y - cam.y) * 0.08 } : { x: ball.x, y: ball.y };
+        rr.draw({ players, kits, ball, cam: rpCam ? { x: Math.max(26, Math.min(79, cam.x)), y: Math.max(17, Math.min(51, cam.y)), zoom: 1.9 } : null });
+        if (k >= rp.frames.length + 3) { k = 0; cam = null; } // repete o lance
+        rpRaf = requestAnimationFrame(loop);
       };
       rpRaf = requestAnimationFrame(loop);
     };
@@ -245,6 +277,9 @@ export function openMatch(f, { onCommit, onClose }) {
     el.onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.rp) return play(+b.dataset.rp);
+      if (b.dataset.rpspd) { rpSpeed = +b.dataset.rpspd; el.querySelectorAll('[data-rpspd]').forEach(x => x.classList.toggle('on', x === b)); return; }
+      if (b.dataset.rpcam) { rpCam = b.dataset.rpcam === '1'; el.querySelectorAll('[data-rpcam]').forEach(x => x.classList.toggle('on', x === b)); return; }
+      if (b.dataset.rpctl) { rpPaused = !rpPaused; b.innerHTML = `${ic(rpPaused ? 'play' : 'pause')} ${rpPaused ? 'Continuar' : 'Pausar'}`; icons(); return; }
       if (b.dataset.mclose !== undefined) { cancelAnimationFrame(rpRaf); closeModal(); return after ? after() : (m.phase === 'live' ? resume() : null); }
     };
   }
@@ -303,7 +338,7 @@ function statsHtml(st, m) {
     ['Finalizações', st[0].shots, st[1].shots], ['No gol', st[0].onTarget, st[1].onTarget], ['xG', st[0].xg.toFixed(2), st[1].xg.toFixed(2), st[0].xg, st[1].xg],
     ['Passes certos', `${st[0].passesOk}/${st[0].passes}`, `${st[1].passesOk}/${st[1].passes}`, st[0].passesOk, st[1].passesOk],
     ['Desarmes', st[0].tackles, st[1].tackles], ['Interceptações', st[0].interceptions, st[1].interceptions],
-    ['Escanteios', st[0].corners, st[1].corners], ['Faltas', st[0].fouls, st[1].fouls], ['Amarelos', st[0].yellows, st[1].yellows], ['Vermelhos', st[0].reds, st[1].reds], ['Defesas', st[0].saves, st[1].saves]
+    ['Escanteios', st[0].corners, st[1].corners], ['Impedimentos', st[0].offsides, st[1].offsides], ['Faltas', st[0].fouls, st[1].fouls], ['Amarelos', st[0].yellows, st[1].yellows], ['Vermelhos', st[0].reds, st[1].reds], ['Defesas', st[0].saves, st[1].saves]
   ];
   return rows.map(([l, a, b, x = +a, y = +b]) => { const t = (x + y) || 1; return `<div class="sbar"><span class="v">${a}</span><span class="lbl">${l}</span><span class="v">${b}</span><div class="dual"><i style="width:${x / t * 100}%"></i><i style="width:${y / t * 100}%"></i></div></div>`; }).join('');
 }

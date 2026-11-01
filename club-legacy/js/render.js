@@ -51,8 +51,26 @@ export class PitchRenderer {
    * scene: { players: [{x,y,side,num,ball,name,gk,energy}], ball:{x,y,z}, kits:[{fill,text,gk}], pass:{sx,sy,ex,ey} }
    */
   draw(scene) {
+    // câmera opcional (replays): aproxima e segue um ponto do campo
+    const base = [this.s, this.ox, this.oy];
+    if (scene.cam) {
+      this.s = base[0] * scene.cam.zoom;
+      this.ox = this.c.width / 2 - scene.cam.x * this.s;
+      this.oy = this.c.height / 2 - scene.cam.y * this.s;
+    }
+    this.drawScene(scene);
+    [this.s, this.ox, this.oy] = base;
+  }
+  drawScene(scene) {
     const g = this.ctx, s = this.s;
     this.drawPitch();
+    if (scene.trail && scene.trail.length > 1) {
+      g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineCap = 'round';
+      for (let i = 1; i < scene.trail.length; i++) {
+        g.lineWidth = s * 0.5 * i / scene.trail.length;
+        g.beginPath(); g.moveTo(this.X(scene.trail[i - 1].x), this.Y(scene.trail[i - 1].y)); g.lineTo(this.X(scene.trail[i].x), this.Y(scene.trail[i].y)); g.stroke();
+      }
+    }
     if (scene.pass) {
       g.strokeStyle = 'rgba(190,242,100,.35)'; g.lineWidth = s * 0.25; g.setLineDash([s * 0.8, s * 0.6]);
       g.beginPath(); g.moveTo(this.X(scene.pass.sx), this.Y(scene.pass.sy)); g.lineTo(this.X(scene.pass.ex), this.Y(scene.pass.ey)); g.stroke();
@@ -67,7 +85,9 @@ export class PitchRenderer {
       if (p.sel) { g.strokeStyle = '#fff'; g.lineWidth = r * 0.2; g.beginPath(); g.arc(X, Y, r * 1.75, 0, Math.PI * 2); g.stroke(); }
       g.fillStyle = p.gk ? kit.gk : kit.fill;
       g.strokeStyle = kit.stroke; g.lineWidth = r * 0.22;
-      g.beginPath(); g.arc(X, Y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+      // goleiro mergulhando: corpo alongado na direção do salto
+      if (p.dive) { g.beginPath(); g.ellipse(X, Y + p.dive * r * 0.5, r * 0.85, r * 1.75, 0, 0, Math.PI * 2); g.fill(); g.stroke(); }
+      else { g.beginPath(); g.arc(X, Y, r, 0, Math.PI * 2); g.fill(); g.stroke(); }
       g.fillStyle = p.gk ? '#111827' : kit.text; g.font = `700 ${r * 1.05}px Inter, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText(p.num, X, Y + r * 0.06);
       if (p.label) {
